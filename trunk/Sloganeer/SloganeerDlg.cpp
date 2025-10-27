@@ -65,6 +65,9 @@ void CSloganeerDlg::CMyCommandLineInfo::ParseParam(const TCHAR* pszParam, BOOL b
 			case FLAG_fullscreen:
 				m_dlg.m_bStartFullScreen = true;
 				break;
+			case FLAG_seqtext:
+				m_dlg.m_sd.SetSloganOrder(true);	// sequential order
+				break;
 			default:
 				m_iFlag = iFlag;	// flag requires a parameter
 			}

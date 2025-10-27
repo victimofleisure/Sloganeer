@@ -61,12 +61,8 @@ int CRandList::GetNext()
 
 int CRandList::GetNext(int nCurVal)
 {
-	int	nVal = 0;
-	int	nElems = GetSize();
-	for (int iElem = 0; iElem < nElems; iElem++) {
-		nVal = GetNext();	// get next value
-		if (nVal != nCurVal)	// if value changed
-			break;
-	}
+	int	nVal = GetNext();
+	if (nVal == nCurVal && GetSize() > 1)
+		nVal = GetNext();
 	return nVal;
 }

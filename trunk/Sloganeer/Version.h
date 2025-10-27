@@ -8,7 +8,7 @@
 		revision history:
 		rev		date	comments
 		00		24oct25	1.0.00.000
-		01		26oct25	1.0.00.007
+		01		27oct25	1.0.00.008
 
 		DON'T FORGET TO CHANGE VERSION RESOURCE IN .RC2
 

@@ -19,6 +19,7 @@ PARAMDEF(fontname)		// font name
 PARAMDEF(fontweight)	// font weight from 1 - 999
 PARAMDEF(transdur)		// transition duration in seconds (fractions allowed)
 PARAMDEF(holddur)		// hold duration in seconds (fractions allowed)
+PARAMDEF(seqtext)		// display slogans in sequential order instead of randomizing them
 
 #undef PARAMDEF
 #endif

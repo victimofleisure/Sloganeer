@@ -8,6 +8,7 @@
 		revision history:
 		rev		date	comments
         00      24oct25	initial version
+		01		27oct25	add tile transition
 
 */
 
@@ -29,6 +30,8 @@ CSloganDraw::CSloganDraw() :
 	m_fTransProgress = 0;
 	m_bThreadExit = false;
 	m_bIsFullScreen = false;
+	m_bIsTransStart = false;
+	m_bSeqSlogans = false;
 	m_iState = ST_TRANS_OUT;
 	m_iSlogan = 0;
 	m_iTransType = 0;
@@ -37,6 +40,9 @@ CSloganDraw::CSloganDraw() :
 	m_fFontSize = 150.0f;
 	m_sFontName = L"Helvetica";
 	m_nFontWeight = DWRITE_FONT_WEIGHT_BLACK;
+	m_fTileSize = 0;
+	m_szTileLayout = CSize(0, 0);
+	m_ptTileOffset = CD2DPointF(0, 0);
 }
 
 CSloganDraw::~CSloganDraw()
@@ -124,9 +130,12 @@ void CSloganDraw::DestroyUserResources()
 bool CSloganDraw::OnThreadCreate()
 {
 	if (SEED_WITH_TIME) {
-		srand(GetTickCount());
+		srand(GetTickCount());	// seed pseudorandom generator with time
 	}
-	StartCycle();
+	if (m_bSeqSlogans) {	// if showing slogans sequentially
+		m_iSlogan = -1;	// avoid skipping first slogan
+	}
+	StartCycle();	// start the first cycle
 	return true;
 }
 
@@ -135,14 +144,27 @@ void CSloganDraw::OnResize()
 	OnTextChange();
 }
 
+void CSloganDraw::StartTrans(int nState)
+{
+	ASSERT(nState == ST_TRANS_IN || nState == ST_TRANS_OUT);	// else logic error
+	m_iState = nState;	// set state
+	m_bIsTransStart = true;	// set transition start flag
+	m_timerTrans.Reset();	// reset transition timer
+	m_iTransType = m_rlTransType.GetNext(m_iTransType);	// get next transition type
+	m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());	// remove transform if any
+}
+
 void CSloganDraw::StartCycle()
 {
-	m_iState = ST_TRANS_IN;	// set state to transition in
-	m_timerTrans.Reset();	// reset transition timer
-	m_iSlogan = m_rlSloganIdx.GetNext(m_iSlogan);	// get next slogan index
-	m_iTransType = m_rlTransType.GetNext(m_iTransType);	// get next transition type
+	StartTrans(ST_TRANS_IN);
+	if (m_bSeqSlogans) {	// if showing slogans sequentially
+		m_iSlogan++;	// next slogan index
+		if (m_iSlogan >= m_aSlogan.GetSize())	// if reached end of slogans
+			m_iSlogan = 0;	// reset to first slogan
+	} else {	// randomizing slogans
+		m_iSlogan = m_rlSloganIdx.GetNext(m_iSlogan);	// get next slogan index
+	}
 	OnTextChange();	// update text
-	m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());	// remove transform if any
 }
 
 void CSloganDraw::StartHold()
@@ -162,23 +184,21 @@ void CSloganDraw::ContinueHold()
 			return;	// incomplete hold; return without altering state
 	}
 	// hold state completed
-	m_iState = ST_TRANS_OUT;	// set state to transition out
-	m_timerTrans.Reset();	// reset transition timer
-	m_iTransType = m_rlTransType.GetNext(m_iTransType);	// get next transition type
+	StartTrans(ST_TRANS_OUT);	// start transition out
 }
 
 bool CSloganDraw::OnFontChange()
 {
-	m_pTextFormat.Release();
-	CHECK(m_pDWriteFactory->CreateTextFormat(
-		m_sFontName,
+	m_pTextFormat.Release();	// release previous text format instance
+	CHECK(m_pDWriteFactory->CreateTextFormat(	// create text format instance
+		m_sFontName,	// font name
 		NULL,	// font collection
-		static_cast<DWRITE_FONT_WEIGHT>(m_nFontWeight),
-		DWRITE_FONT_STYLE_NORMAL,
-		DWRITE_FONT_STRETCH_NORMAL,
-		m_fFontSize,
+		static_cast<DWRITE_FONT_WEIGHT>(m_nFontWeight),	// font weight
+		DWRITE_FONT_STYLE_NORMAL,	// font style
+		DWRITE_FONT_STRETCH_NORMAL,	// font stretch
+		m_fFontSize,	// font size in points
 		L"",	//locale
-		&m_pTextFormat
+		&m_pTextFormat	// receives text format instance
 	));
 	m_pTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
 	m_pTextFormat->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
@@ -188,21 +208,39 @@ bool CSloganDraw::OnFontChange()
 
 bool CSloganDraw::OnTextChange()
 {
-	m_pTextLayout.Release();
+	m_pTextLayout.Release();	// release previous text layout instance
 	LPCTSTR	pszSlogan = m_aSlogan[m_iSlogan];
 	int	nSloganLen = m_aSlogan[m_iSlogan].GetLength();
-	CD2DSizeF	szRT(m_pD2DDeviceContext->GetSize());
-	CHECK(m_pDWriteFactory->CreateTextLayout(
-		pszSlogan, 
-		nSloganLen, 
-		m_pTextFormat, 
-		szRT.width, 
-		szRT.height, 
-		&m_pTextLayout
+	CD2DSizeF	szRT(m_pD2DDeviceContext->GetSize());	// get render target size
+	// layout box is entire frame, for full-screen text and paragraph centering
+	CHECK(m_pDWriteFactory->CreateTextLayout(	// create text layout instance
+		pszSlogan,		// source text
+		nSloganLen,		// text length in characters
+		m_pTextFormat,	// text format instance
+		szRT.width,		// layout box width in DIPs
+		szRT.height,	// layout box height in DIPs
+		&m_pTextLayout	// receives text layout instance
 	));
-	CHECK(m_pTextLayout->GetMetrics(&m_textMetrics));
-	CHECK(m_pTextLayout->GetOverhangMetrics(&m_overhangMetrics));
+	CHECK(m_pTextLayout->GetMetrics(&m_textMetrics));	// get text metrics
+	CHECK(m_pTextLayout->GetOverhangMetrics(&m_overhangMetrics));	// get overhang metrics
 	return true;
+}
+
+CKD2DRectF CSloganDraw::GetTextBounds() const
+{
+	// layout box is entire render target
+	CD2DSizeF	szRT(m_pD2DDeviceContext->GetSize());
+	// use text metrics for x-axis, overhang metrics for y-axis;
+	// assuming text fits within the frame, overhang metrics are
+	// NEGATIVE distances in DIPs from frame edge to text edge
+	CKD2DRectF	rText(
+		m_textMetrics.left,
+		-m_overhangMetrics.top, 
+		m_textMetrics.left + m_textMetrics.width, 
+		szRT.height + m_overhangMetrics.bottom
+	);
+	rText.InflateRect(AA_MARGIN, AA_MARGIN);	// add antialiasing margin
+	return rText;
 }
 
 void CSloganDraw::TransScroll()
@@ -229,44 +267,36 @@ void CSloganDraw::TransScroll()
 	default:
 		NODEFAULTCASE;	// improper call
 	}
-	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pDrawBrush);
+	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pDrawBrush); // draw text
 }
 
 void CSloganDraw::TransReveal()
 {
-	CD2DSizeF	szRT(m_pD2DDeviceContext->GetSize());
-	CD2DRectF	rMask(
-		m_textMetrics.left - AA_MARGIN, 
-		-m_overhangMetrics.top - AA_MARGIN, 
-		m_textMetrics.left + m_textMetrics.width + AA_MARGIN, 
-		szRT.height + m_overhangMetrics.bottom + AA_MARGIN
-	);
-	CD2DSizeF	szMask(rMask.right - rMask.left, rMask.bottom - rMask.top);
+	CKD2DRectF	rText(GetTextBounds());
+	CD2DSizeF	szText(rText.Size());
 	switch (m_iTransType) {
 	case TT_REVEAL_LR:
 		{
-			float	fOffset = DTF(szMask.width * m_fTransProgress);
+			float	fOffset = DTF(szText.width * m_fTransProgress);
 			if (m_iState == ST_TRANS_OUT)	// if transition out
-				fOffset -= szMask.width;	// start unmasked
-			rMask.left += fOffset;
-			rMask.right += fOffset;
+				fOffset -= szText.width;	// start unmasked
+			rText.OffsetRect(fOffset, 0);	// offset text mask horizontally
 		}
 		break;
 	case TT_REVEAL_TB:
 		{
-			float	fOffset = DTF(szMask.height * m_fTransProgress);
+			float	fOffset = DTF(szText.height * m_fTransProgress);
 			if (m_iState == ST_TRANS_OUT)	// if transition out
-				fOffset -= szMask.height;	// start unmasked
-			rMask.top += fOffset;
-			rMask.bottom += fOffset;
+				fOffset -= szText.height;	// start unmasked
+			rText.OffsetRect(0, fOffset);	// offset text mask vertically
 		}
 		break;
 	default:
 		NODEFAULTCASE;	// improper call
 	}
 	CD2DPointF	ptOrigin(0, 0);
-	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pDrawBrush);
-	m_pD2DDeviceContext->FillRectangle(rMask, m_pBkgndBrush);
+	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pDrawBrush);	// draw text
+	m_pD2DDeviceContext->FillRectangle(rText, m_pBkgndBrush);	// draw text mask
 }
 
 void CSloganDraw::TransFade()
@@ -276,7 +306,7 @@ void CSloganDraw::TransFade()
 		fBright = 1 - fBright;	// invert brightness
 	m_pVarBrush->SetColor(D2D1::ColorF(DTF(fBright), DTF(fBright), DTF(fBright)));
 	CD2DPointF	ptOrigin(0, 0);
-	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pVarBrush);
+	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pVarBrush); // draw text
 }
 
 void CSloganDraw::TransTypewriter()
@@ -288,10 +318,10 @@ void CSloganDraw::TransTypewriter()
 	if (m_iState == ST_TRANS_OUT) {	// if transition out
 		std::swap(trShow, trHide);	// swap text ranges
 	}
-	m_pTextLayout->SetDrawingEffect(m_pDrawBrush, trShow);
-	m_pTextLayout->SetDrawingEffect(m_pBkgndBrush, trHide);
+	m_pTextLayout->SetDrawingEffect(m_pDrawBrush, trShow);	// set brush for shown characters
+	m_pTextLayout->SetDrawingEffect(m_pBkgndBrush, trHide);	// set brush for hidden characters
 	CD2DPointF	ptOrigin(0, 0);
-	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pDrawBrush);
+	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pDrawBrush);	// draw text
 }
 
 void CSloganDraw::TransScale()
@@ -305,23 +335,81 @@ void CSloganDraw::TransScale()
 	CD2DSizeF	szScale;
 	switch (m_iTransType) {
 	case TT_SCALE_HORZ:
-		szScale = CD2DSizeF(fScale, 1);
+		szScale = CD2DSizeF(fScale, 1);	// scale horizontally
 		break;
 	case TT_SCALE_VERT:
-		szScale = CD2DSizeF(1, fScale);
+		szScale = CD2DSizeF(1, fScale);	// scale vertically
 		break;
 	case TT_SCALE_BOTH:
-		szScale = CD2DSizeF(fScale, fScale);
+		szScale = CD2DSizeF(fScale, fScale);	// scale both axes
 		break;
 	default:
 		NODEFAULTCASE;	// improper call
 	}
 	CD2DSizeF	szRT(m_pD2DDeviceContext->GetSize());
-	CD2DPointF	ptCenter(szRT.width / 2, szRT.height / 2);
-	auto mScale(D2D1::Matrix3x2F::Scale(szScale, ptCenter));
-	m_pD2DDeviceContext->SetTransform(mScale);
+	CD2DPointF	ptCenter(szRT.width / 2, szRT.height / 2);	// scaling center point
+	auto mScale(D2D1::Matrix3x2F::Scale(szScale, ptCenter));	// create scaling matrix
+	m_pD2DDeviceContext->SetTransform(mScale);	// apply scaling matrix
 	CD2DPointF	ptOrigin(0, 0);
-	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pDrawBrush);
+	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pDrawBrush);	// draw text
+}
+
+void CSloganDraw::InitTiling(const CKD2DRectF& rText)
+{
+	// ideal tile count is one tile for each frame of transition
+	DWORD	dwDisplayFreq;
+	GetDisplayFrequency(dwDisplayFreq);
+	float	fIdealTileCount = dwDisplayFreq * m_fTransDuration;
+	// compute tile size: divide text area by ideal tile count and take square root
+	CD2DSizeF	szText(rText.Size());
+	m_fTileSize = sqrt(szText.width * szText.height / fIdealTileCount);
+	// compute tile layout; round up to ensure text is completely covered
+	m_szTileLayout = CSize(
+		Round(ceil(szText.width / m_fTileSize)),	// number of tile columns
+		Round(ceil(szText.height / m_fTileSize))	// number of tile rows
+	);
+	// compute offsets for centering tile frame over text
+	m_ptTileOffset = CD2DPointF(
+		(m_szTileLayout.cx * m_fTileSize - szText.width) / 2,
+		(m_szTileLayout.cy * m_fTileSize - szText.height) / 2);
+	int	nTiles = m_szTileLayout.cx * m_szTileLayout.cy;	// actual tile count
+	m_aTileIdx.SetSize(nTiles);	// allocate tile index array
+	CRandList	rlTile(nTiles);	// initialize random list
+	for (int iTile = 0; iTile < nTiles; iTile++) {	// for each tile
+		m_aTileIdx[iTile] = rlTile.GetNext();	// set array element to random tile index
+	}
+}
+
+void CSloganDraw::TransTile()
+{
+	CKD2DRectF	rText(GetTextBounds());
+	if (m_bIsTransStart) {	// if start of transition
+		InitTiling(rText);	// initialize tiling; only once per transition
+	}
+	CD2DPointF	ptOrigin(0, 0);
+	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pDrawBrush);	// draw text
+	float	fPhase;
+	if (m_iState == ST_TRANS_OUT) {	// if transition out
+		fPhase = DTF(m_fTransProgress);
+	} else {	// hold or transition in
+		fPhase = DTF(1 - m_fTransProgress);
+	}
+	int	nTiles = Round(m_aTileIdx.GetSize() * fPhase);	// number of tiles to draw
+	for (int iTile = 0; iTile < nTiles; iTile++) {	// for each drawn tile
+		int	nTileIdx = m_aTileIdx[iTile];	// get tile's randomized index
+		int iRow = nTileIdx / m_szTileLayout.cx;	// compute tile row from index
+		int	iCol = nTileIdx % m_szTileLayout.cx;	// compute tile column from index
+		CD2DPointF	ptOrg(	// compute tile's origin
+			rText.left + m_fTileSize * iCol - m_ptTileOffset.x, 
+			rText.top + m_fTileSize * iRow - m_ptTileOffset.y
+		);
+		CKD2DRectF	rTile(	// compute tile's rectangle
+			ptOrg.x, ptOrg.y,
+			ptOrg.x + m_fTileSize, ptOrg.y + m_fTileSize
+		);
+		rTile.InflateRect(1, 1);	// add a pixel to ensure tiles overlap
+		m_pD2DDeviceContext->FillRectangle(rTile, m_pBkgndBrush);	// draw tile
+	}
 }
 
 bool CSloganDraw::OnDraw()
@@ -356,9 +444,13 @@ bool CSloganDraw::OnDraw()
 	case TT_SCALE_BOTH:
 		TransScale();
 		break;
+	case TT_TILE:
+		TransTile();
+		break;
 	default:
 		NODEFAULTCASE;	// logic error
 	}
+	m_bIsTransStart = false;	// reset transition start flag
 	switch (m_iState) {
 	case ST_TRANS_IN:
 		if (m_fTransProgress >= 1) {	// if transition in completed

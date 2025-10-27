@@ -8,6 +8,7 @@
 		revision history:
 		rev		date	comments
         00      24oct25	initial version
+		01		27oct25	add tile transition
 
 */
 
@@ -17,6 +18,7 @@
 #include "Event.h"
 #include "RandList.h"
 #include "Benchmark.h"
+#include "D2DHelper.h"
 
 class CSloganDraw : public CRenderThread {
 public:
@@ -36,6 +38,7 @@ public:
 	void	SetFontWeight(int nWeight);
 	void	SetTransDuration(float fSeconds);
 	void	SetHoldDuration(float fSeconds);
+	void	SetSloganOrder(bool bSequential);
 
 // Operations
 	void	Resize();
@@ -61,6 +64,7 @@ protected:
 		TT_SCALE_HORZ,	// scale horizontally
 		TT_SCALE_VERT,	// scale vertically
 		TT_SCALE_BOTH,	// scale both axes
+		TT_TILE,		// reveal or cover with tiles
 		TRANS_TYPES
 	};
 	enum {
@@ -87,6 +91,8 @@ protected:
 	double	m_fTransProgress;	// transition progress, normalized from 0 to 1
 	bool	m_bThreadExit;		// true if render thread exit requested
 	bool	m_bIsFullScreen;	// true if in full screen mode
+	bool	m_bIsTransStart;	// true if starting a transition
+	bool	m_bSeqSlogans;		// true if showing slogans sequentially
 	int		m_iState;			// index of current state
 	int		m_iSlogan;			// index of current slogan
 	int		m_iTransType;		// index of current transition type
@@ -95,6 +101,10 @@ protected:
 	float	m_fFontSize;		// font size, in points
 	CString	m_sFontName;		// font name
 	int		m_nFontWeight;		// font weight, from 1 to 999
+	float	m_fTileSize;		// tile size, in DIPs
+	CSize	m_szTileLayout;		// tiling layout, in rows and columns
+	CD2DPointF	m_ptTileOffset;	// tile offset, in DIPs
+	CIntArrayEx	m_aTileIdx;		// array of tile indices
 
 // Overrides
 	virtual void	OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate);
@@ -105,16 +115,20 @@ protected:
 	virtual	bool	OnDraw();
 
 // Helpers
+	void	StartTrans(int nState);
 	void	StartCycle();
 	void	StartHold();
 	void	ContinueHold();
 	bool	OnFontChange();
 	bool	OnTextChange();
+	CKD2DRectF	GetTextBounds() const;
 	void	TransScroll();
 	void	TransReveal();
-	void	TransFade();
 	void	TransTypewriter();
+	void	TransFade();
 	void	TransScale();
+	void	TransTile();
+	void	InitTiling(const CKD2DRectF& rText);
 };
 
 inline bool CSloganDraw::IsFullScreen() const
@@ -150,4 +164,9 @@ inline void CSloganDraw::SetTransDuration(float fSeconds)
 inline void CSloganDraw::SetHoldDuration(float fSeconds)
 {
 	m_nHoldDuration = Round(fSeconds * 1000);	// convert to millseconds
+}
+
+inline void CSloganDraw::SetSloganOrder(bool bSequential)
+{
+	m_bSeqSlogans = bSequential;
 }
