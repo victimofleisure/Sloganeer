@@ -11,7 +11,7 @@
 |slogans_path|The path of an ANSI or UTF-8 text file containing the slogans to display, one slogan per line; if the path contains spaces, enclose it in double quotes.|
 |&#8209;fullscreen|Start the application in full screen mode.|
 |&#8209;fontsize&nbsp;SIZE|Font size in points.|
-|&#8209;fontname&nbsp;NAME|Font name; if the path contains spaces, enclose it in double quotes.|
+|&#8209;fontname&nbsp;NAME|Font name; if the font name contains spaces, enclose it in double quotes.|
 |&#8209;fontweight&nbsp;WEIGHT|Font weight from 1 to 999.|
 |&#8209;transdur&nbsp;SECS|Transition duration in seconds (fractions allowed).|
 |&#8209;holddur&nbsp;SECS|Hold duration in seconds (fractions allowed).|
@@ -27,6 +27,12 @@
 |&#8209;transdur&nbsp;2.5|Set the transition duration to 2.5 seconds.|
 
 Sample usage: Sloganeer myslogans.txt -seqtext -fontname Calibri -fontweight 400
+
+### Slogan file
+
+The slogan file is a plain text file file containing the slogans to be displayed. Each non-blank line of the file is interpreted as a single slogan. To create multi-line slogans, use tabs to create line breaks. Tab characters found within a slogan are replaced with newlines.
+
+The slogan file must be in either ANSI or UTF-8 format. To use non-ANSI characters, UTF-8 format is strongly recommended. UTF-8 supports nearly all languages including Chinese, Japanese, Arabic, and Hindi.
 
 
 
