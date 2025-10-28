@@ -33,3 +33,20 @@ Sample usage: Sloganeer myslogans.txt -seqtext -fontname Calibri -fontweight 400
 The slogans file is a plain text file file containing the slogans to be displayed. Each non-blank line of the file is interpreted as a single slogan. For multi-line slogans, use tabs to create line breaks. Tab characters found within a slogan are replaced with newlines.
 
 The slogans file must be in either ANSI or UTF-8 format. To use non-ANSI characters, UTF-8 format is strongly recommended. UTF-8 supports nearly all languages including Chinese, Japanese, Arabic, and Hindi.
+
+### Transitions
+
+* scroll from left to right
+* scroll from right to left
+* scroll from top to bottom
+* scroll from bottom to top
+* reveal or cover from left to right
+* reveal or cover from top to bottom
+* reveal or cover one letter at a time
+* fade to or from background color
+* scale horizontally
+* scale vertically
+* scale both axes
+* reveal or cover with tiles
+
+
