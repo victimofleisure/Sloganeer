@@ -9,6 +9,7 @@
 		rev		date	comments
         00      24oct25	initial version
 		01		27oct25	add tile transition
+		02		28oct25	add capture
 
 */
 
@@ -64,6 +65,9 @@ void CSloganDraw::Destroy()
 	m_bThreadExit = true;	// request render thread to exit
 	m_evtWake.Set();	// set wake event to signaled
 	DestroyThread();	// destroy render thread
+#if CAPTURE_FRAMES
+	m_capture.Destroy();	// destroy capture instance
+#endif
 }
 
 void CSloganDraw::Resize()
@@ -109,9 +113,9 @@ void CSloganDraw::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCST
 
 bool CSloganDraw::CreateUserResources()
 {
-	m_pD2DDeviceContext->CreateSolidColorBrush(m_clrBkgnd, &m_pBkgndBrush);
-	m_pD2DDeviceContext->CreateSolidColorBrush(m_clrDraw, &m_pDrawBrush);
-	m_pD2DDeviceContext->CreateSolidColorBrush(m_clrDraw, &m_pVarBrush);
+	CHECK(m_pD2DDeviceContext->CreateSolidColorBrush(m_clrBkgnd, &m_pBkgndBrush));
+	CHECK(m_pD2DDeviceContext->CreateSolidColorBrush(m_clrDraw, &m_pDrawBrush));
+	CHECK(m_pD2DDeviceContext->CreateSolidColorBrush(m_clrDraw, &m_pVarBrush));
 	CHECK(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(m_pDWriteFactory),
 		reinterpret_cast<IUnknown **>(&m_pDWriteFactory)));
 	return OnFontChange();
@@ -177,11 +181,16 @@ void CSloganDraw::ContinueHold()
 {
 	ULONGLONG	nNow = GetTickCount64();
 	if (nNow < m_nWakeTime) {	// if more hold time remains
+#if CAPTURE_FRAMES
+		return;	// draw during hold state, so hold state gets captured
+#else
+		// sleep during hold state to reduce power usage
 		DWORD	nTimeout = static_cast<DWORD>(m_nWakeTime - nNow);
 		// wait for wake signal or timeout
 		DWORD	nRet = WaitForSingleObject(m_evtWake, nTimeout);
 		if (nRet == WAIT_OBJECT_0)	// if wake signal
 			return;	// incomplete hold; return without altering state
+#endif
 	}
 	// hold state completed
 	StartTrans(ST_TRANS_OUT);	// start transition out
@@ -470,5 +479,14 @@ bool CSloganDraw::OnDraw()
 	default:
 		NODEFAULTCASE;	// logic error
 	}
+#if CAPTURE_FRAMES
+	if (!m_capture.IsCreated()) {
+		// optionally specify a destination folder for the image sequence; default is current directory
+		LPCTSTR	pszOutFolderPath = NULL;
+		if (!m_capture.Create(m_pD3DDevice, m_pSwapChain, pszOutFolderPath))	// create capture instance
+			return false;
+	}
+	m_capture.CaptureFrame();
+#endif
 	return true;
 }

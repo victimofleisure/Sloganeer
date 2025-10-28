@@ -57,6 +57,12 @@
     <ClCompile Include="Win32Console.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="D2DCapture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PathStr.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AboutDlg.h">
@@ -132,6 +138,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Wrapx64.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D2DCapture.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PathStr.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

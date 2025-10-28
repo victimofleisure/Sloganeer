@@ -9,6 +9,7 @@
 		rev		date	comments
         00      24oct25	initial version
 		01		27oct25	add tile transition
+		02		28oct25	add capture
 
 */
 
@@ -19,6 +20,18 @@
 #include "RandList.h"
 #include "Benchmark.h"
 #include "D2DHelper.h"
+
+#define CAPTURE_FRAMES 0	// non-zero to capture frames
+
+#ifdef CAPTURE_FRAMES
+#include "D2DCapture.h"
+class CMyD2DCapture : public CD2DCapture {
+public:
+	virtual void	OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate) {
+		printf("%x %s %d %s\n", hr, pszSrcFileName, nLineNum, pszSrcFileDate);
+	}
+};
+#endif
 
 class CSloganDraw : public CRenderThread {
 public:
@@ -105,6 +118,10 @@ protected:
 	CSize	m_szTileLayout;		// tiling layout, in rows and columns
 	CD2DPointF	m_ptTileOffset;	// tile offset, in DIPs
 	CIntArrayEx	m_aTileIdx;		// array of tile indices
+
+#if CAPTURE_FRAMES
+	CMyD2DCapture	m_capture;	// frame capture instance
+#endif
 
 // Overrides
 	virtual void	OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate);
