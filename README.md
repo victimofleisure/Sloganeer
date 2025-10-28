@@ -36,17 +36,17 @@ The slogans file must be in either ANSI or UTF-8 format. To use non-ANSI charact
 
 ### Transitions
 
-* scroll from left to right
-* scroll from right to left
-* scroll from top to bottom
-* scroll from bottom to top
-* reveal or cover from left to right
-* reveal or cover from top to bottom
-* reveal or cover one letter at a time
-* fade to or from background color
-* scale horizontally
-* scale vertically
-* scale both axes
-* reveal or cover with tiles
+* Scroll from left to right
+* Scroll from right to left
+* Scroll from top to bottom
+* Scroll from bottom to top
+* Reveal or cover from left to right
+* Reveal or cover from top to bottom
+* Reveal or cover one letter at a time
+* Fade to or from background color
+* Scale horizontally
+* Scale vertically
+* Scale both axes
+* Reveal or cover with tiles
 
 
