@@ -13,8 +13,8 @@
 |&#8209;fontsize&nbsp;SIZE|Font size in points.|
 |&#8209;fontname&nbsp;NAME|Font name; if the font name contains spaces, enclose it in double quotes.|
 |&#8209;fontweight&nbsp;WEIGHT|Font weight from 1 to 999.|
-|&#8209;transdur&nbsp;SECS|Transition duration in seconds (fractional durations are allowed).|
-|&#8209;holddur&nbsp;SECS|Hold duration in seconds (fractional durations are allowed).|
+|&#8209;transdur&nbsp;SECS|Transition duration in seconds (fractions of a second are allowed).|
+|&#8209;holddur&nbsp;SECS|Hold duration in seconds (fractions of a second are allowed).|
 |&#8209;seqtext|Display slogans in sequential order instead of randomizing them.|
 
 ### Examples
