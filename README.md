@@ -26,4 +26,7 @@
 |&#8209;fontweight&nbsp;400|Set the font weight to 400.|
 |&#8209;transdur&nbsp;2.5|Set the transition duration to 2.5 seconds.|
 
+Sample usage: Sloganeer myslogans.txt -seqtext -fontname Calibri -fontweight 400
+
+
 
