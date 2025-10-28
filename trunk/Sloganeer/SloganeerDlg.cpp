@@ -170,6 +170,13 @@ BOOL CSloganeerDlg::OnInitDialog()
 			pSysMenu->AppendMenu(MF_SEPARATOR);
 			pSysMenu->AppendMenu(MF_STRING, IDM_ABOUTBOX, strAboutMenu);
 		}
+		CString strFullScreenMenu;
+		bNameValid = strFullScreenMenu.LoadString(IDS_FULL_SCREEN);
+		ASSERT(strFullScreenMenu);
+		if (!strFullScreenMenu.IsEmpty())
+		{
+			pSysMenu->InsertMenu(SC_MINIMIZE, 0, IDM_FULLSCREEN, strFullScreenMenu);
+		}
 	}
 
 	// Set the icon for this dialog.  The framework does this automatically
@@ -222,13 +229,17 @@ BOOL CSloganeerDlg::DestroyWindow()
 
 void CSloganeerDlg::OnSysCommand(UINT nID, LPARAM lParam)
 {
-	if ((nID & 0xFFF0) == IDM_ABOUTBOX)
-	{
-		CAboutDlg dlgAbout;
-		dlgAbout.DoModal();
-	}
-	else
-	{
+	switch (nID & 0xFFF0) {
+	case IDM_ABOUTBOX:
+		{
+			CAboutDlg dlgAbout;
+			dlgAbout.DoModal();
+		}
+		break;
+	case IDM_FULLSCREEN:
+		m_sd.FullScreen(!m_sd.IsFullScreen());
+		break;
+	default:
 		CDialogEx::OnSysCommand(nID, lParam);
 	}
 }

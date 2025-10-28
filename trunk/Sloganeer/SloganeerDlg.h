@@ -53,7 +53,8 @@ protected:
 
 // Constants
 	enum {
-		IDM_ABOUTBOX = 0x0010
+		IDM_ABOUTBOX = 0x0010,
+		IDM_FULLSCREEN = 0x0020,
 	};
 	static const LPCTSTR m_aSlogan[];	// default array of slogans
 

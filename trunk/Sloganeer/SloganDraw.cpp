@@ -39,7 +39,7 @@ CSloganDraw::CSloganDraw() :
 	m_nHoldDuration = 1000;
 	m_fTransDuration = 2.0f;
 	m_fFontSize = 150.0f;
-	m_sFontName = L"Helvetica";
+	m_sFontName = L"Arial";
 	m_nFontWeight = DWRITE_FONT_WEIGHT_BLACK;
 	m_fTileSize = 0;
 	m_szTileLayout = CSize(0, 0);

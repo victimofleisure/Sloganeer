@@ -10,6 +10,7 @@
 #define IDS_ERR_FILE_NOT_FOUND          202
 #define IDS_ERR_MISSING_PARAM           203
 #define IDS_ERR_UNKNOWN_FLAG            204
+#define IDS_FULL_SCREEN                 205
 #define IDC_ABOUT_LICENSE               1001
 #define IDC_ABOUT_VERSION               1002
 
@@ -18,7 +19,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                1
-#define _APS_NEXT_RESOURCE_VALUE        205
+#define _APS_NEXT_RESOURCE_VALUE        206
 #define _APS_NEXT_COMMAND_VALUE         32771
 #define _APS_NEXT_CONTROL_VALUE         1003
 #define _APS_NEXT_SYMED_VALUE           101
