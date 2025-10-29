@@ -55,10 +55,8 @@ The slogans file must be in either ANSI or UTF-8 format. To use non-ANSI charact
 
 ### Defaults
 
-Randomized text order, white text on black background, 150 point Arial Black 
-(weight 900), five second hold time, and no pause between slogans.
+Randomized text order, white text on black background, 150 point Arial Black (weight 900), two second transitions, one second hold time, and no pause between slogans.
 
 ### Installation
 
-There is no installer. Unzip the distribution file and run the executable.
-The application does not store settings in the registry or anywhere else.
+There is no installer. Unzip the distribution file and run the executable. The application does not store settings in the registry or anywhere else.
