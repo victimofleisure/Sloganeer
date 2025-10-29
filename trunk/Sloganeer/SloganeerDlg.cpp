@@ -8,6 +8,7 @@
 		revision history:
 		rev		date	comments
         00      24oct25	initial version
+		01		29oct25	add pause and color parameters
 
 */
 
@@ -91,6 +92,15 @@ void CSloganeerDlg::CMyCommandLineInfo::ParseParam(const TCHAR* pszParam, BOOL b
 				break;
 			case FLAG_holddur:
 				m_dlg.m_sd.SetHoldDuration(std::stof(pszParam));
+				break;
+			case FLAG_pausedur:
+				m_dlg.m_sd.SetPauseDuration(std::stof(pszParam));
+				break;
+			case FLAG_bgcolor:
+				m_dlg.m_sd.SetBkgndColor(std::stoi(pszParam, 0, 16));	// hexadecimal
+				break;
+			case FLAG_drawcolor:
+				m_dlg.m_sd.SetDrawColor(std::stoi(pszParam, 0, 16));	// hexadecimal
 				break;
 			default:
 				NODEFAULTCASE;	// logic error

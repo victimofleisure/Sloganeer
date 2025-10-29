@@ -10,6 +10,7 @@
         00      24oct25	initial version
 		01		27oct25	add tile transition
 		02		28oct25	add capture
+		03		29oct25	add pause
 
 */
 
@@ -23,15 +24,9 @@
 
 #define CAPTURE_FRAMES 0	// non-zero to capture frames
 
-#ifdef CAPTURE_FRAMES
+#if CAPTURE_FRAMES
 #include "D2DCapture.h"
-class CMyD2DCapture : public CD2DCapture {
-public:
-	virtual void	OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate) {
-		printf("%x %s %d %s\n", hr, pszSrcFileName, nLineNum, pszSrcFileDate);
-	}
-};
-#endif
+#endif	// CAPTURE_FRAMES
 
 class CSloganDraw : public CRenderThread {
 public:
@@ -51,7 +46,10 @@ public:
 	void	SetFontWeight(int nWeight);
 	void	SetTransDuration(float fSeconds);
 	void	SetHoldDuration(float fSeconds);
+	void	SetPauseDuration(float fSeconds);
 	void	SetSloganOrder(bool bSequential);
+	void	SetBkgndColor(COLORREF clr);
+	void	SetDrawColor(COLORREF clr);
 
 // Operations
 	void	Resize();
@@ -61,8 +59,9 @@ protected:
 // Constants
 	enum {	// display states
 		ST_TRANS_IN,	// transition in
-		ST_HOLD,		// freeze frame
+		ST_HOLD,		// freeze slogan
 		ST_TRANS_OUT,	// transition out
+		ST_PAUSE,		// pause between slogans
 		STATES
 	};
 	enum {	// transition types
@@ -83,8 +82,6 @@ protected:
 	enum {
 		AA_MARGIN = 1,	// extra margin to account for antialiasing
 	};
-	const D2D1::ColorF	m_clrBkgnd;	// background color
-	const D2D1::ColorF	m_clrDraw;	// drawing color
 
 // Members
 	CComPtr<ID2D1SolidColorBrush>	m_pBkgndBrush;	// background brush interface
@@ -101,6 +98,8 @@ protected:
 	CRandList	m_rlSloganIdx;	// randomized list of slogan indices
 	CBenchmark	m_timerTrans;	// high-performance transition timer
 	ULONGLONG	m_nWakeTime;	// during hold, wake time in CPU ticks
+	D2D1::ColorF	m_clrBkgnd;	// background color
+	D2D1::ColorF	m_clrDraw;	// drawing color
 	double	m_fTransProgress;	// transition progress, normalized from 0 to 1
 	bool	m_bThreadExit;		// true if render thread exit requested
 	bool	m_bIsFullScreen;	// true if in full screen mode
@@ -110,18 +109,24 @@ protected:
 	int		m_iSlogan;			// index of current slogan
 	int		m_iTransType;		// index of current transition type
 	int		m_nHoldDuration;	// hold duration in milliseconds
+	int		m_nPauseDuration;	// pause duration in milliseconds
 	float	m_fTransDuration;	// transition duration in seconds
-	float	m_fFontSize;		// font size, in points
 	CString	m_sFontName;		// font name
+	float	m_fFontSize;		// font size, in points
 	int		m_nFontWeight;		// font weight, from 1 to 999
 	float	m_fTileSize;		// tile size, in DIPs
 	CSize	m_szTileLayout;		// tiling layout, in rows and columns
 	CD2DPointF	m_ptTileOffset;	// tile offset, in DIPs
 	CIntArrayEx	m_aTileIdx;		// array of tile indices
 
-#if CAPTURE_FRAMES
+#if CAPTURE_FRAMES	// if capturing frames
+	class CMyD2DCapture : public CD2DCapture {
+	public:
+		virtual void	OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate);
+		CSloganDraw	*m_pParent;	// pointer to parent instance
+	};
 	CMyD2DCapture	m_capture;	// frame capture instance
-#endif
+#endif	// CAPTURE_FRAMES
 
 // Overrides
 	virtual void	OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate);
@@ -132,13 +137,15 @@ protected:
 	virtual	bool	OnDraw();
 
 // Helpers
+	static double	Lerp(double a, double b, double t);
+	bool	IsTransOut() const;
 	void	StartTrans(int nState);
 	void	StartCycle();
-	void	StartHold();
-	void	ContinueHold();
+	void	StartIdle(int nDuration);
+	bool	ContinueIdle();
 	bool	OnFontChange();
 	bool	OnTextChange();
-	CKD2DRectF	GetTextBounds() const;
+	CD2DSizeF	GetTextBounds(CKD2DRectF& rText) const;
 	void	TransScroll();
 	void	TransReveal();
 	void	TransTypewriter();
@@ -147,6 +154,11 @@ protected:
 	void	TransTile();
 	void	InitTiling(const CKD2DRectF& rText);
 };
+
+inline bool CSloganDraw::IsTransOut() const
+{
+	return m_iState == ST_TRANS_OUT || m_iState == ST_PAUSE;
+}
 
 inline bool CSloganDraw::IsFullScreen() const
 {
@@ -183,7 +195,22 @@ inline void CSloganDraw::SetHoldDuration(float fSeconds)
 	m_nHoldDuration = Round(fSeconds * 1000);	// convert to millseconds
 }
 
+inline void CSloganDraw::SetPauseDuration(float fSeconds)
+{
+	m_nPauseDuration = Round(fSeconds * 1000);	// convert to millseconds
+}
+
 inline void CSloganDraw::SetSloganOrder(bool bSequential)
 {
 	m_bSeqSlogans = bSequential;
+}
+
+inline void CSloganDraw::SetBkgndColor(COLORREF clr)
+{
+	m_clrBkgnd = clr;
+}
+
+inline void CSloganDraw::SetDrawColor(COLORREF clr)
+{
+	m_clrDraw = clr;
 }

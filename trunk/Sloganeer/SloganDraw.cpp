@@ -10,6 +10,7 @@
         00      24oct25	initial version
 		01		27oct25	add tile transition
 		02		28oct25	add capture
+		03		29oct25	add pause
 
 */
 
@@ -37,13 +38,17 @@ CSloganDraw::CSloganDraw() :
 	m_iSlogan = 0;
 	m_iTransType = 0;
 	m_nHoldDuration = 1000;
+	m_nPauseDuration = 0;
 	m_fTransDuration = 2.0f;
-	m_fFontSize = 150.0f;
 	m_sFontName = L"Arial";
+	m_fFontSize = 150.0f;
 	m_nFontWeight = DWRITE_FONT_WEIGHT_BLACK;
 	m_fTileSize = 0;
 	m_szTileLayout = CSize(0, 0);
 	m_ptTileOffset = CD2DPointF(0, 0);
+#if CAPTURE_FRAMES	// if capturing frames
+	m_capture.m_pParent = this;
+#endif	// CAPTURE_FRAMES
 }
 
 CSloganDraw::~CSloganDraw()
@@ -65,9 +70,9 @@ void CSloganDraw::Destroy()
 	m_bThreadExit = true;	// request render thread to exit
 	m_evtWake.Set();	// set wake event to signaled
 	DestroyThread();	// destroy render thread
-#if CAPTURE_FRAMES
+#if CAPTURE_FRAMES	// if capturing frames
 	m_capture.Destroy();	// destroy capture instance
-#endif
+#endif	// CAPTURE_FRAMES
 }
 
 void CSloganDraw::Resize()
@@ -110,6 +115,13 @@ void CSloganDraw::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCST
 {
 	printf("%x %s %d %s\n", hr, pszSrcFileName, nLineNum, pszSrcFileDate);
 }
+
+#if CAPTURE_FRAMES	// if capturing frames
+void CSloganDraw::CMyD2DCapture::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate)
+{
+	m_pParent->OnError(hr, pszSrcFileName, nLineNum, pszSrcFileDate);
+}
+#endif	// CAPTURE_FRAMES
 
 bool CSloganDraw::CreateUserResources()
 {
@@ -171,29 +183,27 @@ void CSloganDraw::StartCycle()
 	OnTextChange();	// update text
 }
 
-void CSloganDraw::StartHold()
+void CSloganDraw::StartIdle(int nDuration)
 {
-	m_nWakeTime = GetTickCount64() + m_nHoldDuration;	// set wake time
-	m_iState = ST_HOLD;	// set state to hold
+	m_nWakeTime = GetTickCount64() + nDuration;	// set wake time
 }
 
-void CSloganDraw::ContinueHold()
+bool CSloganDraw::ContinueIdle()
 {
 	ULONGLONG	nNow = GetTickCount64();
-	if (nNow < m_nWakeTime) {	// if more hold time remains
-#if CAPTURE_FRAMES
-		return;	// draw during hold state, so hold state gets captured
-#else
-		// sleep during hold state to reduce power usage
+	if (nNow < m_nWakeTime) {	// if more idle time remains
+#if CAPTURE_FRAMES	// if capturing frames
+		return false;	// draw during idle, so idle gets captured
+#else	// not capturing frames
+		// block instead of drawing, to reduce power usage
 		DWORD	nTimeout = static_cast<DWORD>(m_nWakeTime - nNow);
 		// wait for wake signal or timeout
 		DWORD	nRet = WaitForSingleObject(m_evtWake, nTimeout);
 		if (nRet == WAIT_OBJECT_0)	// if wake signal
-			return;	// incomplete hold; return without altering state
-#endif
+			return false;	// idle is incomplete
+#endif	// CAPTURE_FRAMES
 	}
-	// hold state completed
-	StartTrans(ST_TRANS_OUT);	// start transition out
+	return true;	// idle is over
 }
 
 bool CSloganDraw::OnFontChange()
@@ -235,30 +245,32 @@ bool CSloganDraw::OnTextChange()
 	return true;
 }
 
-CKD2DRectF CSloganDraw::GetTextBounds() const
+CD2DSizeF CSloganDraw::GetTextBounds(CKD2DRectF& rText) const
 {
 	// layout box is entire render target
-	CD2DSizeF	szRT(m_pD2DDeviceContext->GetSize());
+	CD2DSizeF	szRT(m_pD2DDeviceContext->GetSize());	// get render target size
 	// use text metrics for x-axis, overhang metrics for y-axis;
 	// assuming text fits within the frame, overhang metrics are
 	// NEGATIVE distances in DIPs from frame edge to text edge
-	CKD2DRectF	rText(
+	rText = CKD2DRectF(
 		m_textMetrics.left,
 		-m_overhangMetrics.top, 
 		m_textMetrics.left + m_textMetrics.width, 
 		szRT.height + m_overhangMetrics.bottom
 	);
 	rText.InflateRect(AA_MARGIN, AA_MARGIN);	// add antialiasing margin
-	return rText;
+	return szRT;	// return render target size
 }
 
 void CSloganDraw::TransScroll()
 {
-	CD2DSizeF	szRT(m_pD2DDeviceContext->GetSize());
+	CKD2DRectF	rText;
+	CD2DSizeF	szRT(GetTextBounds(rText));
+	CD2DSizeF	szText(rText.Size());
 	double	fPhase;
-	if (m_iState == ST_TRANS_OUT) {	// if transition out
+	if (IsTransOut()) {	// if transition out
 		fPhase = m_fTransProgress; 
-	} else {	// hold or transition in
+	} else {	// transition in
 		fPhase = m_fTransProgress - 1;	// reverse progress
 	}
 	if (m_iTransType == TT_SCROLL_RL || m_iTransType == TT_SCROLL_BT)	// if reversed
@@ -267,11 +279,19 @@ void CSloganDraw::TransScroll()
 	switch (m_iTransType) {
 	case TT_SCROLL_LR:
 	case TT_SCROLL_RL:
-		ptOrigin.x = DTF((szRT.width - m_textMetrics.left + AA_MARGIN) * fPhase);
+		if (fPhase < 1) {
+			ptOrigin.x = DTF(rText.right * fPhase);
+		} else {
+			ptOrigin.x = DTF((szRT.width - rText.left) * fPhase);
+		}
 		break;
 	case TT_SCROLL_TB:
 	case TT_SCROLL_BT:
-		ptOrigin.y = DTF((szRT.height + m_overhangMetrics.top + AA_MARGIN) * fPhase);
+		if (fPhase < 1) {
+			ptOrigin.y = DTF(rText.bottom * fPhase);
+		} else {
+			ptOrigin.y = DTF((szRT.height - rText.top) * fPhase);
+		}
 		break;
 	default:
 		NODEFAULTCASE;	// improper call
@@ -281,13 +301,14 @@ void CSloganDraw::TransScroll()
 
 void CSloganDraw::TransReveal()
 {
-	CKD2DRectF	rText(GetTextBounds());
+	CKD2DRectF	rText;
+	GetTextBounds(rText);
 	CD2DSizeF	szText(rText.Size());
 	switch (m_iTransType) {
 	case TT_REVEAL_LR:
 		{
 			float	fOffset = DTF(szText.width * m_fTransProgress);
-			if (m_iState == ST_TRANS_OUT)	// if transition out
+			if (IsTransOut())	// if transition out
 				fOffset -= szText.width;	// start unmasked
 			rText.OffsetRect(fOffset, 0);	// offset text mask horizontally
 		}
@@ -295,7 +316,7 @@ void CSloganDraw::TransReveal()
 	case TT_REVEAL_TB:
 		{
 			float	fOffset = DTF(szText.height * m_fTransProgress);
-			if (m_iState == ST_TRANS_OUT)	// if transition out
+			if (IsTransOut())	// if transition out
 				fOffset -= szText.height;	// start unmasked
 			rText.OffsetRect(0, fOffset);	// offset text mask vertically
 		}
@@ -308,12 +329,21 @@ void CSloganDraw::TransReveal()
 	m_pD2DDeviceContext->FillRectangle(rText, m_pBkgndBrush);	// draw text mask
 }
 
+double CSloganDraw::Lerp(double a, double b, double t)
+{
+	return t * b + (1 - t) * a;
+}
+
 void CSloganDraw::TransFade()
 {
 	double	fBright = DTF(m_fTransProgress);
-	if (m_iState == ST_TRANS_OUT)	// if transition out
+	if (IsTransOut())	// if transition out
 		fBright = 1 - fBright;	// invert brightness
-	m_pVarBrush->SetColor(D2D1::ColorF(DTF(fBright), DTF(fBright), DTF(fBright)));
+	m_pVarBrush->SetColor(D2D1::ColorF(
+		DTF(Lerp(m_clrBkgnd.r, m_clrDraw.r, fBright)),
+		DTF(Lerp(m_clrBkgnd.g, m_clrDraw.g, fBright)),
+		DTF(Lerp(m_clrBkgnd.b, m_clrDraw.b, fBright))
+	));
 	CD2DPointF	ptOrigin(0, 0);
 	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pVarBrush); // draw text
 }
@@ -324,7 +354,7 @@ void CSloganDraw::TransTypewriter()
 	int	nCharsTyped = Round(nTextLen * m_fTransProgress);
 	DWRITE_TEXT_RANGE	trShow = {0, nCharsTyped};
 	DWRITE_TEXT_RANGE	trHide = {nCharsTyped, nTextLen - nCharsTyped};
-	if (m_iState == ST_TRANS_OUT) {	// if transition out
+	if (IsTransOut()) {	// if transition out
 		std::swap(trShow, trHide);	// swap text ranges
 	}
 	m_pTextLayout->SetDrawingEffect(m_pDrawBrush, trShow);	// set brush for shown characters
@@ -336,7 +366,7 @@ void CSloganDraw::TransTypewriter()
 void CSloganDraw::TransScale()
 {
 	float	fScale;
-	if (m_iState == ST_TRANS_OUT) {	// if transition out
+	if (IsTransOut()) {	// if transition out
 		fScale = DTF(1 - m_fTransProgress);
 	} else {	// hold or transition in
 		fScale = DTF(m_fTransProgress);
@@ -355,7 +385,7 @@ void CSloganDraw::TransScale()
 	default:
 		NODEFAULTCASE;	// improper call
 	}
-	CD2DSizeF	szRT(m_pD2DDeviceContext->GetSize());
+	CD2DSizeF	szRT(m_pD2DDeviceContext->GetSize());	// get render target size
 	CD2DPointF	ptCenter(szRT.width / 2, szRT.height / 2);	// scaling center point
 	auto mScale(D2D1::Matrix3x2F::Scale(szScale, ptCenter));	// create scaling matrix
 	m_pD2DDeviceContext->SetTransform(mScale);	// apply scaling matrix
@@ -391,14 +421,15 @@ void CSloganDraw::InitTiling(const CKD2DRectF& rText)
 
 void CSloganDraw::TransTile()
 {
-	CKD2DRectF	rText(GetTextBounds());
+	CKD2DRectF	rText;
+	GetTextBounds(rText);
 	if (m_bIsTransStart) {	// if start of transition
 		InitTiling(rText);	// initialize tiling; only once per transition
 	}
 	CD2DPointF	ptOrigin(0, 0);
 	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pDrawBrush);	// draw text
 	float	fPhase;
-	if (m_iState == ST_TRANS_OUT) {	// if transition out
+	if (IsTransOut()) {	// if transition out
 		fPhase = DTF(m_fTransProgress);
 	} else {	// hold or transition in
 		fPhase = DTF(1 - m_fTransProgress);
@@ -463,23 +494,42 @@ bool CSloganDraw::OnDraw()
 	switch (m_iState) {
 	case ST_TRANS_IN:
 		if (m_fTransProgress >= 1) {	// if transition in completed
-			StartHold();	// start hold state
+			if (m_nHoldDuration > 0) {	// if hold desired
+				StartIdle(m_nHoldDuration);	// start hold
+				m_iState = ST_HOLD;	// set state to hold
+			} else {	// skip hold state
+				m_iState = ST_TRANS_OUT;	// set state to transition out
+			}
 		}
 		break;
 	case ST_HOLD:
 		if (!m_bThreadExit) {	// if exit wasn't requested
-			ContinueHold();	// continue hold state
+			if (ContinueIdle()) {	// if hold completed
+				StartTrans(ST_TRANS_OUT);	// start transition out
+			}
 		}
 		break;
 	case ST_TRANS_OUT:
 		if (m_fTransProgress >= 1) {	// if transition out completed
-			StartCycle();	// start a new cycle
+			if (m_nPauseDuration > 0) {	// if pause desired
+				StartIdle(m_nPauseDuration);	// start pause
+				m_iState = ST_PAUSE;	// set state to hold
+			} else {	// skip pause state
+				StartCycle();	// start a new cycle
+			}
+		}
+		break;
+	case ST_PAUSE:
+		if (!m_bThreadExit) {	// if exit wasn't requested
+			if (ContinueIdle()) {	// if pause completed
+				StartCycle();	// start a new cycle
+			}
 		}
 		break;
 	default:
 		NODEFAULTCASE;	// logic error
 	}
-#if CAPTURE_FRAMES
+#if CAPTURE_FRAMES	// if capturing frames
 	if (!m_capture.IsCreated()) {
 		// optionally specify a destination folder for the image sequence; default is current directory
 		LPCTSTR	pszOutFolderPath = NULL;
@@ -487,6 +537,6 @@ bool CSloganDraw::OnDraw()
 			return false;
 	}
 	m_capture.CaptureFrame();
-#endif
+#endif	// CAPTURE_FRAMES
 	return true;
 }

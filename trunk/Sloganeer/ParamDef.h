@@ -8,6 +8,7 @@
 		revision history:
 		rev		date	comments
         00      24oct25	initial version
+		01		29oct25	add pause and color parameters
 
 */
 
@@ -19,7 +20,10 @@ PARAMDEF(fontname)		// font name
 PARAMDEF(fontweight)	// font weight from 1 - 999
 PARAMDEF(transdur)		// transition duration in seconds (fractions allowed)
 PARAMDEF(holddur)		// hold duration in seconds (fractions allowed)
+PARAMDEF(pausedur)		// pause duration in seconds (fractions allowed)
 PARAMDEF(seqtext)		// display slogans in sequential order instead of randomizing them
+PARAMDEF(bgcolor)		// background color in hexadecimal
+PARAMDEF(drawcolor)		// drawing color in hexadecimal
 
 #undef PARAMDEF
 #endif
