@@ -15,7 +15,7 @@
 |&#8209;fontweight&nbsp;WEIGHT|Font weight from 1 to 999.|
 |&#8209;transdur&nbsp;SECS|Transition duration in seconds; fractions of a second are allowed.|
 |&#8209;holddur&nbsp;SECS|Hold duration in seconds; fractions of a second are allowed.|
-|&#8209;pausedur&nbsp;SECS|Pause duration in seconds; fractions of a second are allowed.|
+|&#8209;pausedur&nbsp;SECS|Duration of pause between slogans in seconds; fractions of a second are allowed.|
 |&#8209;seqtext|Display slogans in sequential order instead of randomizing them.|
 |&#8209;bgcolor&nbsp;COLOR|Background color in hexadecimal.|
 |&#8209;drawcolor&nbsp;COLOR|Drawing color in hexadecimal.|
