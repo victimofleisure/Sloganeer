@@ -495,7 +495,7 @@ bool CSloganDraw::OnDraw()
 	case ST_TRANS_IN:
 		if (m_fTransProgress >= 1) {	// if transition in completed
 			if (m_nHoldDuration > 0) {	// if hold desired
-				StartIdle(m_nHoldDuration);	// start hold
+				StartIdle(m_nHoldDuration);	// start hold idle
 				m_iState = ST_HOLD;	// set state to hold
 			} else {	// skip hold state
 				m_iState = ST_TRANS_OUT;	// set state to transition out
@@ -512,8 +512,8 @@ bool CSloganDraw::OnDraw()
 	case ST_TRANS_OUT:
 		if (m_fTransProgress >= 1) {	// if transition out completed
 			if (m_nPauseDuration > 0) {	// if pause desired
-				StartIdle(m_nPauseDuration);	// start pause
-				m_iState = ST_PAUSE;	// set state to hold
+				StartIdle(m_nPauseDuration);	// start pause idle
+				m_iState = ST_PAUSE;	// set state to pause
 			} else {	// skip pause state
 				StartCycle();	// start a new cycle
 			}
