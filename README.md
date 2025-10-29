@@ -53,4 +53,12 @@ The slogans file must be in either ANSI or UTF-8 format. To use non-ANSI charact
 * Scale both axes
 * Reveal or cover with tiles
 
+### Defaults
 
+Randomized text order, white text on black background, 150 point Arial Black 
+(weight 900), five second hold time, and no pause between slogans.
+
+### Installation
+
+There is no installer. Unzip the distribution file and run the executable.
+The application does not store settings in the registry or anywhere else.
