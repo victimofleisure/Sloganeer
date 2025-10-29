@@ -14,7 +14,7 @@
 |&#8209;fontname&nbsp;NAME|Font name; if the font name contains spaces, enclose it in double quotes.|
 |&#8209;fontweight&nbsp;WEIGHT|Font weight from 1 to 999.|
 |&#8209;transdur&nbsp;SECS|Transition duration in seconds; fractions of a second are allowed.|
-|&#8209;holddur&nbsp;SECS|Hold duration in seconds; fractions of a second are allowed.|
+|&#8209;holddur&nbsp;SECS|Duration for which text is frozen in seconds; fractions of a second are allowed.|
 |&#8209;pausedur&nbsp;SECS|Duration of pause between slogans in seconds; fractions of a second are allowed.|
 |&#8209;seqtext|Display slogans in sequential order instead of randomizing them.|
 |&#8209;bgcolor&nbsp;COLOR|Background color in hexadecimal.|
