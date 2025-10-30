@@ -11,6 +11,7 @@
 		01		27oct25	add tile transition
 		02		28oct25	add capture
 		03		29oct25	add pause
+		04		30oct25	move parameters to base class
 
 */
 

@@ -9,6 +9,7 @@
 		rev		date	comments
         00      24oct25	initial version
 		01		29oct25	add pause and color parameters
+		02		30oct25	add nowrap parameter
 
 */
 
@@ -24,6 +25,7 @@ PARAMDEF(pausedur)		// pause duration in seconds (fractions allowed)
 PARAMDEF(seqtext)		// display slogans in sequential order instead of randomizing them
 PARAMDEF(bgcolor)		// background color in hexadecimal
 PARAMDEF(drawcolor)		// drawing color in hexadecimal
+PARAMDEF(nowrap)		// disables automatic word wrapping
 
 #undef PARAMDEF
 #endif

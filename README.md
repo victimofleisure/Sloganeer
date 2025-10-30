@@ -19,6 +19,7 @@
 |&#8209;seqtext|Display slogans in sequential order instead of randomizing them.|
 |&#8209;bgcolor&nbsp;COLOR|Background color in hexadecimal.|
 |&#8209;drawcolor&nbsp;COLOR|Drawing color in hexadecimal.|
+|&#8209;nowrap|Disables automatic word wrapping.|
 
 ### Examples
 

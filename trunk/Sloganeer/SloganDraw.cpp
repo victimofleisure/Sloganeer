@@ -11,6 +11,7 @@
 		01		27oct25	add tile transition
 		02		28oct25	add capture
 		03		29oct25	add pause
+		04		30oct25	move parameters to base class
 
 */
 
@@ -201,11 +202,12 @@ bool CSloganDraw::OnFontChange()
 		DWRITE_FONT_STYLE_NORMAL,	// font style
 		DWRITE_FONT_STRETCH_NORMAL,	// font stretch
 		m_fFontSize,	// font size in points
-		L"",	//locale
+		L"",	// locale
 		&m_pTextFormat	// receives text format instance
 	));
 	m_pTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
-	m_pTextFormat->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
+	m_pTextFormat->SetWordWrapping(m_bNoWordWrap ? 
+		DWRITE_WORD_WRAPPING_NO_WRAP : DWRITE_WORD_WRAPPING_WRAP);
 	m_pTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
 	return OnTextChange();
 }

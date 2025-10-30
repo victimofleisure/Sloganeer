@@ -22,6 +22,7 @@ public:
 	CStringArrayEx	m_aSlogan;	// array of slogans to display
 	bool	m_bStartFullScreen;	// true if starting in full screen mode
 	bool	m_bSeqSlogans;		// true if showing slogans sequentially
+	bool	m_bNoWordWrap;		// true if automatic word wrapping is disabled
 	int		m_nHoldDuration;	// hold duration in milliseconds
 	int		m_nPauseDuration;	// pause duration in milliseconds
 	float	m_fTransDuration;	// transition duration in seconds

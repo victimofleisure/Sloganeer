@@ -8,7 +8,7 @@
 		revision history:
 		rev		date	comments
         00      24oct25	initial version
-		01		29oct25	add pause and color parameters
+		01		30oct25	move parameters to their own class
 
 */
 

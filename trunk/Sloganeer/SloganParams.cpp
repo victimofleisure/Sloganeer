@@ -28,6 +28,7 @@ CSloganParams::CSloganParams() :
 {
 	m_bStartFullScreen = false;
 	m_bSeqSlogans = false;
+	m_bNoWordWrap = false;
 	m_nHoldDuration = 1000;
 	m_nPauseDuration = 0;
 	m_fTransDuration = 2.0f;
@@ -81,6 +82,9 @@ void CParamsParser::ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast)
 				break;
 			case FLAG_seqtext:
 				m_params.m_bSeqSlogans = true;	// sequential order
+				break;
+			case FLAG_nowrap:
+				m_params.m_bNoWordWrap = true;	// disable word wrapping
 				break;
 			default:
 				m_iFlag = iFlag;	// flag requires a parameter
