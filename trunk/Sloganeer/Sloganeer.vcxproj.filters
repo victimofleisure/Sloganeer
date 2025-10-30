@@ -63,6 +63,9 @@
     <ClCompile Include="PathStr.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SloganParams.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AboutDlg.h">
@@ -144,6 +147,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PathStr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SloganParams.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

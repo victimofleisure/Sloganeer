@@ -24,25 +24,31 @@
 
 #define CHECK(x) { HRESULT hr = x; if (FAILED(hr)) { OnError(hr, __FILE__, __LINE__, __DATE__); return false; }}
 
-CSloganDraw::CSloganDraw() :
-	m_clrBkgnd(D2D1::ColorF::Black),
-	m_clrDraw(D2D1::ColorF::White)
+CSloganDraw::CSloganDraw()
+{
+	Init();
+}
+
+CSloganDraw::CSloganDraw(CSloganParams& params) : CSloganParams(params)
+{
+	Init();
+}
+
+CSloganDraw::~CSloganDraw()
+{
+	Destroy();
+}
+
+void CSloganDraw::Init()
 {
 	m_nWakeTime = 0;
 	m_fTransProgress = 0;
 	m_bThreadExit = false;
 	m_bIsFullScreen = false;
 	m_bIsTransStart = false;
-	m_bSeqSlogans = false;
 	m_iState = ST_TRANS_OUT;
 	m_iSlogan = 0;
 	m_iTransType = 0;
-	m_nHoldDuration = 1000;
-	m_nPauseDuration = 0;
-	m_fTransDuration = 2.0f;
-	m_sFontName = L"Arial";
-	m_fFontSize = 150.0f;
-	m_nFontWeight = DWRITE_FONT_WEIGHT_BLACK;
 	m_fTileSize = 0;
 	m_szTileLayout = CSize(0, 0);
 	m_ptTileOffset = CD2DPointF(0, 0);
@@ -51,17 +57,13 @@ CSloganDraw::CSloganDraw() :
 #endif	// CAPTURE_FRAMES
 }
 
-CSloganDraw::~CSloganDraw()
-{
-	Destroy();
-}
-
 bool CSloganDraw::Create(HWND hWnd)
 {
 	if (!m_evtWake.Create(NULL, false, false, NULL))	// create wake event
 		return false;
 	m_timerTrans.Reset();	// reset transition timer
-	m_rlTransType.Init(TRANS_TYPES);	// init transition type random list
+	m_rlSloganIdx.Init(m_aSlogan.GetSize());	// init slogan index shuffler
+	m_rlTransType.Init(TRANS_TYPES);	// init transition type shuffler
 	return CreateThread(hWnd);	// create render thread
 }
 
@@ -92,23 +94,6 @@ bool CSloganDraw::FullScreen(bool bEnable)
 		return false;
 	m_bIsFullScreen ^= 1;
 	return true;
-}
-
-void CSloganDraw::SetSlogans(const CStringArrayEx& aSlogan)
-{
-	ASSERT(m_pThread == NULL);	// only safe before thread is launched
-	m_aSlogan = aSlogan;
-	m_rlSloganIdx.Init(aSlogan.GetSize());	// init slogan random list
-}
-
-void CSloganDraw::SetSlogans(const LPCTSTR *aSlogan, int nSlogans)
-{
-	ASSERT(m_pThread == NULL);	// only safe before thread is launched
-	m_aSlogan.SetSize(nSlogans);	// allocate slogan array
-	for (int iSlogan = 0; iSlogan < nSlogans; iSlogan++) {	// for each slogan
-		m_aSlogan[iSlogan] = aSlogan[iSlogan];	// copy string to array element
-	}
-	m_rlSloganIdx.Init(nSlogans);	// init slogan random list
 }
 
 void CSloganDraw::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate)
@@ -413,7 +398,7 @@ void CSloganDraw::InitTiling(const CKD2DRectF& rText)
 		(m_szTileLayout.cy * m_fTileSize - szText.height) / 2);
 	int	nTiles = m_szTileLayout.cx * m_szTileLayout.cy;	// actual tile count
 	m_aTileIdx.SetSize(nTiles);	// allocate tile index array
-	CRandList	rlTile(nTiles);	// initialize random list
+	CRandList	rlTile(nTiles);	// initialize tile shuffler
 	for (int iTile = 0; iTile < nTiles; iTile++) {	// for each tile
 		m_aTileIdx[iTile] = rlTile.GetNext();	// set array element to random tile index
 	}

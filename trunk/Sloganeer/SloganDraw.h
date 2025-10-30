@@ -21,6 +21,7 @@
 #include "RandList.h"
 #include "Benchmark.h"
 #include "D2DHelper.h"
+#include "SloganParams.h"
 
 #define CAPTURE_FRAMES 0	// non-zero to capture frames
 
@@ -28,28 +29,18 @@
 #include "D2DCapture.h"
 #endif	// CAPTURE_FRAMES
 
-class CSloganDraw : public CRenderThread {
+class CSloganDraw : public CRenderThread, protected CSloganParams {
 public:
 // Construction
 	CSloganDraw();
+	CSloganDraw(CSloganParams& params);
 	~CSloganDraw();
 	bool	Create(HWND hWnd);
 	void	Destroy();
 
 // Attributes
 	bool	IsFullScreen() const;
-	bool	HasSlogans() const;
-	void	SetSlogans(const CStringArrayEx& aSlogan);
-	void	SetSlogans(const LPCTSTR *aSlogan, int nSlogans);
-	void	SetFontSize(float fSize);
-	void	SetFontName(CString sName);
-	void	SetFontWeight(int nWeight);
-	void	SetTransDuration(float fSeconds);
-	void	SetHoldDuration(float fSeconds);
-	void	SetPauseDuration(float fSeconds);
-	void	SetSloganOrder(bool bSequential);
-	void	SetBkgndColor(COLORREF clr);
-	void	SetDrawColor(COLORREF clr);
+	const CSloganParams&	GetParms() const;
 
 // Operations
 	void	Resize();
@@ -92,28 +83,18 @@ protected:
 	CComPtr<IDWriteTextLayout>	m_pTextLayout;	// text layout interface
 	DWRITE_TEXT_METRICS	m_textMetrics;	// text metrics
 	DWRITE_OVERHANG_METRICS	m_overhangMetrics;	// overhang metrics
-	CStringArrayEx	m_aSlogan;	// array of slogans to display
 	WEvent	m_evtWake;			// during hold, signals wake from idle
 	CRandList	m_rlTransType;	// randomized list of transition types
 	CRandList	m_rlSloganIdx;	// randomized list of slogan indices
 	CBenchmark	m_timerTrans;	// high-performance transition timer
 	ULONGLONG	m_nWakeTime;	// during hold, wake time in CPU ticks
-	D2D1::ColorF	m_clrBkgnd;	// background color
-	D2D1::ColorF	m_clrDraw;	// drawing color
 	double	m_fTransProgress;	// transition progress, normalized from 0 to 1
 	bool	m_bThreadExit;		// true if render thread exit requested
 	bool	m_bIsFullScreen;	// true if in full screen mode
 	bool	m_bIsTransStart;	// true if starting a transition
-	bool	m_bSeqSlogans;		// true if showing slogans sequentially
 	int		m_iState;			// index of current state
 	int		m_iSlogan;			// index of current slogan
 	int		m_iTransType;		// index of current transition type
-	int		m_nHoldDuration;	// hold duration in milliseconds
-	int		m_nPauseDuration;	// pause duration in milliseconds
-	float	m_fTransDuration;	// transition duration in seconds
-	CString	m_sFontName;		// font name
-	float	m_fFontSize;		// font size, in points
-	int		m_nFontWeight;		// font weight, from 1 to 999
 	float	m_fTileSize;		// tile size, in DIPs
 	CSize	m_szTileLayout;		// tiling layout, in rows and columns
 	CD2DPointF	m_ptTileOffset;	// tile offset, in DIPs
@@ -137,7 +118,7 @@ protected:
 	virtual	bool	OnDraw();
 
 // Helpers
-	static double	Lerp(double a, double b, double t);
+	void	Init();
 	bool	IsTransOut() const;
 	void	StartTrans(int nState);
 	void	StartCycle();
@@ -153,6 +134,7 @@ protected:
 	void	TransScale();
 	void	TransTile();
 	void	InitTiling(const CKD2DRectF& rText);
+	static double	Lerp(double a, double b, double t);
 };
 
 inline bool CSloganDraw::IsTransOut() const
@@ -165,52 +147,7 @@ inline bool CSloganDraw::IsFullScreen() const
 	return m_bIsFullScreen;
 }
 
-inline bool CSloganDraw::HasSlogans() const
+inline const CSloganParams& CSloganDraw::GetParms() const
 {
-	return !m_aSlogan.IsEmpty();
-}
-
-inline void CSloganDraw::SetFontSize(float fSize)
-{
-	m_fFontSize = fSize;
-}
-
-inline void CSloganDraw::SetFontName(CString sName)
-{
-	m_sFontName = sName;
-}
-
-inline void CSloganDraw::SetFontWeight(int nWeight)
-{
-	m_nFontWeight = nWeight;
-}
-
-inline void CSloganDraw::SetTransDuration(float fSeconds)
-{
-	m_fTransDuration = fSeconds;
-}
-
-inline void CSloganDraw::SetHoldDuration(float fSeconds)
-{
-	m_nHoldDuration = Round(fSeconds * 1000);	// convert to millseconds
-}
-
-inline void CSloganDraw::SetPauseDuration(float fSeconds)
-{
-	m_nPauseDuration = Round(fSeconds * 1000);	// convert to millseconds
-}
-
-inline void CSloganDraw::SetSloganOrder(bool bSequential)
-{
-	m_bSeqSlogans = bSequential;
-}
-
-inline void CSloganDraw::SetBkgndColor(COLORREF clr)
-{
-	m_clrBkgnd = clr;
-}
-
-inline void CSloganDraw::SetDrawColor(COLORREF clr)
-{
-	m_clrDraw = clr;
+	return *this;	// automatic upcast
 }

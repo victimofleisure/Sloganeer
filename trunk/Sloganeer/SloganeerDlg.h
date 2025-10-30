@@ -25,7 +25,7 @@ class CSloganeerDlg : public CDialogEx, public CRenderThreadBase
 {
 // Construction
 public:
-	CSloganeerDlg(CWnd* pParent = NULL);	// standard constructor
+	CSloganeerDlg(CSloganParams& params, CWnd* pParent = NULL);	// standard constructor
 
 // Dialog Data
 	enum { IDD = IDD_SLOGANEER_DIALOG };
@@ -36,33 +36,16 @@ public:
 // Implementation
 protected:
 // Types
-	class CMyCommandLineInfo : public CCommandLineInfo {
-	public:
-		CMyCommandLineInfo(CSloganeerDlg &dlg);
-		enum {
-			#define PARAMDEF(name) FLAG_##name,
-			#include "ParamDef.h"
-			FLAGS
-		};
-		static const LPCTSTR m_aFlag[FLAGS];
-		virtual void ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast);
-		CSloganeerDlg&	m_dlg;	// parent dialog
-		int		m_iFlag;	// index of flag expecting a parameter
-		bool	m_bError;	// true if error occurred
-		void	OnError(int nErrID, LPCTSTR pszParam);
-	};
 
 // Constants
 	enum {
 		IDM_ABOUTBOX = 0x0010,
 		IDM_FULLSCREEN = 0x0020,
 	};
-	static const LPCTSTR m_aSlogan[];	// default array of slogans
 
 // Member data
 	HICON m_hIcon;
 	CSloganDraw	m_sd;	// slogan drawing class
-	bool	m_bStartFullScreen;	// true if starting in full screen mode
 
 // Overrides
 	virtual BOOL OnInitDialog();

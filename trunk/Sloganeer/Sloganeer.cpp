@@ -66,10 +66,12 @@ BOOL CSloganeerApp::InitInstance()
 
 	SetRegistryKey(_T("Anal Software"));
 
-	CSloganeerDlg dlg;
-	if (!dlg.ParamCmdLine())
+	CSloganParams	params;
+	CParamsParser	parser(params);
+	if (!parser.Parse())
 		return false;
 
+	CSloganeerDlg dlg(params);
 	m_pMainWnd = &dlg;
 	INT_PTR nResponse = dlg.DoModal();
 	if (nResponse == -1)
