@@ -60,3 +60,9 @@ Randomized slogan order, white text on black background, 150 point Arial Black (
 ### Installation
 
 There is no installer. Unzip the distribution file and run the executable. The application does not store settings in the registry or anywhere else.
+
+### Development
+
+There's a [development blog](https://sloganeers.blogspot.com/). See you there!
+
+
