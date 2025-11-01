@@ -38,15 +38,18 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="StdioFileUTF.cpp" />
+    <ClCompile Include="StdioFileEx.cpp" />
+    <ClCompile Include="TextRenderer.cpp" />
     <ClCompile Include="VersionInfo.cpp" />
     <ClCompile Include="Win32Console.cpp" />
+    <ClCompile Include="WinAppCK.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AboutDlg.h" />
     <ClInclude Include="ArrayEx.h" />
     <ClInclude Include="ArrayExAlgoDef.h" />
     <ClInclude Include="Benchmark.h" />
+    <ClInclude Include="CritSec.h" />
     <ClInclude Include="D2DCapture.h" />
     <ClInclude Include="D2DDevCtx.h" />
     <ClInclude Include="D2DHelper.h" />
@@ -64,11 +67,13 @@
     <ClInclude Include="Sloganeer.h" />
     <ClInclude Include="SloganeerDlg.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="StdioFileUTF.h" />
+    <ClInclude Include="StdioFileEx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="TextRenderer.h" />
     <ClInclude Include="Version.h" />
     <ClInclude Include="VersionInfo.h" />
     <ClInclude Include="Win32Console.h" />
+    <ClInclude Include="WinAppCK.h" />
     <ClInclude Include="WObject.h" />
     <ClInclude Include="Wrapx64.h" />
   </ItemGroup>

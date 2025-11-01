@@ -8,6 +8,7 @@
 		revision history:
 		rev		date	comments
         00      24oct25	initial version
+        01      01nov25	add error log
 
 */
 
@@ -19,6 +20,8 @@
 #include "SloganeerDlg.h"
 #include "Win32Console.h"
 #include "VersionInfo.h"
+#include "StdioFileEx.h"
+#include "PathStr.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -68,8 +71,15 @@ BOOL CSloganeerApp::InitInstance()
 
 	CSloganParams	params;
 	CParamsParser	parser(params);
-	if (!parser.Parse())
-		return false;
+	TRY {
+		if (!parser.Parse())
+			return false;
+	}
+	CATCH (CFileException, e) {
+		e->ReportError();	// report the exception
+		return false;	// failure
+	}
+	END_CATCH
 
 	CSloganeerDlg dlg(params);
 	m_pMainWnd = &dlg;
@@ -85,23 +95,43 @@ BOOL CSloganeerApp::InitInstance()
 	return FALSE;
 }
 
-CString CSloganeerApp::GetVersionString()
+bool CSloganeerApp::WriteLogEntry(CString sLogEntry)
 {
-	VS_FIXEDFILEINFO	AppInfo;
-	CString	sVersion;
-	CVersionInfo::GetFileInfo(AppInfo, NULL);
-	sVersion.Format(_T("%d.%d.%d.%d"), 
-		HIWORD(AppInfo.dwFileVersionMS), LOWORD(AppInfo.dwFileVersionMS),
-		HIWORD(AppInfo.dwFileVersionLS), LOWORD(AppInfo.dwFileVersionLS));
-#ifdef _WIN64
-	sVersion += _T(" x64");
-#else
-	sVersion += _T(" x86");
-#endif
-#ifdef _DEBUG
-	sVersion += _T(" Debug");
-#else
-	sVersion += _T(" Release");
-#endif
-	return sVersion;
+	// This method is callable by worker threads, and access to the log file
+	// is therefore serialized via a critical section. The caller may not be
+	// expecting MFC exceptions, but both CString and CStdioFile throw them,
+	// so the entire method is wrapped in an MFC-style TRY block.
+	TRY {
+		// the intended path is %USERPROFILE%\AppData\Local\AppName\AppName.log
+		CString	sLogFolder;
+		GetLocalAppDataFolder(sLogFolder);
+		if (!CreateFolder(sLogFolder)) {	// if unable to create folder
+			AfxMessageBox(IDS_APP_ERR_CANT_CREATE_APP_DATA_FOLDER);
+			return false;	// failure
+		}
+		CPathStr	sLogPath(sLogFolder);	// start with the log folder
+		sLogPath.Append(m_pszAppName);	// append the application name
+		sLogPath += _T(".log");	// append the log file extension
+		SYSTEMTIME	sysTime;
+		GetSystemTime(&sysTime);
+		CString	sTimestamp;
+		sTimestamp.Format(_T("%04d-%02d-%02d %02d:%02d:%02d.%03d"),	// ISO 8601
+			sysTime.wYear, sysTime.wMonth, sysTime.wDay,
+			sysTime.wHour, sysTime.wMinute, sysTime.wSecond, sysTime.wMilliseconds);
+		sLogEntry.Replace('\n', ' ');	// replace any internal newlines with spaces
+		sLogEntry.Remove('\r');	// remove all internal carriage returns
+		sLogEntry += '\n';	// append a single trailing newline
+		// Enter the critical section as late as possible; we'll exit
+		// it automatically when the lock instance goes out of scope.
+		WCritSec::Lock	lock(m_csErrorLog);	// serialize access to the log file
+		CStdioLogFile	fLog(sLogPath);	// open UTF-8, append, text, commit
+		fLog.WriteString(sTimestamp + ' ' + sLogEntry);	// write the log entry
+		fLog.Flush();	// force any buffered data to be written to the file
+	}
+	CATCH (CFileException, e) {
+		e->ReportError();	// report the exception
+		return false;	// failure
+	}
+	END_CATCH
+	return true;	// success
 }

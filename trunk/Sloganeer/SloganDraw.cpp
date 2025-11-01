@@ -12,10 +12,12 @@
 		02		28oct25	add capture
 		03		29oct25	add pause
 		04		30oct25	move parameters to base class
+		05		01nov25	add vertical converge transition
 
 */
 
 #include "stdafx.h"
+#include "Sloganeer.h"
 #include "SloganDraw.h"
 #include <algorithm>	// for swap
 
@@ -53,6 +55,8 @@ void CSloganDraw::Init()
 	m_fTileSize = 0;
 	m_szTileLayout = CSize(0, 0);
 	m_ptTileOffset = CD2DPointF(0, 0);
+	m_bIsGlyphRising = false;
+	m_iGlyphLine = 0;
 #if CAPTURE_FRAMES	// if capturing frames
 	m_capture.m_pParent = this;
 #endif	// CAPTURE_FRAMES
@@ -99,7 +103,16 @@ bool CSloganDraw::FullScreen(bool bEnable)
 
 void CSloganDraw::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate)
 {
+#ifdef _DEBUG
 	printf("%x %s %d %s\n", hr, pszSrcFileName, nLineNum, pszSrcFileDate);
+#endif
+	CString	sSrcFileName(pszSrcFileName);	// convert to Unicode
+	CString	sSrcFileDate(pszSrcFileDate);
+	CString	sErrorMsg;
+	sErrorMsg.Format(_T("Error %d (0x%x) in %s line %d (%s)"), hr, hr,
+		sSrcFileName.GetString(), nLineNum, sSrcFileDate.GetString());
+	sErrorMsg += '\n' + FormatSystemError(hr);
+	theApp.WriteLogEntry(sErrorMsg);
 }
 
 #if CAPTURE_FRAMES	// if capturing frames
@@ -439,15 +452,93 @@ void CSloganDraw::TransTile()
 	}
 }
 
+bool CSloganDraw::GetLineMetrics()
+{
+	int	nLines = m_textMetrics.lineCount;
+	m_aLineMetrics.SetSize(nLines);	// allocate line metrics destination array
+	UINT	nActualLines;	// get line metrics from text layout
+	CHECK(m_pTextLayout->GetLineMetrics(m_aLineMetrics.GetData(), nLines, &nActualLines));
+	return nActualLines == nLines;
+}
+
+bool CSloganDraw::MakeCharToLineTable()
+{
+	GetLineMetrics();
+	const CString& sSlogan = m_aSlogan[m_iSlogan];
+	m_aCharToLine.SetSize(sSlogan.GetLength());	// allocate character-to-line index array
+	int	nPos = 0;
+	int	nLines = m_textMetrics.lineCount;
+	for (int iLine = 0; iLine < nLines; iLine++) {	// for each line of text
+		int	nLineLen = m_aLineMetrics[iLine].length;	// get line length from metrics
+		for (int iChar = nPos; iChar < nPos + nLineLen; iChar++) {	// for each of line's characters
+			m_aCharToLine[iChar] = iLine;	// store line index
+		}
+		nPos += nLineLen;	// bump position by line length
+	}
+	return true;
+}
+
+void CSloganDraw::TransConverge()
+{
+	if (!MakeCharToLineTable())
+		return;
+	m_bIsGlyphRising = false;
+	m_iGlyphLine = 0;
+	m_pTextLayout->Draw(0, this, 0, 0);
+}
+
+HRESULT CSloganDraw::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOriginX, 
+	FLOAT fBaselineOriginY, DWRITE_MEASURING_MODE measuringMode, DWRITE_GLYPH_RUN const* pGlyphRun, 
+	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, IUnknown* pClientDrawingEffect)
+{
+	UINT	nGlyphs = pGlyphRun->glyphCount;
+	m_aGlyphOffset.SetSize(nGlyphs);	// array is member to reduce reallocation
+	if (pGlyphRun->glyphOffsets != NULL)	// if caller specified glyph offsets, copy them
+		memcpy(m_aGlyphOffset.GetData(), pGlyphRun->glyphOffsets, sizeof(DWRITE_GLYPH_OFFSET) * nGlyphs);
+	else {	// no glyph offsets, so zero our array
+		ZeroMemory(m_aGlyphOffset.GetData(), sizeof(DWRITE_GLYPH_OFFSET) * nGlyphs);
+	}
+	DWRITE_GLYPH_RUN	glyphRun = *pGlyphRun;	// copy entire glyph run struct
+	glyphRun.glyphOffsets = m_aGlyphOffset.GetData();	// override glyph run's offset array
+	CKD2DRectF	rText;
+	CD2DSizeF	szRT = GetTextBounds(rText);
+	double	fPhase = m_fTransProgress;
+	if (!IsTransOut())	// if transition in
+		fPhase = 1 - fPhase;	// invert phase
+	float	fSlideSpan = DTF(max(szRT.height - rText.top, rText.bottom) * fPhase);
+	// odd characters fall and even characters rise, or vice versa
+	for (UINT iGlyph = 0; iGlyph < nGlyphs; iGlyph++) {	// for each glyph
+		int	iChar = pGlyphRunDescription->textPosition + iGlyph;
+		int	iLine = m_aCharToLine[iChar];
+		if (iLine != m_iGlyphLine) {	// if line index changed
+			m_bIsGlyphRising = false;	// reset alternation state
+			m_iGlyphLine = iLine;	// update cached value
+		}
+		float	fOffset = fSlideSpan;
+		if (pGlyphRunDescription->string[iGlyph] != ' ') {	// exclude spaces
+			if (m_bIsGlyphRising)	// if glyph rises
+				fOffset = -fOffset;	// negate offset
+			m_bIsGlyphRising ^= 1;	// alternate
+		}
+		m_aGlyphOffset[iGlyph].ascenderOffset += fOffset;
+	}
+	m_pD2DDeviceContext->DrawGlyphRun(CD2DPointF(fBaselineOriginX, fBaselineOriginY), 
+		&glyphRun, m_pDrawBrush, measuringMode);
+	return S_OK;
+}
+
 bool CSloganDraw::OnDraw()
 {
 	m_pD2DDeviceContext->Clear(m_clrBkgnd);	// clear frame to background color
 	double	fTransElapsed = m_timerTrans.Elapsed();	// elapsed time since transition started
 	double	fTransRemain = m_fTransDuration - fTransElapsed;	// remaining transition time
+	bool	bTransComplete;
 	if (fTransRemain > 0) {	// if transition has time remaining
-		m_fTransProgress = 1 - double(fTransRemain) / m_fTransDuration;
+		m_fTransProgress = 1 - fTransRemain / m_fTransDuration;
+		bTransComplete = false;
 	} else {	// transition is complete
 		m_fTransProgress = 1;
+		bTransComplete = true;
 	}
 	switch (m_iTransType) {	// switch on transition type
 	case TT_SCROLL_LR:
@@ -474,18 +565,26 @@ bool CSloganDraw::OnDraw()
 	case TT_TILE:
 		TransTile();
 		break;
+	case TT_CONVERGE_VERT:
+		TransConverge();
+		break;
 	default:
 		NODEFAULTCASE;	// logic error
 	}
+#if 0	// draw bounds (debug only)
+	CKD2DRectF	rText;
+	GetTextBounds(rText);
+	m_pD2DDeviceContext->DrawRectangle(rText, m_pDrawBrush);
+#endif
 	m_bIsTransStart = false;	// reset transition start flag
 	switch (m_iState) {
 	case ST_TRANS_IN:
-		if (m_fTransProgress >= 1) {	// if transition in completed
+		if (bTransComplete) {	// if transition in completed
 			if (m_nHoldDuration > 0) {	// if hold desired
 				StartIdle(m_nHoldDuration);	// start hold idle
 				m_iState = ST_HOLD;	// set state to hold
 			} else {	// skip hold state
-				m_iState = ST_TRANS_OUT;	// set state to transition out
+				StartTrans(ST_TRANS_OUT);	// start transition out
 			}
 		}
 		break;
@@ -497,7 +596,7 @@ bool CSloganDraw::OnDraw()
 		}
 		break;
 	case ST_TRANS_OUT:
-		if (m_fTransProgress >= 1) {	// if transition out completed
+		if (bTransComplete) {	// if transition out completed
 			if (m_nPauseDuration > 0) {	// if pause desired
 				StartIdle(m_nPauseDuration);	// start pause idle
 				m_iState = ST_PAUSE;	// set state to pause

@@ -12,6 +12,7 @@
 		02		28oct25	add capture
 		03		29oct25	add pause
 		04		30oct25	move parameters to base class
+		05		01nov25	add vertical converge transition
 
 */
 
@@ -23,6 +24,7 @@
 #include "Benchmark.h"
 #include "D2DHelper.h"
 #include "SloganParams.h"
+#include "TextRenderer.h"
 
 #define CAPTURE_FRAMES 0	// non-zero to capture frames
 
@@ -30,7 +32,7 @@
 #include "D2DCapture.h"
 #endif	// CAPTURE_FRAMES
 
-class CSloganDraw : public CRenderThread, protected CSloganParams {
+class CSloganDraw : public CRenderThread, protected CSloganParams, protected CTextRenderer {
 public:
 // Construction
 	CSloganDraw();
@@ -69,11 +71,16 @@ protected:
 		TT_SCALE_VERT,	// scale vertically
 		TT_SCALE_BOTH,	// scale both axes
 		TT_TILE,		// reveal or cover with tiles
+		TT_CONVERGE_VERT,	// converge vertically
 		TRANS_TYPES
 	};
 	enum {
 		AA_MARGIN = 1,	// extra margin to account for antialiasing
 	};
+
+// Types
+	typedef CArrayEx<DWRITE_GLYPH_OFFSET, DWRITE_GLYPH_OFFSET&> CGlyphOffsetArray;
+	typedef CArrayEx<DWRITE_LINE_METRICS, DWRITE_LINE_METRICS&> CLineMetricsArray;
 
 // Members
 	CComPtr<ID2D1SolidColorBrush>	m_pBkgndBrush;	// background brush interface
@@ -100,6 +107,11 @@ protected:
 	CSize	m_szTileLayout;		// tiling layout, in rows and columns
 	CD2DPointF	m_ptTileOffset;	// tile offset, in DIPs
 	CIntArrayEx	m_aTileIdx;		// array of tile indices
+	CGlyphOffsetArray	m_aGlyphOffset;	// array of glyph offsets, for text renderer
+	CLineMetricsArray	m_aLineMetrics;	// array of line metrics, for text renderer
+	bool	m_bIsGlyphRising;	// true if glyph is rising; for vertical converge
+	int		m_iGlyphLine;		// index of line text renderer is currently on
+	CIntArrayEx	m_aCharToLine;	// for each character of slogan, index of its line
 
 #if CAPTURE_FRAMES	// if capturing frames
 	class CMyD2DCapture : public CD2DCapture {
@@ -118,6 +130,14 @@ protected:
 	virtual	void	OnResize();
 	virtual	bool	OnDraw();
 
+// COM overrides
+	// AddRef and Release should never be called, but overload them safely anyway
+	IFACEMETHOD_(ULONG, AddRef)() { return 1; }
+	IFACEMETHOD_(ULONG, Release)() { return 1; }
+    IFACEMETHOD(DrawGlyphRun)(void* pClientDrawingContext, FLOAT fBaselineOriginX, 
+		FLOAT fBaselineOriginY, DWRITE_MEASURING_MODE measuringMode, DWRITE_GLYPH_RUN const* pGlyphRun, 
+		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, IUnknown* pClientDrawingEffect);
+
 // Helpers
 	void	Init();
 	bool	IsTransOut() const;
@@ -135,6 +155,9 @@ protected:
 	void	TransScale();
 	void	TransTile();
 	void	InitTiling(const CKD2DRectF& rText);
+	void	TransConverge();
+	bool	GetLineMetrics();
+	bool	MakeCharToLineTable();
 	static double	Lerp(double a, double b, double t);
 };
 

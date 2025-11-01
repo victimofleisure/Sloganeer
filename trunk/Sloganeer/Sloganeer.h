@@ -8,6 +8,7 @@
 		revision history:
 		rev		date	comments
         00      24oct25	initial version
+        01      01nov25	add error log
 
 */
 
@@ -21,13 +22,14 @@
 #endif
 
 #include "resource.h"		// main symbols
-
+#include "CritSec.h"
+#include "WinAppCK.h"
 
 // CSloganeerApp:
 // See Sloganeer.cpp for the implementation of this class
 //
 
-class CSloganeerApp : public CWinApp
+class CSloganeerApp : public CWinAppCK
 {
 public:
 	CSloganeerApp();
@@ -36,11 +38,13 @@ public:
 public:
 	virtual BOOL InitInstance();
 
-// Attributes
-	static	CString GetVersionString();
+// Operations
+	bool	WriteLogEntry(CString sLogEntry);
 
 // Implementation
 protected:
+	WCritSec	m_csErrorLog;		// critical section for error log file
+
 	DECLARE_MESSAGE_MAP()
 };
 

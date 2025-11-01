@@ -14,7 +14,7 @@
 #include "stdafx.h"
 #include "Sloganeer.h"
 #include "SloganParams.h"
-#include "StdioFileUTF.h"
+#include "StdioFileEx.h"
 #include <string>	// for stoi and stof
 
 const LPCTSTR CParamsParser::m_aFlag[FLAGS] = {
@@ -139,11 +139,7 @@ bool CParamsParser::Parse()
 	theApp.ParseCommandLine(*this);
 	if (!m_strFileName.IsEmpty()) {	// if file name specified
 		// assume UTF-8 text file containing slogans to display, one per line
-		CStdioFileUTF	fSlogan;
-		if (!fSlogan.Open(m_strFileName, CFile::modeRead)) {	// if open error
-			OnError(IDS_ERR_FILE_NOT_FOUND, m_strFileName);
-			return false;
-		}
+		CStdioFileEx	fSlogan(m_strFileName, CFile::modeRead);
 		CStringArrayEx	aSlogan;
 		CString	sSlogan;
 		while (fSlogan.ReadString(sSlogan)) {	// read slogan string
