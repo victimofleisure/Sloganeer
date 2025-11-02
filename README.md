@@ -43,7 +43,7 @@ Each slogan cycles through the following four states:
 
 The duration of each of these states can be set independently. To skip a state, give it a duration of zero.
 
-Note that if you only specify the transdur option, it applies to both incoming and outgoing transitions. To make the outgoing transition a different duration from the incoming transition, you must also specifiy the outdur option.
+Note that if you only specify the transdur option, it applies to both incoming and outgoing transitions. To make the outgoing transition a different duration from the incoming transition, you must also specify the outdur option.
 
 For example, to set incoming transitions to 1 second, a hold time of 3 seconds, no outgoing transition, and a pause of 1.5 seconds:
 -transdur 1 -holddur 3 -outdur 0 -pausedur 1.5
