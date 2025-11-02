@@ -4,7 +4,7 @@
 
 # Command line
 
-### Usage: sloganeer slogans_path [options]
+### Usage: Sloganeer slogans_path [options]
 
 Sample usage: Sloganeer myslogans.txt -fontname Calibri -fontweight 400
 
