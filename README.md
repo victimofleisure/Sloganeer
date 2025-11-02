@@ -48,8 +48,6 @@ Note that if you only specify the transdur option, it applies to both incoming a
 For example, to set incoming transitions to 1 second, a hold time of 3 seconds, no outgoing transition, and a pause of 1.5 seconds:
 -transdur 1 -holddur 3 -outdur 0 -pausedur 1.5
 
-To enter or exit full screen mode, use the app's system menu or the shortcut key F11.
-
 ### Slogans file
 
 The slogans file is a plain text file containing the slogans to be displayed. Each non-blank line of the file is interpreted as a single slogan. You can create multi-line slogans by inserting tab characters where you want line breaks. Each tab in a slogan is replaced with a newline when the text is displayed.
@@ -75,6 +73,10 @@ The slogans file must be in either ANSI or UTF-8 format. To use non-ANSI charact
 
 Randomized slogan order, white text on black background, 150 point Arial Black (weight 900), each transition takes two seconds, with one second of hold time and no pause between slogans.
 
+### Shortcuts
+
+To enter or exit full screen mode, use the app's system menu or the shortcut key F11.
+
 ### Installation
 
 There is no installer. Unzip the distribution file and run the executable. The application does not store settings in the registry or anywhere else.
@@ -82,5 +84,3 @@ There is no installer. Unzip the distribution file and run the executable. The a
 ### Development
 
 There's a [development blog](https://sloganeers.blogspot.com/). See you there!
-
-
