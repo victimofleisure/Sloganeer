@@ -68,6 +68,7 @@ The slogans file must be in either ANSI or UTF-8 format. To use non-ANSI charact
 * Scale vertically
 * Scale both axes
 * Reveal or cover with tiles
+* Converge horizontally or vertically
 
 ### Defaults
 
