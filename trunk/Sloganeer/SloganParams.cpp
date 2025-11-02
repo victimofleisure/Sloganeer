@@ -31,7 +31,8 @@ CSloganParams::CSloganParams() :
 	m_bNoWordWrap = false;
 	m_nHoldDuration = 1000;
 	m_nPauseDuration = 0;
-	m_fTransDuration = 2.0f;
+	m_fInTransDuration = 2.0f;
+	m_fOutTransDuration = 2.0f;
 	m_sFontName = L"Arial";
 	m_fFontSize = 150.0f;
 	m_nFontWeight = DWRITE_FONT_WEIGHT_BLACK;
@@ -53,6 +54,7 @@ CParamsParser::CParamsParser(CSloganParams& params) : m_params(params)
 {
 	m_iFlag = -1;
 	m_bError = false;
+	m_bHasOutDur = false;
 }
 
 void CParamsParser::OnError(int nErrID, LPCTSTR pszParam)
@@ -105,7 +107,11 @@ void CParamsParser::ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast)
 				m_params.m_nFontWeight = std::stoi(pszParam);
 				break;
 			case FLAG_transdur:
-				m_params.m_fTransDuration = std::stof(pszParam);
+				m_params.m_fInTransDuration = std::stof(pszParam);
+				break;
+			case FLAG_outdur:
+				m_params.m_fOutTransDuration = std::stof(pszParam);
+				m_bHasOutDur = true;
 				break;
 			case FLAG_holddur:
 				m_params.m_nHoldDuration = Round(std::stof(pszParam) * 1000);
@@ -131,6 +137,8 @@ void CParamsParser::ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast)
 		if (m_iFlag >= 0) {	// if parameter expected
 			OnError(IDS_ERR_MISSING_PARAM, m_aFlag[m_iFlag]);
 		}
+		if (!m_bHasOutDur)	// if outgoing transition duration not specified
+			m_params.m_fOutTransDuration = m_params.m_fInTransDuration;	// same as incoming
 	}
 }
 

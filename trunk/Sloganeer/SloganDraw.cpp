@@ -52,6 +52,7 @@ void CSloganDraw::Init()
 	m_iState = ST_TRANS_OUT;
 	m_iSlogan = 0;
 	m_iTransType = 0;
+	m_fTransDuration = 2.0f;
 	m_fTileSize = 0;
 	m_szTileLayout = CSize(0, 0);
 	m_ptTileOffset = CD2DPointF(0, 0);
@@ -150,7 +151,7 @@ bool CSloganDraw::OnThreadCreate()
 	if (m_bSeqSlogans) {	// if showing slogans sequentially
 		m_iSlogan = -1;	// avoid skipping first slogan
 	}
-	StartCycle();	// start the first cycle
+	StartSlogan();	// start the first slogan
 	return true;
 }
 
@@ -159,19 +160,20 @@ void CSloganDraw::OnResize()
 	OnTextChange();
 }
 
-void CSloganDraw::StartTrans(int nState)
+void CSloganDraw::StartTrans(int nState, float fDuration)
 {
 	ASSERT(nState == ST_TRANS_IN || nState == ST_TRANS_OUT);	// else logic error
 	m_iState = nState;	// set state
+	m_fTransDuration = fDuration;
 	m_bIsTransStart = true;	// set transition start flag
 	m_timerTrans.Reset();	// reset transition timer
 	m_iTransType = m_rlTransType.GetNext(m_iTransType);	// get next transition type
 	m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());	// remove transform if any
 }
 
-void CSloganDraw::StartCycle()
+void CSloganDraw::StartSlogan()
 {
-	StartTrans(ST_TRANS_IN);
+	StartTrans(ST_TRANS_IN, m_fInTransDuration);	// start incoming transition
 	if (m_bSeqSlogans) {	// if showing slogans sequentially
 		m_iSlogan++;	// next slogan index
 		if (m_iSlogan >= m_aSlogan.GetSize())	// if reached end of slogans
@@ -268,9 +270,9 @@ void CSloganDraw::TransScroll()
 	CD2DSizeF	szRT(GetTextBounds(rText));
 	CD2DSizeF	szText(rText.Size());
 	double	fPhase;
-	if (IsTransOut()) {	// if transition out
+	if (IsTransOut()) {	// if outgoing transition
 		fPhase = m_fTransProgress; 
-	} else {	// transition in
+	} else {	// incoming transition
 		fPhase = m_fTransProgress - 1;	// reverse progress
 	}
 	if (m_iTransType == TT_SCROLL_RL || m_iTransType == TT_SCROLL_BT)	// if reversed
@@ -308,7 +310,7 @@ void CSloganDraw::TransReveal()
 	case TT_REVEAL_LR:
 		{
 			float	fOffset = DTF(szText.width * m_fTransProgress);
-			if (IsTransOut())	// if transition out
+			if (IsTransOut())	// if outgoing transition
 				fOffset -= szText.width;	// start unmasked
 			rText.OffsetRect(fOffset, 0);	// offset text mask horizontally
 		}
@@ -316,7 +318,7 @@ void CSloganDraw::TransReveal()
 	case TT_REVEAL_TB:
 		{
 			float	fOffset = DTF(szText.height * m_fTransProgress);
-			if (IsTransOut())	// if transition out
+			if (IsTransOut())	// if outgoing transition
 				fOffset -= szText.height;	// start unmasked
 			rText.OffsetRect(0, fOffset);	// offset text mask vertically
 		}
@@ -337,7 +339,7 @@ double CSloganDraw::Lerp(double a, double b, double t)
 void CSloganDraw::TransFade()
 {
 	double	fBright = DTF(m_fTransProgress);
-	if (IsTransOut())	// if transition out
+	if (IsTransOut())	// if outgoing transition
 		fBright = 1 - fBright;	// invert brightness
 	m_pVarBrush->SetColor(D2D1::ColorF(
 		DTF(Lerp(m_clrBkgnd.r, m_clrDraw.r, fBright)),
@@ -354,7 +356,7 @@ void CSloganDraw::TransTypewriter()
 	int	nCharsTyped = Round(nTextLen * m_fTransProgress);
 	DWRITE_TEXT_RANGE	trShow = {0, nCharsTyped};
 	DWRITE_TEXT_RANGE	trHide = {nCharsTyped, nTextLen - nCharsTyped};
-	if (IsTransOut()) {	// if transition out
+	if (IsTransOut()) {	// if outgoing transition
 		std::swap(trShow, trHide);	// swap text ranges
 	}
 	m_pTextLayout->SetDrawingEffect(m_pDrawBrush, trShow);	// set brush for shown characters
@@ -366,9 +368,9 @@ void CSloganDraw::TransTypewriter()
 void CSloganDraw::TransScale()
 {
 	float	fScale;
-	if (IsTransOut()) {	// if transition out
+	if (IsTransOut()) {	// if outgoing transition
 		fScale = DTF(1 - m_fTransProgress);
-	} else {	// hold or transition in
+	} else {	// hold or incoming transition
 		fScale = DTF(m_fTransProgress);
 	}
 	CD2DSizeF	szScale;
@@ -429,9 +431,9 @@ void CSloganDraw::TransTile()
 	CD2DPointF	ptOrigin(0, 0);
 	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pDrawBrush);	// draw text
 	float	fPhase;
-	if (IsTransOut()) {	// if transition out
+	if (IsTransOut()) {	// if outgoing transition
 		fPhase = DTF(m_fTransProgress);
-	} else {	// hold or transition in
+	} else {	// hold or incoming transition
 		fPhase = DTF(1 - m_fTransProgress);
 	}
 	int	nTiles = Round(m_aTileIdx.GetSize() * fPhase);	// number of tiles to draw
@@ -503,7 +505,7 @@ HRESULT CSloganDraw::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOr
 	CKD2DRectF	rText;
 	CD2DSizeF	szRT = GetTextBounds(rText);
 	double	fPhase = m_fTransProgress;
-	if (!IsTransOut())	// if transition in
+	if (!IsTransOut())	// if incoming transition
 		fPhase = 1 - fPhase;	// invert phase
 	float	fSlideSpan = DTF(max(szRT.height - rText.top, rText.bottom) * fPhase);
 	// odd characters fall and even characters rise, or vice versa
@@ -579,36 +581,36 @@ bool CSloganDraw::OnDraw()
 	m_bIsTransStart = false;	// reset transition start flag
 	switch (m_iState) {
 	case ST_TRANS_IN:
-		if (bTransComplete) {	// if transition in completed
+		if (bTransComplete) {	// if incoming transition completed
 			if (m_nHoldDuration > 0) {	// if hold desired
 				StartIdle(m_nHoldDuration);	// start hold idle
 				m_iState = ST_HOLD;	// set state to hold
 			} else {	// skip hold state
-				StartTrans(ST_TRANS_OUT);	// start transition out
+				StartTrans(ST_TRANS_OUT, m_fOutTransDuration);	// start outgoing transition
 			}
 		}
 		break;
 	case ST_HOLD:
 		if (!m_bThreadExit) {	// if exit wasn't requested
 			if (ContinueIdle()) {	// if hold completed
-				StartTrans(ST_TRANS_OUT);	// start transition out
+				StartTrans(ST_TRANS_OUT, m_fOutTransDuration);	// start outgoing transition
 			}
 		}
 		break;
 	case ST_TRANS_OUT:
-		if (bTransComplete) {	// if transition out completed
+		if (bTransComplete) {	// if outgoing transition completed
 			if (m_nPauseDuration > 0) {	// if pause desired
 				StartIdle(m_nPauseDuration);	// start pause idle
 				m_iState = ST_PAUSE;	// set state to pause
 			} else {	// skip pause state
-				StartCycle();	// start a new cycle
+				StartSlogan();	// start a new slogan
 			}
 		}
 		break;
 	case ST_PAUSE:
 		if (!m_bThreadExit) {	// if exit wasn't requested
 			if (ContinueIdle()) {	// if pause completed
-				StartCycle();	// start a new cycle
+				StartSlogan();	// start a new slogan
 			}
 		}
 		break;

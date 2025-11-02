@@ -52,9 +52,9 @@ public:
 protected:
 // Constants
 	enum {	// display states
-		ST_TRANS_IN,	// transition in
+		ST_TRANS_IN,	// incoming transition
 		ST_HOLD,		// freeze slogan
-		ST_TRANS_OUT,	// transition out
+		ST_TRANS_OUT,	// outgoing transition
 		ST_PAUSE,		// pause between slogans
 		STATES
 	};
@@ -103,6 +103,7 @@ protected:
 	int		m_iState;			// index of current state
 	int		m_iSlogan;			// index of current slogan
 	int		m_iTransType;		// index of current transition type
+	float	m_fTransDuration;	// duration of current transition, in seconds
 	float	m_fTileSize;		// tile size, in DIPs
 	CSize	m_szTileLayout;		// tiling layout, in rows and columns
 	CD2DPointF	m_ptTileOffset;	// tile offset, in DIPs
@@ -141,8 +142,8 @@ protected:
 // Helpers
 	void	Init();
 	bool	IsTransOut() const;
-	void	StartTrans(int nState);
-	void	StartCycle();
+	void	StartSlogan();
+	void	StartTrans(int nState, float fDuration);
 	void	StartIdle(int nDuration);
 	bool	ContinueIdle();
 	bool	OnFontChange();

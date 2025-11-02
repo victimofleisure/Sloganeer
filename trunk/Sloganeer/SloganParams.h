@@ -25,7 +25,8 @@ public:
 	bool	m_bNoWordWrap;		// true if automatic word wrapping is disabled
 	int		m_nHoldDuration;	// hold duration in milliseconds
 	int		m_nPauseDuration;	// pause duration in milliseconds
-	float	m_fTransDuration;	// transition duration in seconds
+	float	m_fInTransDuration;	// incoming transition duration in seconds
+	float	m_fOutTransDuration;	// outgoing transition duration in seconds
 	CString	m_sFontName;		// font name
 	float	m_fFontSize;		// font size, in points
 	int		m_nFontWeight;		// font weight, from 1 to 999
@@ -61,6 +62,7 @@ protected:
 	CSloganParams&	m_params;	// reference to parameters instance
 	int		m_iFlag;	// index of flag expecting a parameter
 	bool	m_bError;	// true if error occurred
+	bool	m_bHasOutDur;	// true if outgoing duration was specified
 
 // Helpers
 	void	OnError(int nErrID, LPCTSTR pszParam);
