@@ -6,6 +6,8 @@
 
 ### Usage: sloganeer slogans_path [options]
 
+Sample usage: Sloganeer myslogans.txt -fontname Calibri -fontweight 400
+
 |Option|Description|
 |---|---|
 |slogans_path|The path of an ANSI or UTF-8 text file containing the slogans to display, one slogan per line; if the path contains spaces, enclose it in double quotes.|
@@ -31,8 +33,6 @@
 |&#8209;fontweight&nbsp;400|Set the font weight to 400.|
 |&#8209;transdur&nbsp;2.5|Set the transition duration to 2.5 seconds.|
 |&#8209;bgcolor&nbsp;A9A9A9|Set the background color to dark gray.|
-
-Sample usage: Sloganeer myslogans.txt -seqtext -fontname Calibri -fontweight 400
 
 Each slogan cycles through the following four states:
 
