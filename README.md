@@ -41,7 +41,7 @@ Each slogan cycles through the following four states:
 3. Outgoing transition
 4. Pause
 
-The duration of each of these states can be set independently.
+The duration of each of these states can be set independently. To eliminate a state, give it a duration of zero.
 
 Note that if you only specify the transdur option, it applies to both incoming and outgoing transitions. To make the outgoing transition a different duration from the incoming transition, you must also specifiy the outdur option.
 
