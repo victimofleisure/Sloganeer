@@ -6,7 +6,7 @@
 
 ### Usage: Sloganeer slogans_path [options]
 
-Sample usage: Sloganeer myslogans.txt -fontname Calibri -fontweight 400
+Simple example: Sloganeer myslogans.txt -fontname Calibri -fontsize 120
 
 |Option|Description|
 |---|---|
@@ -47,6 +47,8 @@ Note that if you only specify the transdur option, it applies to both incoming a
 
 For example, to set incoming transitions to 1 second, a hold time of 3 seconds, no outgoing transition, and a pause of 1.5 seconds:
 -transdur 1 -holddur 3 -outdur 0 -pausedur 1.5
+
+To enter or exit exclusive full screen mode, use the F11 shortcut key or the app's system menu.
 
 ### Slogans file
 
