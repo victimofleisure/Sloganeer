@@ -15,7 +15,7 @@
 |&#8209;fontweight&nbsp;WEIGHT|Font weight from 1 to 999.|
 |&#8209;transdur&nbsp;SECS|Transition duration in seconds; fractions of a second are allowed. Applies to both incoming and outgoing transitions unless the outdur option is also specified.|
 |&#8209;holddur&nbsp;SECS|Duration for which slogan is immobile, in seconds; fractions of a second are allowed.|
-|&#8209;outdur&nbsp;SECS|Outgoing transition duration in seconds; fractions of a second are allowed. Only needed if the outgoing transitions should have a different duration than incoming transitions.|
+|&#8209;outdur&nbsp;SECS|Outgoing transition duration in seconds; fractions of a second are allowed. Only needed if outgoing transitions should have a different duration than incoming transitions.|
 |&#8209;pausedur&nbsp;SECS|Duration of pause between slogans, in seconds; fractions of a second are allowed.|
 |&#8209;seqtext|Display slogans in sequential order instead of randomizing them.|
 |&#8209;bgcolor&nbsp;COLOR|Background color in hexadecimal.|
