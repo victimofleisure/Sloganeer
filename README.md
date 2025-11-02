@@ -13,8 +13,9 @@
 |&#8209;fontsize&nbsp;SIZE|Font size in points.|
 |&#8209;fontname&nbsp;NAME|Font name; if the font name contains spaces, enclose it in double quotes.|
 |&#8209;fontweight&nbsp;WEIGHT|Font weight from 1 to 999.|
-|&#8209;transdur&nbsp;SECS|Transition duration in seconds; fractions of a second are allowed.|
+|&#8209;transdur&nbsp;SECS|Transition duration in seconds; fractions of a second are allowed. Applies to both incoming and outgoing transitions unless outdur option is specified.|
 |&#8209;holddur&nbsp;SECS|Duration for which slogan is immobile, in seconds; fractions of a second are allowed.|
+|&#8209;outdur&nbsp;SECS|Outgoing transition duration in seconds; fractions of a second are allowed. Only needed if outgoing transitions should have a different duration than incoming transitions.|
 |&#8209;pausedur&nbsp;SECS|Duration of pause between slogans, in seconds; fractions of a second are allowed.|
 |&#8209;seqtext|Display slogans in sequential order instead of randomizing them.|
 |&#8209;bgcolor&nbsp;COLOR|Background color in hexadecimal.|
@@ -32,6 +33,20 @@
 |&#8209;bgcolor&nbsp;A9A9A9|Set the background color to dark gray.|
 
 Sample usage: Sloganeer myslogans.txt -seqtext -fontname Calibri -fontweight 400
+
+Each slogan cycles through the following four states:
+
+1. Incoming transition
+2. Hold
+3. Outgoing transition
+4. Pause
+
+The duration of each of these states can be set independently.
+
+Note that if you only specify the transdur option, it applies to both incoming and outgoing transitions. To make the outgoing transition a different duration from the incoming transition, you must also specifiy the outdur option.
+
+For example, to set incoming transitions to 1 second, a hold time of 3 seconds, no outgoing transition, and a pause of 1.5 seconds:
+-transdur 1 -holddur 3 -outdur 0 -pausedur 1.5
 
 ### Slogans file
 
