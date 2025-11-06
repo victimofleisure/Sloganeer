@@ -184,6 +184,8 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>version.lib;D2d1.lib;D3D11.lib;dwrite.lib</AdditionalDependencies>
+      <StripPrivateSymbols>
+      </StripPrivateSymbols>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>

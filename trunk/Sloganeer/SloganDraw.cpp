@@ -13,6 +13,7 @@
 		03		29oct25	add pause
 		04		30oct25	move parameters to base class
 		05		01nov25	add vertical converge transition
+		06		06nov25	add horizontal converge transition
 
 */
 
@@ -489,26 +490,57 @@ void CSloganDraw::TransConverge()
 	m_pTextLayout->Draw(0, this, 0, 0);
 }
 
-HRESULT CSloganDraw::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOriginX, 
-	FLOAT fBaselineOriginY, DWRITE_MEASURING_MODE measuringMode, DWRITE_GLYPH_RUN const* pGlyphRun, 
-	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, IUnknown* pClientDrawingEffect)
+void CSloganDraw::TransConvergeHorz(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
 {
-	UINT	nGlyphs = pGlyphRun->glyphCount;
-	m_aGlyphOffset.SetSize(nGlyphs);	// array is member to reduce reallocation
-	if (pGlyphRun->glyphOffsets != NULL)	// if caller specified glyph offsets, copy them
-		memcpy(m_aGlyphOffset.GetData(), pGlyphRun->glyphOffsets, sizeof(DWRITE_GLYPH_OFFSET) * nGlyphs);
-	else {	// no glyph offsets, so zero our array
-		ZeroMemory(m_aGlyphOffset.GetData(), sizeof(DWRITE_GLYPH_OFFSET) * nGlyphs);
-	}
-	DWRITE_GLYPH_RUN	glyphRun = *pGlyphRun;	// copy entire glyph run struct
-	glyphRun.glyphOffsets = m_aGlyphOffset.GetData();	// override glyph run's offset array
-	CKD2DRectF	rText;
-	CD2DSizeF	szRT = GetTextBounds(rText);
+	// odd lines slide left and even lines slide right, or vice versa
 	double	fPhase = m_fTransProgress;
 	if (!IsTransOut())	// if incoming transition
 		fPhase = 1 - fPhase;	// invert phase
-	float	fSlideSpan = DTF(max(szRT.height - rText.top, rText.bottom) * fPhase);
+	CKD2DRectF	rText;
+	CD2DSizeF	szRT = GetTextBounds(rText);
+	float	fSlideSpan = DTF(max(szRT.width - rText.left, rText.right) * fPhase);
+	UINT	nGlyphs = pGlyphRun->glyphCount;
+	if (m_aLineMetrics.GetSize() == 1) {	// if single line
+		CD2DSizeF	szText = rText.Size();
+		CKD2DRectF	rClip(CD2DPointF(0, rText.top), CD2DSizeF(szRT.width, szText.height / 2));
+		for (int iStrip = 0; iStrip < 2; iStrip++) {	// for each of two horizontal strips
+			if (iStrip)	// if second strip
+				rClip.OffsetRect(0, szText.height / 2);
+			for (UINT iGlyph = 0; iGlyph < nGlyphs; iGlyph++) {	// for each glyph
+				float	fOffset = fSlideSpan;
+				if (iStrip)	// if second strip
+					fOffset = -fOffset * 2;	// opposite slide
+				m_aGlyphOffset[iGlyph].advanceOffset += fOffset;
+			}
+			m_pD2DDeviceContext->PushAxisAlignedClip(rClip, D2D1_ANTIALIAS_MODE_ALIASED);
+			m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
+			m_pD2DDeviceContext->PopAxisAlignedClip();
+		}
+	} else {	// multiple lines
+		for (UINT iGlyph = 0; iGlyph < nGlyphs; iGlyph++) {	// for each glyph
+			int	iChar = pGlyphRunDescription->textPosition + iGlyph;
+			int	iLine = m_aCharToLine[iChar];
+			float	fOffset = fSlideSpan;
+			if (iLine & 1)	// if odd line
+				fOffset = -fOffset;	// opposite slide
+			m_aGlyphOffset[iGlyph].advanceOffset += fOffset;
+		}
+		m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
+	}
+}
+
+void CSloganDraw::TransConvergeVert(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
+{
 	// odd characters fall and even characters rise, or vice versa
+	double	fPhase = m_fTransProgress;
+	if (!IsTransOut())	// if incoming transition
+		fPhase = 1 - fPhase;	// invert phase
+	CKD2DRectF	rText;
+	CD2DSizeF	szRT = GetTextBounds(rText);
+	float	fSlideSpan = DTF(max(szRT.height - rText.top, rText.bottom) * fPhase);
+	UINT	nGlyphs = pGlyphRun->glyphCount;
 	for (UINT iGlyph = 0; iGlyph < nGlyphs; iGlyph++) {	// for each glyph
 		int	iChar = pGlyphRunDescription->textPosition + iGlyph;
 		int	iLine = m_aCharToLine[iChar];
@@ -524,8 +556,33 @@ HRESULT CSloganDraw::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOr
 		}
 		m_aGlyphOffset[iGlyph].ascenderOffset += fOffset;
 	}
-	m_pD2DDeviceContext->DrawGlyphRun(CD2DPointF(fBaselineOriginX, fBaselineOriginY), 
-		&glyphRun, m_pDrawBrush, measuringMode);
+	m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
+}
+
+HRESULT CSloganDraw::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOriginX, 
+	FLOAT fBaselineOriginY, DWRITE_MEASURING_MODE measuringMode, DWRITE_GLYPH_RUN const* pGlyphRun, 
+	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, IUnknown* pClientDrawingEffect)
+{
+	UINT	nGlyphs = pGlyphRun->glyphCount;
+	m_aGlyphOffset.SetSize(nGlyphs);	// array is member to reduce reallocation
+	if (pGlyphRun->glyphOffsets != NULL)	// if caller specified glyph offsets, copy them
+		memcpy(m_aGlyphOffset.GetData(), pGlyphRun->glyphOffsets, sizeof(DWRITE_GLYPH_OFFSET) * nGlyphs);
+	else {	// no glyph offsets, so zero our array
+		ZeroMemory(m_aGlyphOffset.GetData(), sizeof(DWRITE_GLYPH_OFFSET) * nGlyphs);
+	}
+	DWRITE_GLYPH_RUN	glyphRun = *pGlyphRun;	// copy entire glyph run struct
+	glyphRun.glyphOffsets = m_aGlyphOffset.GetData();	// override glyph run copy's offset array
+	CD2DPointF	ptBaselineOrigin(fBaselineOriginX, fBaselineOriginY);
+	switch (m_iTransType) {
+	case TT_CONVERGE_HORZ:
+		TransConvergeHorz(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
+		break;
+	case TT_CONVERGE_VERT:
+		TransConvergeVert(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
+		break;
+	default:
+		NODEFAULTCASE;
+	}
 	return S_OK;
 }
 
@@ -567,6 +624,7 @@ bool CSloganDraw::OnDraw()
 	case TT_TILE:
 		TransTile();
 		break;
+	case TT_CONVERGE_HORZ:
 	case TT_CONVERGE_VERT:
 		TransConverge();
 		break;

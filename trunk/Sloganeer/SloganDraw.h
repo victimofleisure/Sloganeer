@@ -13,6 +13,7 @@
 		03		29oct25	add pause
 		04		30oct25	move parameters to base class
 		05		01nov25	add vertical converge transition
+		06		06nov25	add horizontal converge transition
 
 */
 
@@ -71,6 +72,7 @@ protected:
 		TT_SCALE_VERT,	// scale vertically
 		TT_SCALE_BOTH,	// scale both axes
 		TT_TILE,		// reveal or cover with tiles
+		TT_CONVERGE_HORZ,	// converge horizontally
 		TT_CONVERGE_VERT,	// converge vertically
 		TRANS_TYPES
 	};
@@ -157,6 +159,10 @@ protected:
 	void	TransTile();
 	void	InitTiling(const CKD2DRectF& rText);
 	void	TransConverge();
+	void	TransConvergeHorz(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
+	void	TransConvergeVert(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
 	bool	GetLineMetrics();
 	bool	MakeCharToLineTable();
 	static double	Lerp(double a, double b, double t);
