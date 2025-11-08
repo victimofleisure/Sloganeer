@@ -72,6 +72,9 @@
     <ClCompile Include="WinAppCK.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MeltTextProbe.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AboutDlg.h">
@@ -165,6 +168,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="WinAppCK.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MeltTextProbe.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

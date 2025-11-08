@@ -25,6 +25,7 @@
     <ClCompile Include="D2DCapture.cpp" />
     <ClCompile Include="D2DDevCtx.cpp" />
     <ClCompile Include="Event.cpp" />
+    <ClCompile Include="MeltTextProbe.cpp" />
     <ClCompile Include="SloganParams.cpp" />
     <ClCompile Include="PathStr.cpp" />
     <ClCompile Include="RandList.cpp" />
@@ -56,6 +57,7 @@
     <ClInclude Include="Event.h" />
     <ClInclude Include="Globals.h" />
     <ClInclude Include="ILockRingBuf.h" />
+    <ClInclude Include="MeltTextProbe.h" />
     <ClInclude Include="ParamDef.h" />
     <ClInclude Include="SloganParams.h" />
     <ClInclude Include="PathStr.h" />

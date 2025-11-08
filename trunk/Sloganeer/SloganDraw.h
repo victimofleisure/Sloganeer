@@ -14,6 +14,7 @@
 		04		30oct25	move parameters to base class
 		05		01nov25	add vertical converge transition
 		06		06nov25	add horizontal converge transition
+		07		07nov25	add melt transition
 
 */
 
@@ -74,6 +75,7 @@ protected:
 		TT_TILE,		// reveal or cover with tiles
 		TT_CONVERGE_HORZ,	// converge horizontally
 		TT_CONVERGE_VERT,	// converge vertically
+		TT_MELT,		// outline with increasing stroke width
 		TRANS_TYPES
 	};
 	enum {
@@ -91,6 +93,7 @@ protected:
 	CComPtr<IDWriteFactory>	m_pDWriteFactory;	// DirectWrite factory interface
 	CComPtr<IDWriteTextFormat>	m_pTextFormat;	// text format interface
 	CComPtr<IDWriteTextLayout>	m_pTextLayout;	// text layout interface
+	CComPtr<ID2D1StrokeStyle1>	m_pStrokeStyle;	// stroke style for melt effect
 	DWRITE_TEXT_METRICS	m_textMetrics;	// text metrics
 	DWRITE_OVERHANG_METRICS	m_overhangMetrics;	// overhang metrics
 	WEvent	m_evtWake;			// during hold, signals wake from idle
@@ -115,6 +118,7 @@ protected:
 	bool	m_bIsGlyphRising;	// true if glyph is rising; for vertical converge
 	int		m_iGlyphLine;		// index of line text renderer is currently on
 	CIntArrayEx	m_aCharToLine;	// for each character of slogan, index of its line
+	float	m_fMeltMaxStroke;	// maximum outline stroke for melt effect, in DIPs
 
 #if CAPTURE_FRAMES	// if capturing frames
 	class CMyD2DCapture : public CD2DCapture {
@@ -151,6 +155,7 @@ protected:
 	bool	OnFontChange();
 	bool	OnTextChange();
 	CD2DSizeF	GetTextBounds(CKD2DRectF& rText) const;
+	bool	CreateStrokeStyle();
 	void	TransScroll();
 	void	TransReveal();
 	void	TransTypewriter();
@@ -163,6 +168,10 @@ protected:
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
 	void	TransConvergeVert(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
+	void	TransMelt();
+	bool	TransMelt(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
+	bool	MeasureMeltStroke();
 	bool	GetLineMetrics();
 	bool	MakeCharToLineTable();
 	static double	Lerp(double a, double b, double t);

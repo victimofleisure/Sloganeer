@@ -14,12 +14,14 @@
 		04		30oct25	move parameters to base class
 		05		01nov25	add vertical converge transition
 		06		06nov25	add horizontal converge transition
+		07		07nov25	add melt transition
 
 */
 
 #include "stdafx.h"
 #include "Sloganeer.h"
 #include "SloganDraw.h"
+#include "MeltTextProbe.h"
 #include <algorithm>	// for swap
 
 #define SEED_WITH_TIME 1	// non-zero to seed pseudorandom sequence with current time
@@ -59,6 +61,7 @@ void CSloganDraw::Init()
 	m_ptTileOffset = CD2DPointF(0, 0);
 	m_bIsGlyphRising = false;
 	m_iGlyphLine = 0;
+	m_fMeltMaxStroke = 0;
 #if CAPTURE_FRAMES	// if capturing frames
 	m_capture.m_pParent = this;
 #endif	// CAPTURE_FRAMES
@@ -131,6 +134,7 @@ bool CSloganDraw::CreateUserResources()
 	CHECK(m_pD2DDeviceContext->CreateSolidColorBrush(m_clrDraw, &m_pVarBrush));
 	CHECK(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(m_pDWriteFactory),
 		reinterpret_cast<IUnknown **>(&m_pDWriteFactory)));
+	CreateStrokeStyle();
 	return OnFontChange();
 }
 
@@ -142,10 +146,14 @@ void CSloganDraw::DestroyUserResources()
 	m_pTextFormat.Release();
 	m_pTextLayout.Release();
 	m_pDWriteFactory.Release();
+	m_pStrokeStyle.Release();
+	if (m_bThreadExit)
+		CoUninitialize();	// needed for WIC
 }
 
 bool CSloganDraw::OnThreadCreate()
 {
+	CHECK(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED));	// needed for WIC
 	if (SEED_WITH_TIME) {
 		srand(GetTickCount());	// seed pseudorandom generator with time
 	}
@@ -153,6 +161,17 @@ bool CSloganDraw::OnThreadCreate()
 		m_iSlogan = -1;	// avoid skipping first slogan
 	}
 	StartSlogan();	// start the first slogan
+	return true;
+}
+
+bool CSloganDraw::CreateStrokeStyle()
+{
+	D2D1_STROKE_STYLE_PROPERTIES1 sp = {};
+	sp.lineJoin = D2D1_LINE_JOIN_ROUND;
+	sp.startCap = D2D1_CAP_STYLE_ROUND;
+	sp.endCap = D2D1_CAP_STYLE_ROUND;
+	sp.miterLimit = 1.f;
+	CHECK(m_pD2DFactory->CreateStrokeStyle(sp, nullptr, 0, &m_pStrokeStyle));
 	return true;
 }
 
@@ -559,6 +578,68 @@ void CSloganDraw::TransConvergeVert(CD2DPointF ptBaselineOrigin, DWRITE_MEASURIN
 	m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
 }
 
+bool CSloganDraw::MeasureMeltStroke()
+{
+	float	fDpiX, fDpiY;
+	m_pD2DDeviceContext->GetDpi(&fDpiX, &fDpiY);
+	CD2DPointF	ptDPI(fDpiX, fDpiY);
+	CMeltTextProbe	mtb(m_pD2DFactory, m_pDWriteFactory, m_pStrokeStyle);
+	if (!mtb.Create(m_aSlogan[m_iSlogan], m_sFontName, 
+		m_fFontSize, m_nFontWeight, ptDPI, m_fMeltMaxStroke))
+		return false;
+#if 0	// non-zero to compare text bitmap with screen text
+	CKD2DRectF	rText;
+	CD2DSizeF	szScrRT = GetTextBounds(rText);
+	CD2DSizeF	szText(rText.Size());
+	CComPtr<ID2D1Bitmap> pTempBmp;
+	CHECK(m_pD2DDeviceContext->CreateBitmapFromWicBitmap(mtb.GetBitmap(), NULL, &pTempBmp));
+	CSize	szBmp(mtb.GetBitmapSize());
+	CKD2DRectF	rOutBmp(
+		CD2DPointF((szScrRT.width - float(szBmp.cx)) / 2, (szScrRT.height - float(szBmp.cy)) / 2), 
+		CD2DSizeF(float(szBmp.cx), float(szBmp.cy)));
+	m_pD2DDeviceContext->DrawBitmap(pTempBmp, rOutBmp);
+	// draw reference text
+	m_pVarBrush->SetColor(D2D1::ColorF(1, 0, 0));
+	m_pD2DDeviceContext->DrawTextLayout(CD2DPointF(0, 0), m_pTextLayout, m_pVarBrush);
+#endif
+	return true;
+}
+
+void CSloganDraw::TransMelt()
+{
+	if (m_bIsTransStart) {	// if start of transition
+		MeasureMeltStroke();	// find appropriate maximum outline stroke
+	}
+	// if pausing between slogans, and outgoing transition complete
+	if (m_nPauseDuration && IsTransOut() && m_fTransProgress >= 1)
+		return;	// avoid potentially showing scraps of unerased text while paused
+	m_pD2DDeviceContext->DrawTextLayout(CD2DPointF(0, 0), m_pTextLayout, m_pDrawBrush);	// fill text
+	m_pTextLayout->Draw(0, this, 0, 0);	// erase text outline
+}
+
+bool CSloganDraw::TransMelt(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
+{
+	double	fPhase = m_fTransProgress;
+	if (!IsTransOut())	// if incoming transition
+		fPhase = 1 - fPhase;	// invert phase
+	CComPtr<ID2D1PathGeometry> pPathGeom;
+	CHECK(m_pD2DFactory->CreatePathGeometry(&pPathGeom));
+	CComPtr<ID2D1GeometrySink> pGeomSink;
+	CHECK(pPathGeom->Open(&pGeomSink));
+	const DWRITE_GLYPH_RUN& run = *pGlyphRun;
+	CComPtr<IDWriteFontFace> pFontFace = run.fontFace;
+	CHECK(pFontFace->GetGlyphRunOutline(run.fontEmSize, run.glyphIndices, run.glyphAdvances, 
+		run.glyphOffsets, run.glyphCount, run.isSideways, run.bidiLevel, pGeomSink));
+	CHECK(pGeomSink->Close());
+	auto mTranslate(D2D1::Matrix3x2F::Translation(ptBaselineOrigin.x, ptBaselineOrigin.y));
+	m_pD2DDeviceContext->SetTransform(mTranslate);
+	float	fStroke = DTF(m_fMeltMaxStroke * fPhase);
+	m_pD2DDeviceContext->DrawGeometry(pPathGeom, m_pBkgndBrush, fStroke, m_pStrokeStyle);
+	m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());	// remove transform
+	return S_OK;
+}
+
 HRESULT CSloganDraw::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOriginX, 
 	FLOAT fBaselineOriginY, DWRITE_MEASURING_MODE measuringMode, DWRITE_GLYPH_RUN const* pGlyphRun, 
 	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, IUnknown* pClientDrawingEffect)
@@ -579,6 +660,9 @@ HRESULT CSloganDraw::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOr
 		break;
 	case TT_CONVERGE_VERT:
 		TransConvergeVert(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
+		break;
+	case TT_MELT:
+		TransMelt(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
 		break;
 	default:
 		NODEFAULTCASE;
@@ -627,6 +711,9 @@ bool CSloganDraw::OnDraw()
 	case TT_CONVERGE_HORZ:
 	case TT_CONVERGE_VERT:
 		TransConverge();
+		break;
+	case TT_MELT:
+		TransMelt();
 		break;
 	default:
 		NODEFAULTCASE;	// logic error
