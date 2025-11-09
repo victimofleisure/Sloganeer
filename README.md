@@ -47,7 +47,7 @@ Note that if you only specify the transdur option, it applies to both incoming a
 
 For example, to set incoming transitions to 1 second, a hold time of 3 seconds, no outgoing transition, and a pause of 1.5 seconds:
 
-`&#8209transdur 1 &#8209holddur 3 &#8209outdur 0 &#8209pausedur 1.5`
+`-transdur 1 -holddur 3 -outdur 0 -pausedur 1.5`
 
 ### Slogans file
 
