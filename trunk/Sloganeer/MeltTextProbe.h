@@ -23,7 +23,6 @@ public:
 	bool	Create(CString sText, CString sFontName, float fFontSize, int nFontWeight, CD2DPointF ptDPI, float &fEraseStroke);
 	IWICBitmap*	GetBitmap();
 	CSize	GetBitmapSize() const;
-	bool	WriteBitmap(LPCTSTR pszImagePath);
 
 protected:
 // Overrides
@@ -54,7 +53,10 @@ protected:
 	CD2DPointF	m_ptText;
 
 // Helpers
+	bool	ProbeText(float &fEraseStroke);
 	bool	OutlineErasesText(float fOutlineStroke);
+	static void	SimplifyText(CString& sText);
+	bool	WriteBitmap(IWICBitmap* pBitmap, LPCTSTR pszImagePath);
 };
 
 inline IWICBitmap* CMeltTextProbe::GetBitmap()
