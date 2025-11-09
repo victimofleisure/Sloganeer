@@ -49,6 +49,7 @@ bool CMeltTextProbe::Create(CString sText, CString sFontName, float fFontSize, i
 	SimplifyText(sText);	// remove whitespace and duplicate characters
 	if (sText.IsEmpty())	// if empty text
 		return false;	// probe is meaningless
+	ASSERT(m_pTextFormat == NULL);	// reuse of this instance is not permitted
 	// create text format instance
 	CHECK(m_pDWriteFactory->CreateTextFormat(
 		sFontName,	// font name
@@ -88,13 +89,14 @@ bool CMeltTextProbe::Create(CString sText, CString sFontName, float fFontSize, i
 		D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), ptDPI.x, ptDPI.y);
 	m_pD2DFactory->CreateWicBitmapRenderTarget(m_pWICBmp, props, &m_pRT);
 	CD2DSizeF	szRT(m_pRT->GetSize());	// get render target size
-    m_pRT->CreateSolidColorBrush(D2D1::ColorF(1, 1, 1), &m_pDrawBrush);
-    m_pRT->CreateSolidColorBrush(D2D1::ColorF(0), &m_pBkgndBrush);
+    m_pRT->CreateSolidColorBrush(D2D1::ColorF(1, 1, 1), &m_pDrawBrush);	// draw in white
+    m_pRT->CreateSolidColorBrush(D2D1::ColorF(0), &m_pBkgndBrush);	// on black background
 	m_ptText = CD2DPointF(overhangMetrics.left + AA_MARGIN, overhangMetrics.top + AA_MARGIN);
 #if WRITE_PROBE_BITMAP
 	OutlineErasesText(0.0f);
 	WriteBitmap(m_pWICBmp, _T("meltprobe.tif"));
 #endif
+	// find smallest outline stroke width that completely erases text
 	return ProbeText(fEraseStroke);
 }
 
@@ -172,7 +174,7 @@ bool CMeltTextProbe::OutlineErasesText(float fOutlineStroke)
 	m_pRT->Clear(D2D1::ColorF(0));	// clear to background color
 	m_pRT->DrawTextLayout(m_ptText, m_pTextLayout, m_pDrawBrush);	// fill text
 	m_pTextLayout->Draw(&fOutlineStroke, this, m_ptText.x, m_ptText.y);	// erase text outline
-	m_pRT->EndDraw();
+	CHECK(m_pRT->EndDraw());
 	CComPtr<IWICBitmapLock> pLock;
 	WICRect r = {0, 0, m_szBmp.cx, m_szBmp.cy};
 	CHECK(m_pWICBmp->Lock(&r, WICBitmapLockRead, &pLock));	// lock bitmap memory
@@ -182,6 +184,8 @@ bool CMeltTextProbe::OutlineErasesText(float fOutlineStroke)
 	pLock->GetStride(&nStride);
 	pLock->GetDataPointer(&cbBufSize, &pBufData);
 	CSize	sz(m_szBmp);
+	// only the least significant (blue) color channel is checked;
+	// that's fine as we're drawing in white on a black background
 	for (int y = 0; y < sz.cy; ++y) {	// for each row
 		const BYTE* pRow = pBufData + y * nStride;
 		for (int x = 0; x < sz.cx; ++x) {	// for each column
