@@ -26,7 +26,7 @@
 #include "Benchmark.h"
 #include "D2DHelper.h"
 #include "SloganParams.h"
-#include "TextRenderer.h"
+#include "MeltProbe.h"
 
 #define CAPTURE_FRAMES 0	// non-zero to capture frames
 
@@ -120,6 +120,8 @@ protected:
 	int		m_iGlyphLine;		// index of line text renderer is currently on
 	CIntArrayEx	m_aCharToLine;	// for each character of slogan, index of its line
 	float	m_fMeltMaxStroke;	// maximum outline stroke for melt effect, in DIPs
+	CMeltProbeWorker	m_thrMeltWorker;	// melt probe worker thread instance
+	CArrayEx<float, float>	m_aMeltStroke;	// array of cached melt outline strokes
 
 #if CAPTURE_FRAMES	// if capturing frames
 	class CMyD2DCapture : public CD2DCapture {
@@ -173,6 +175,7 @@ protected:
 	void	TransMelt();
 	bool	TransMelt(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
+	bool	LaunchMeltWorker();
 	bool	MeasureMeltStroke();
 	bool	GetLineMetrics();
 	bool	MakeCharToLineTable();

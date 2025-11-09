@@ -22,7 +22,6 @@ ing// Copyleft 2025 Chris Korda
 #include "stdafx.h"
 #include "Sloganeer.h"
 #include "SloganDraw.h"
-#include "MeltTextProbe.h"
 #include <algorithm>	// for swap
 
 #define SEED_WITH_TIME 1	// non-zero to seed pseudorandom sequence with current time
@@ -152,18 +151,14 @@ bool CSloganDraw::OnThreadCreate()
 	if (m_bSeqSlogans) {	// if showing slogans sequentially
 		m_iSlogan = -1;	// avoid skipping first slogan
 	}
+	LaunchMeltWorker();
 	StartSlogan();	// start the first slogan
 	return true;
 }
 
 bool CSloganDraw::CreateStrokeStyle()
 {
-	D2D1_STROKE_STYLE_PROPERTIES1 sp = {};
-	sp.lineJoin = D2D1_LINE_JOIN_ROUND;
-	sp.startCap = D2D1_CAP_STYLE_ROUND;
-	sp.endCap = D2D1_CAP_STYLE_ROUND;
-	sp.miterLimit = 1.f;
-	CHECK(m_pD2DFactory->CreateStrokeStyle(sp, nullptr, 0, &m_pStrokeStyle));
+	CHECK(CMeltProbeWorker::CreateStrokeStyle(m_pD2DFactory, &m_pStrokeStyle));
 	return true;
 }
 
@@ -588,30 +583,29 @@ void CSloganDraw::TransConvergeVert(CD2DPointF ptBaselineOrigin, DWRITE_MEASURIN
 	m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
 }
 
-class CMyMeltTextProbe : public CMeltTextProbe {
-public:
-	CMyMeltTextProbe(ID2D1Factory1* pD2DFactory, IDWriteFactory* pDWriteFactory, ID2D1StrokeStyle1* pStrokeStyle)
-		: CMeltTextProbe(pD2DFactory, pDWriteFactory, pStrokeStyle) {}
-	virtual void OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate) {
-		theApp.OnError(hr, pszSrcFileName, nLineNum, pszSrcFileDate);	// route errors to application handler
-	}
-};
+bool CSloganDraw::LaunchMeltWorker()
+{
+	CD2DPointF	ptDPI;
+	m_pD2DDeviceContext->GetDpi(&ptDPI.x, &ptDPI.y);
+	m_aMeltStroke.SetSize(m_aSlogan.GetSize());	// allocate destination stroke array
+	return m_thrMeltWorker.Create(m_aSlogan, m_sFontName,	// launch worker thread
+		m_fFontSize, m_nFontWeight, ptDPI, m_aMeltStroke);
+}
 
 bool CSloganDraw::MeasureMeltStroke()
 {
-	float	fDpiX, fDpiY;
-	m_pD2DDeviceContext->GetDpi(&fDpiX, &fDpiY);
-	CD2DPointF	ptDPI(fDpiX, fDpiY);
-	CMyMeltTextProbe	mtb(m_pD2DFactory, m_pDWriteFactory, m_pStrokeStyle);
-	if (!mtb.Create(m_sSlogan, m_sFontName, m_fFontSize, m_nFontWeight, ptDPI, m_fMeltMaxStroke))
+	CD2DPointF	ptDPI;
+	m_pD2DDeviceContext->GetDpi(&ptDPI.x, &ptDPI.y);
+	CMeltProbe	probe(m_pD2DFactory, m_pDWriteFactory, m_pStrokeStyle);
+	if (!probe.Create(m_sSlogan, m_sFontName, m_fFontSize, m_nFontWeight, ptDPI, m_fMeltMaxStroke))
 		return false;
 #if 0	// non-zero to compare text bitmap with screen text
 	CKD2DRectF	rText;
 	CD2DSizeF	szScrRT = GetTextBounds(rText);
 	CD2DSizeF	szText(rText.Size());
 	CComPtr<ID2D1Bitmap> pTempBmp;
-	CHECK(m_pD2DDeviceContext->CreateBitmapFromWicBitmap(mtb.GetBitmap(), NULL, &pTempBmp));
-	CSize	szBmp(mtb.GetBitmapSize());
+	CHECK(m_pD2DDeviceContext->CreateBitmapFromWicBitmap(probe.GetBitmap(), NULL, &pTempBmp));
+	CSize	szBmp(probe.GetBitmapSize());
 	CKD2DRectF	rOutBmp(
 		CD2DPointF((szScrRT.width - float(szBmp.cx)) / 2, (szScrRT.height - float(szBmp.cy)) / 2), 
 		CD2DSizeF(float(szBmp.cx), float(szBmp.cy)));
@@ -626,7 +620,11 @@ bool CSloganDraw::MeasureMeltStroke()
 void CSloganDraw::TransMelt()
 {
 	if (m_bIsTransStart) {	// if start of transition
-		MeasureMeltStroke();	// find appropriate maximum outline stroke
+		if (m_aMeltStroke[m_iSlogan]) {	// if cached melt stroke available
+			m_fMeltMaxStroke = m_aMeltStroke[m_iSlogan];	// use cached value
+		} else {	// melt stroke isn't cached
+			MeasureMeltStroke();	// find appropriate maximum outline stroke
+		}
 	}
 	// if pausing between slogans, and outgoing transition complete
 	if (m_nPauseDuration && IsTransOut() && m_fTransProgress >= 1)

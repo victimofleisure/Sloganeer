@@ -8,12 +8,13 @@
 		revision history:
 		rev		date	comments
         00      08nov25	initial version
+        01      09nov25	add worker thread
 
 */
 
 #include "stdafx.h"
 #include "Sloganeer.h"
-#include "MeltTextProbe.h"
+#include "MeltProbe.h"
 #include "Benchmark.h"
 #include <bitset>
 
@@ -23,7 +24,7 @@
 
 #define WRITE_PROBE_BITMAP	0	// non-zero to write probe bitmap to a file for debugging
 
-CMeltTextProbe::CMeltTextProbe(ID2D1Factory1* pD2DFactory, IDWriteFactory* pDWriteFactory, ID2D1StrokeStyle1* pStrokeStyle)
+CMeltProbe::CMeltProbe(ID2D1Factory1* pD2DFactory, IDWriteFactory* pDWriteFactory, ID2D1StrokeStyle1* pStrokeStyle)
 { 
 	m_pD2DFactory = pD2DFactory;
 	m_pDWriteFactory = pDWriteFactory;
@@ -32,19 +33,16 @@ CMeltTextProbe::CMeltTextProbe(ID2D1Factory1* pD2DFactory, IDWriteFactory* pDWri
 	m_ptText = CD2DPointF(0, 0);
 }
 
-CMeltTextProbe::~CMeltTextProbe()
+CMeltProbe::~CMeltProbe()
 {
 }
 
-void CMeltTextProbe::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate)
+void CMeltProbe::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate)
 {
-	UNREFERENCED_PARAMETER(hr);
-	UNREFERENCED_PARAMETER(pszSrcFileName);
-	UNREFERENCED_PARAMETER(nLineNum);
-	UNREFERENCED_PARAMETER(pszSrcFileDate);
+	theApp.OnError(hr, pszSrcFileName, nLineNum, pszSrcFileDate);	// route errors to application handler
 }
 
-bool CMeltTextProbe::Create(CString sText, CString sFontName, float fFontSize, int nFontWeight, CD2DPointF ptDPI, float &fEraseStroke)
+bool CMeltProbe::Create(CString sText, CString sFontName, float fFontSize, int nFontWeight, CD2DPointF ptDPI, float &fEraseStroke)
 {
 	SimplifyText(sText);	// remove whitespace and duplicate characters
 	if (sText.IsEmpty())	// if empty text
@@ -100,7 +98,7 @@ bool CMeltTextProbe::Create(CString sText, CString sFontName, float fFontSize, i
 	return ProbeText(fEraseStroke);
 }
 
-bool CMeltTextProbe::ProbeText(float &fEraseStroke)
+bool CMeltProbe::ProbeText(float &fEraseStroke)
 {
 	// To establish an upper limit for the outline stroke, we increase it
 	// by powers of two until it's big enough to completely erase the text.
@@ -140,7 +138,7 @@ bool CMeltTextProbe::ProbeText(float &fEraseStroke)
 	return true;
 }
 
-void CMeltTextProbe::SimplifyText(CString& sText)
+void CMeltProbe::SimplifyText(CString& sText)
 {
 	// remove whitespace and duplicate characters
 	int	nOldLen = sText.GetLength();
@@ -167,7 +165,7 @@ void CMeltTextProbe::SimplifyText(CString& sText)
 	sText = sNewText;	// copy result to caller's string
 }
 
-bool CMeltTextProbe::OutlineErasesText(float fOutlineStroke)
+bool CMeltProbe::OutlineErasesText(float fOutlineStroke)
 {
 	// drawing consumes most of the time
 	m_pRT->BeginDraw();
@@ -197,7 +195,7 @@ bool CMeltTextProbe::OutlineErasesText(float fOutlineStroke)
 	return true;	// text completely erased by outline
 }
 
-HRESULT CMeltTextProbe::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOriginX, 
+HRESULT CMeltProbe::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOriginX, 
 	FLOAT fBaselineOriginY, DWRITE_MEASURING_MODE measuringMode, DWRITE_GLYPH_RUN const* pGlyphRun, 
 	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, IUnknown* pClientDrawingEffect)
 {
@@ -219,7 +217,7 @@ HRESULT CMeltTextProbe::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselin
 	return S_OK;
 }
 
-bool CMeltTextProbe::WriteBitmap(IWICBitmap* pBitmap, LPCTSTR pszImagePath)
+bool CMeltProbe::WriteBitmap(IWICBitmap* pBitmap, LPCTSTR pszImagePath)
 {
 	CComPtr<IWICBitmapEncoder> pEncoder;
 	CHECK(m_pWICFactory->CreateEncoder(GUID_ContainerFormatTiff, NULL, &pEncoder));	// create encoder
@@ -240,4 +238,101 @@ bool CMeltTextProbe::WriteBitmap(IWICBitmap* pBitmap, LPCTSTR pszImagePath)
 	CHECK(pFrame->Commit());	// commit frame to image
 	CHECK(pEncoder->Commit());	// commit all image changes and close stream
 	return true;
+}
+
+CMeltProbeWorker::CMeltProbeWorker()
+{
+}
+
+CMeltProbeWorker::~CMeltProbeWorker()
+{
+	Destroy();
+}
+
+bool CMeltProbeWorker::Create(const CStringArrayEx& aText, CString sFontName, 
+	float fFontSize, int nFontWeight, CD2DPointF ptDPI, CArrayEx<float, float>& aStroke)
+{
+	ASSERT(m_pWorker == NULL);	// single worker thread only
+	if (m_pWorker != NULL)	// if worker already running
+		return false;
+	CProbeState	*pState = new CProbeState;
+	pState->m_aText = aText;
+	pState->m_sFontName = sFontName;
+	pState->m_fFontSize = fFontSize;
+	pState->m_nFontWeight = nFontWeight;
+	pState->m_ptDPI = ptDPI;
+	pState->m_paStroke = &aStroke;
+	// create thread suspended so we can safely clear its auto delete flag
+	CWinThread*	pThread = AfxBeginThread(ThreadFunc, pState, 0, 0, CREATE_SUSPENDED);
+	if (pThread == NULL)	// if can't create thread
+		return false;
+	m_pWorker.Attach(pThread);	// attach thread instance to member
+	pThread->m_bAutoDelete = false;	// clear auto delete flag
+	pThread->ResumeThread();	// launch thread
+	return true;
+}
+
+void CMeltProbeWorker::Destroy()
+{
+	WaitForSingleObject(m_pWorker->m_hThread, INFINITE);
+	m_pWorker.Free();	// free worker thread instance
+}
+
+HRESULT	CMeltProbeWorker::CreateStrokeStyle(ID2D1Factory1 *pD2DFactory, ID2D1StrokeStyle1** ppStrokeStyle)
+{
+	D2D1_STROKE_STYLE_PROPERTIES1 sp = {};
+	sp.lineJoin = D2D1_LINE_JOIN_ROUND;
+	sp.startCap = D2D1_CAP_STYLE_ROUND;
+	sp.endCap = D2D1_CAP_STYLE_ROUND;
+	sp.miterLimit = 1.f;
+	return pD2DFactory->CreateStrokeStyle(sp, nullptr, 0, ppStrokeStyle);
+}
+
+UINT CMeltProbeWorker::ThreadFunc(LPVOID pParam)
+{
+	CProbeState	*pState = static_cast<CProbeState*>(pParam);
+	pState->Probe();
+	if (pState->m_bIsCOMInit) {	// if COM init succeeded
+		CoUninitialize();	// uninitialize COM
+	}
+	delete pState;	// free probe state
+	return 0;
+}
+
+CMeltProbeWorker::CProbeState::CProbeState()
+{
+	m_fFontSize = 0;
+	m_nFontWeight = 0;
+	m_ptDPI = CD2DPointF(0, 0);
+	m_paStroke = NULL;
+	m_bIsCOMInit = false;
+}
+
+void CMeltProbeWorker::CProbeState::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate)
+{
+	theApp.OnError(hr, pszSrcFileName, nLineNum, pszSrcFileDate);	// route errors to application handler
+}
+
+bool CMeltProbeWorker::CProbeState::Probe()
+{
+	m_bIsCOMInit = false;	// reset COM initialized flag
+	CHECK(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED));	// needed for WIC
+	m_bIsCOMInit = true;	// mark COM as initialized
+	// create interfaces needed for probe
+	CComPtr<ID2D1Factory1>	pD2DFactory;	// Direct2D factory interface
+	CComPtr<IDWriteFactory>	pDWriteFactory;	// DirectWrite factory interface
+	CComPtr<ID2D1StrokeStyle1>	pStrokeStyle;	// stroke style interface
+	CHECK(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &pD2DFactory));
+	CHECK(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(pDWriteFactory),
+		reinterpret_cast<IUnknown **>(&pDWriteFactory)));
+	CHECK(CreateStrokeStyle(pD2DFactory, &pStrokeStyle));
+	// now find the optimal maximum outline stroke for each text array element
+	int	nTexts = m_aText.GetSize();
+	for (int iText = 0; iText < nTexts; iText++) {	// for each text
+		CMeltProbe	probe(pD2DFactory, pDWriteFactory, pStrokeStyle);
+		float&	fOutStroke = (*m_paStroke)[iText];	// dereference stroke array element
+		if (!probe.Create(m_aText[iText], m_sFontName, m_fFontSize, m_nFontWeight, m_ptDPI, fOutStroke))
+			return false;
+	}
+	return true;	// success
 }

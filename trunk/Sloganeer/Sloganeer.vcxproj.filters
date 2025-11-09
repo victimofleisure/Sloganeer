@@ -72,7 +72,7 @@
     <ClCompile Include="WinAppCK.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MeltTextProbe.cpp">
+    <ClCompile Include="MeltProbe.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -170,7 +170,7 @@
     <ClInclude Include="WinAppCK.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MeltTextProbe.h">
+    <ClInclude Include="MeltProbe.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
