@@ -39,6 +39,7 @@ public:
 	virtual BOOL InitInstance();
 
 // Operations
+	void	OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate);
 	bool	WriteLogEntry(CString sLogEntry);
 
 // Implementation

@@ -38,7 +38,10 @@ CMeltTextProbe::~CMeltTextProbe()
 
 void CMeltTextProbe::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate)
 {
-	printf("%x %s %s %s\n", hr, pszSrcFileName, nLineNum, pszSrcFileDate);
+	UNREFERENCED_PARAMETER(hr);
+	UNREFERENCED_PARAMETER(pszSrcFileName);
+	UNREFERENCED_PARAMETER(nLineNum);
+	UNREFERENCED_PARAMETER(pszSrcFileDate);
 }
 
 bool CMeltTextProbe::Create(CString sText, CString sFontName, float fFontSize, int nFontWeight, CD2DPointF ptDPI, float &fEraseStroke)

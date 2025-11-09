@@ -95,6 +95,20 @@ BOOL CSloganeerApp::InitInstance()
 	return FALSE;
 }
 
+void CSloganeerApp::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate)
+{
+#ifdef _DEBUG
+	printf("%x %s %d %s\n", hr, pszSrcFileName, nLineNum, pszSrcFileDate);
+#endif
+	CString	sSrcFileName(pszSrcFileName);	// convert to Unicode
+	CString	sSrcFileDate(pszSrcFileDate);
+	CString	sErrorMsg;
+	sErrorMsg.Format(_T("Error %d (0x%x) in %s line %d (%s)"), hr, hr,
+		sSrcFileName.GetString(), nLineNum, sSrcFileDate.GetString());
+	sErrorMsg += '\n' + FormatSystemError(hr);
+	WriteLogEntry(sErrorMsg);
+}
+
 bool CSloganeerApp::WriteLogEntry(CString sLogEntry)
 {
 	// This method is callable by worker threads, and access to the log file

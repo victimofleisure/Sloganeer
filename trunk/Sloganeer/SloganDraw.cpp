@@ -1,4 +1,4 @@
-// Copyleft 2025 Chris Korda
+ing// Copyleft 2025 Chris Korda
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the Free
 // Software Foundation; either version 2 of the License, or any later version.
@@ -15,6 +15,7 @@
 		05		01nov25	add vertical converge transition
 		06		06nov25	add horizontal converge transition
 		07		07nov25	add melt transition
+		08		09nov25	fix typewriter breaking fade; reset drawing effect
 
 */
 
@@ -108,16 +109,7 @@ bool CSloganDraw::FullScreen(bool bEnable)
 
 void CSloganDraw::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate)
 {
-#ifdef _DEBUG
-	printf("%x %s %d %s\n", hr, pszSrcFileName, nLineNum, pszSrcFileDate);
-#endif
-	CString	sSrcFileName(pszSrcFileName);	// convert to Unicode
-	CString	sSrcFileDate(pszSrcFileDate);
-	CString	sErrorMsg;
-	sErrorMsg.Format(_T("Error %d (0x%x) in %s line %d (%s)"), hr, hr,
-		sSrcFileName.GetString(), nLineNum, sSrcFileDate.GetString());
-	sErrorMsg += '\n' + FormatSystemError(hr);
-	theApp.WriteLogEntry(sErrorMsg);
+	theApp.OnError(hr, pszSrcFileName, nLineNum, pszSrcFileDate);
 }
 
 #if CAPTURE_FRAMES	// if capturing frames
@@ -175,6 +167,15 @@ bool CSloganDraw::CreateStrokeStyle()
 	return true;
 }
 
+bool CSloganDraw::ResetDrawingEffect()
+{
+	ASSERT(m_pTextLayout != NULL);
+	int	nTextLen = m_sSlogan.GetLength();
+	DWRITE_TEXT_RANGE	tr = {0, nTextLen};	// for all characters in layout
+	CHECK(m_pTextLayout->SetDrawingEffect(NULL, tr));	// remove drawing effect
+	return true;
+}
+
 void CSloganDraw::OnResize()
 {
 	OnTextChange();
@@ -183,6 +184,14 @@ void CSloganDraw::OnResize()
 void CSloganDraw::StartTrans(int nState, float fDuration)
 {
 	ASSERT(nState == ST_TRANS_IN || nState == ST_TRANS_OUT);	// else logic error
+	if (nState == ST_TRANS_OUT)	{	// if starting outgoing transition
+		// reset any persistent state left by incoming transition
+		switch (m_iTransType) {	// previous transition type
+		case TT_TYPEWRITER:
+			ResetDrawingEffect();	// remove per-character brushes
+			break;
+		}
+	}
 	m_iState = nState;	// set state
 	m_fTransDuration = fDuration;
 	m_bIsTransStart = true;	// set transition start flag
@@ -201,6 +210,7 @@ void CSloganDraw::StartSlogan()
 	} else {	// randomizing slogans
 		m_iSlogan = m_rlSloganIdx.GetNext(m_iSlogan);	// get next slogan index
 	}
+	m_sSlogan = m_aSlogan[m_iSlogan];	// cache current slogan
 	OnTextChange();	// update text
 }
 
@@ -250,13 +260,12 @@ bool CSloganDraw::OnFontChange()
 bool CSloganDraw::OnTextChange()
 {
 	m_pTextLayout.Release();	// release previous text layout instance
-	LPCTSTR	pszSlogan = m_aSlogan[m_iSlogan];
-	int	nSloganLen = m_aSlogan[m_iSlogan].GetLength();
+	int	nTextLen = m_sSlogan.GetLength();
 	CD2DSizeF	szRT(m_pD2DDeviceContext->GetSize());	// get render target size
 	// layout box is entire frame, for full-screen text and paragraph centering
 	CHECK(m_pDWriteFactory->CreateTextLayout(	// create text layout instance
-		pszSlogan,		// source text
-		nSloganLen,		// text length in characters
+		m_sSlogan,		// source text
+		nTextLen,		// text length in characters
 		m_pTextFormat,	// text format instance
 		szRT.width,		// layout box width in DIPs
 		szRT.height,	// layout box height in DIPs
@@ -372,13 +381,15 @@ void CSloganDraw::TransFade()
 
 void CSloganDraw::TransTypewriter()
 {
-	int	nTextLen = m_aSlogan[m_iSlogan].GetLength();
+	int	nTextLen = m_sSlogan.GetLength();
 	int	nCharsTyped = Round(nTextLen * m_fTransProgress);
 	DWRITE_TEXT_RANGE	trShow = {0, nCharsTyped};
 	DWRITE_TEXT_RANGE	trHide = {nCharsTyped, nTextLen - nCharsTyped};
 	if (IsTransOut()) {	// if outgoing transition
 		std::swap(trShow, trHide);	// swap text ranges
 	}
+	// Per-character brushes override the default brush passed to DrawTextLayout,
+	// and they must be reset to restore normal behavior; see ResetDrawingEffect.
 	m_pTextLayout->SetDrawingEffect(m_pDrawBrush, trShow);	// set brush for shown characters
 	m_pTextLayout->SetDrawingEffect(m_pBkgndBrush, trHide);	// set brush for hidden characters
 	CD2DPointF	ptOrigin(0, 0);
@@ -486,8 +497,7 @@ bool CSloganDraw::GetLineMetrics()
 bool CSloganDraw::MakeCharToLineTable()
 {
 	GetLineMetrics();
-	const CString& sSlogan = m_aSlogan[m_iSlogan];
-	m_aCharToLine.SetSize(sSlogan.GetLength());	// allocate character-to-line index array
+	m_aCharToLine.SetSize(m_sSlogan.GetLength());	// allocate character-to-line index array
 	int	nPos = 0;
 	int	nLines = m_textMetrics.lineCount;
 	for (int iLine = 0; iLine < nLines; iLine++) {	// for each line of text
@@ -578,14 +588,22 @@ void CSloganDraw::TransConvergeVert(CD2DPointF ptBaselineOrigin, DWRITE_MEASURIN
 	m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
 }
 
+class CMyMeltTextProbe : public CMeltTextProbe {
+public:
+	CMyMeltTextProbe(ID2D1Factory1* pD2DFactory, IDWriteFactory* pDWriteFactory, ID2D1StrokeStyle1* pStrokeStyle)
+		: CMeltTextProbe(pD2DFactory, pDWriteFactory, pStrokeStyle) {}
+	virtual void OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate) {
+		theApp.OnError(hr, pszSrcFileName, nLineNum, pszSrcFileDate);	// route errors to application handler
+	}
+};
+
 bool CSloganDraw::MeasureMeltStroke()
 {
 	float	fDpiX, fDpiY;
 	m_pD2DDeviceContext->GetDpi(&fDpiX, &fDpiY);
 	CD2DPointF	ptDPI(fDpiX, fDpiY);
-	CMeltTextProbe	mtb(m_pD2DFactory, m_pDWriteFactory, m_pStrokeStyle);
-	if (!mtb.Create(m_aSlogan[m_iSlogan], m_sFontName, 
-		m_fFontSize, m_nFontWeight, ptDPI, m_fMeltMaxStroke))
+	CMyMeltTextProbe	mtb(m_pD2DFactory, m_pDWriteFactory, m_pStrokeStyle);
+	if (!mtb.Create(m_sSlogan, m_sFontName, m_fFontSize, m_nFontWeight, ptDPI, m_fMeltMaxStroke))
 		return false;
 #if 0	// non-zero to compare text bitmap with screen text
 	CKD2DRectF	rText;

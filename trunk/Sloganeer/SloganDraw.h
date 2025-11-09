@@ -101,6 +101,7 @@ protected:
 	CRandList	m_rlSloganIdx;	// randomized list of slogan indices
 	CBenchmark	m_timerTrans;	// high-performance transition timer
 	ULONGLONG	m_nWakeTime;	// during hold, wake time in CPU ticks
+	CString		m_sSlogan;		// current slogan being displayed
 	double	m_fTransProgress;	// transition progress, normalized from 0 to 1
 	bool	m_bThreadExit;		// true if render thread exit requested
 	bool	m_bIsFullScreen;	// true if in full screen mode
@@ -156,6 +157,7 @@ protected:
 	bool	OnTextChange();
 	CD2DSizeF	GetTextBounds(CKD2DRectF& rText) const;
 	bool	CreateStrokeStyle();
+	bool	ResetDrawingEffect();
 	void	TransScroll();
 	void	TransReveal();
 	void	TransTypewriter();
