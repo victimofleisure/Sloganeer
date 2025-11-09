@@ -156,6 +156,9 @@ void CMeltTextProbe::SimplifyText(CString& sText)
 				nNewLen++;	// bump new character count
 				aUsed.set(c);	// mark character used
 			}
+		} else {	// non-ASCII character
+			pNewText[nNewLen] = c;	// append to buffer
+			nNewLen++;	// bump new character count
 		}
 	}
 	sNewText.ReleaseBuffer(nNewLen);	// release buffer
