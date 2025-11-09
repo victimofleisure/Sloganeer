@@ -6,7 +6,7 @@
 
 ### Usage: Sloganeer slogans_path [options]
 
-Simple example: Sloganeer myslogans.txt -fontname Calibri -fontsize 120
+Simple example: `Sloganeer myslogans.txt -fontname Calibri -fontsize 120`
 
 |Option|Description|
 |---|---|
