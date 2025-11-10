@@ -184,9 +184,9 @@ bool CMeltProbe::OutlineErasesText(float fOutlineStroke)
 	CSize	sz(m_szBmp);
 	// only the least significant (blue) color channel is checked;
 	// that's fine as we're drawing in white on a black background
-	for (int y = 0; y < sz.cy; ++y) {	// for each row
+	for (int y = 0; y < sz.cy; y++) {	// for each row
 		const BYTE* pRow = pBufData + y * nStride;
-		for (int x = 0; x < sz.cx; ++x) {	// for each column
+		for (int x = 0; x < sz.cx; x++) {	// for each column
 			if (pRow[x * 4]) {	// if pixel isn't background color
 				return false;	// text wasn't erased by outline
 			}
@@ -242,6 +242,11 @@ bool CMeltProbe::WriteBitmap(IWICBitmap* pBitmap, LPCTSTR pszImagePath)
 
 CMeltProbeWorker::CMeltProbeWorker()
 {
+	m_fFontSize = 0;
+	m_nFontWeight = 0;
+	m_paStroke = NULL;
+	m_bIsCOMInit = false;
+	m_bThreadExit = false;
 }
 
 CMeltProbeWorker::~CMeltProbeWorker()
@@ -254,16 +259,18 @@ bool CMeltProbeWorker::Create(const CStringArrayEx& aText, CString sFontName,
 {
 	ASSERT(m_pWorker == NULL);	// single worker thread only
 	if (m_pWorker != NULL)	// if worker already running
-		return false;
-	CProbeState	*pState = new CProbeState;
-	pState->m_aText = aText;
-	pState->m_sFontName = sFontName;
-	pState->m_fFontSize = fFontSize;
-	pState->m_nFontWeight = nFontWeight;
-	pState->m_ptDPI = ptDPI;
-	pState->m_paStroke = &aStroke;
+		return false;	// can't proceed
+	// the caller is responsible for allocating the stroke result array,
+	// and it must have the same number of elements as the input text array
+	ASSERT(aStroke.GetSize() == aText.GetSize());
+	m_aText = aText;
+	m_sFontName = sFontName;
+	m_fFontSize = fFontSize;
+	m_nFontWeight = nFontWeight;
+	m_ptDPI = ptDPI;
+	m_paStroke = &aStroke;
 	// create thread suspended so we can safely clear its auto delete flag
-	CWinThread*	pThread = AfxBeginThread(ThreadFunc, pState, 0, 0, CREATE_SUSPENDED);
+	CWinThread*	pThread = AfxBeginThread(ThreadFunc, this, 0, 0, CREATE_SUSPENDED);
 	if (pThread == NULL)	// if can't create thread
 		return false;
 	m_pWorker.Attach(pThread);	// attach thread instance to member
@@ -274,6 +281,9 @@ bool CMeltProbeWorker::Create(const CStringArrayEx& aText, CString sFontName,
 
 void CMeltProbeWorker::Destroy()
 {
+	if (m_pWorker == NULL)	// if worker not launched
+		return;	// nothing to do
+	m_bThreadExit = true;	// request worker to exit
 	WaitForSingleObject(m_pWorker->m_hThread, INFINITE);
 	m_pWorker.Free();	// free worker thread instance
 }
@@ -290,30 +300,21 @@ HRESULT	CMeltProbeWorker::CreateStrokeStyle(ID2D1Factory1 *pD2DFactory, ID2D1Str
 
 UINT CMeltProbeWorker::ThreadFunc(LPVOID pParam)
 {
-	CProbeState	*pState = static_cast<CProbeState*>(pParam);
-	pState->Probe();
-	if (pState->m_bIsCOMInit) {	// if COM init succeeded
+	CMeltProbeWorker*	pThis = static_cast<CMeltProbeWorker*>(pParam);
+	ASSERT(pThis != NULL);	// else logic error
+	pThis->Probe();
+	if (pThis->m_bIsCOMInit) {	// if COM init succeeded
 		CoUninitialize();	// uninitialize COM
 	}
-	delete pState;	// free probe state
 	return 0;
 }
 
-CMeltProbeWorker::CProbeState::CProbeState()
-{
-	m_fFontSize = 0;
-	m_nFontWeight = 0;
-	m_ptDPI = CD2DPointF(0, 0);
-	m_paStroke = NULL;
-	m_bIsCOMInit = false;
-}
-
-void CMeltProbeWorker::CProbeState::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate)
+void CMeltProbeWorker::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate)
 {
 	theApp.OnError(hr, pszSrcFileName, nLineNum, pszSrcFileDate);	// route errors to application handler
 }
 
-bool CMeltProbeWorker::CProbeState::Probe()
+bool CMeltProbeWorker::Probe()
 {
 	m_bIsCOMInit = false;	// reset COM initialized flag
 	CHECK(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED));	// needed for WIC
@@ -329,10 +330,12 @@ bool CMeltProbeWorker::CProbeState::Probe()
 	// now find the optimal maximum outline stroke for each text array element
 	int	nTexts = m_aText.GetSize();
 	for (int iText = 0; iText < nTexts; iText++) {	// for each text
+		if (m_bThreadExit)	// if worker should exit
+			return false;
 		CMeltProbe	probe(pD2DFactory, pDWriteFactory, pStrokeStyle);
 		float&	fOutStroke = (*m_paStroke)[iText];	// dereference stroke array element
 		if (!probe.Create(m_aText[iText], m_sFontName, m_fFontSize, m_nFontWeight, m_ptDPI, fOutStroke))
-			return false;
+			return false;	// probe failed; error already handled
 	}
 	return true;	// success
 }

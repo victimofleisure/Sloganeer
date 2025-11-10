@@ -79,6 +79,8 @@ bool CSloganDraw::Create(HWND hWnd)
 
 void CSloganDraw::Destroy()
 {
+	// order matters
+	m_thrMeltWorker.Destroy();	// destroy melt worker thread
 	m_bThreadExit = true;	// request render thread to exit
 	m_evtWake.Set();	// set wake event to signaled
 	DestroyThread();	// destroy render thread
