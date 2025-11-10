@@ -1,4 +1,4 @@
-ing// Copyleft 2025 Chris Korda
+// Copyleft 2025 Chris Korda
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the Free
 // Software Foundation; either version 2 of the License, or any later version.
@@ -16,6 +16,7 @@ ing// Copyleft 2025 Chris Korda
 		06		06nov25	add horizontal converge transition
 		07		07nov25	add melt transition
 		08		09nov25	fix typewriter breaking fade; reset drawing effect
+		09		10nov25	add regression test
 
 */
 
@@ -62,9 +63,11 @@ void CSloganDraw::Init()
 	m_bIsGlyphRising = false;
 	m_iGlyphLine = 0;
 	m_fMeltMaxStroke = 0;
-#if CAPTURE_FRAMES	// if capturing frames
+	m_nFrames = 0;
+	m_nSwapChainBuffers = 0;
+#if SD_CAPTURE	// if capturing frames
 	m_capture.m_pParent = this;
-#endif	// CAPTURE_FRAMES
+#endif	// SD_CAPTURE
 }
 
 bool CSloganDraw::Create(HWND hWnd)
@@ -84,9 +87,9 @@ void CSloganDraw::Destroy()
 	m_bThreadExit = true;	// request render thread to exit
 	m_evtWake.Set();	// set wake event to signaled
 	DestroyThread();	// destroy render thread
-#if CAPTURE_FRAMES	// if capturing frames
+#if SD_CAPTURE	// if capturing frames
 	m_capture.Destroy();	// destroy capture instance
-#endif	// CAPTURE_FRAMES
+#endif	// SD_CAPTURE
 }
 
 void CSloganDraw::Resize()
@@ -113,12 +116,12 @@ void CSloganDraw::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCST
 	theApp.OnError(hr, pszSrcFileName, nLineNum, pszSrcFileDate);
 }
 
-#if CAPTURE_FRAMES	// if capturing frames
+#if SD_CAPTURE	// if capturing frames
 void CSloganDraw::CMyD2DCapture::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate)
 {
 	m_pParent->OnError(hr, pszSrcFileName, nLineNum, pszSrcFileDate);
 }
-#endif	// CAPTURE_FRAMES
+#endif	// SD_CAPTURE
 
 bool CSloganDraw::CreateUserResources()
 {
@@ -155,6 +158,10 @@ bool CSloganDraw::OnThreadCreate()
 	}
 	LaunchMeltWorker();
 	StartSlogan();	// start the first slogan
+#if SD_CAPTURE	// if capturing frames
+	if (!SetCapture())
+		return false;
+#endif	// SD_CAPTURE
 	return true;
 }
 
@@ -177,6 +184,135 @@ void CSloganDraw::OnResize()
 {
 	OnTextChange();
 }
+
+#if SD_CAPTURE	// if capturing frames
+bool CSloganDraw::SetCapture(bool bEnable)
+{
+	if (bEnable == m_capture.IsCreated())	// if state unchanged
+		return true;	// nothing to do
+	if (bEnable) {	// if starting capture
+		DXGI_SWAP_CHAIN_DESC	desc;
+		CHECK(m_pSwapChain->GetDesc(&desc));
+		m_nSwapChainBuffers = desc.BufferCount;	// store swap chain buffer count
+		LPCTSTR	pszCaptureFolderPath = NULL;	// default is current directory
+		if (!m_capture.Create(m_pD3DDevice, m_pSwapChain, pszCaptureFolderPath))	// create capture instance
+			return false;
+	} else {	// ending capture
+		m_capture.Destroy();
+	}
+	return true;
+}
+
+bool CSloganDraw::CaptureFrame()
+{
+	if (!m_capture.IsCreated())	// if capture instance not created
+		return false;
+	//
+	// The swap chain's buffers are initially blank. If the swap chain
+	// has N buffers, you must present N times before the swap chain's
+	// buffer zero contains meaningful data. The first N frames captured
+	// are leftovers from before drawing started, and should be skipped.
+	//
+	if (m_nFrames < m_nSwapChainBuffers)	// if initial blank frame
+		return true;	// skip blank frame; not an error
+	return m_capture.CaptureFrame();	// capture frame
+}
+#endif	// SD_CAPTURE
+
+#if SD_CAPTURE >= SD_CAPTURE_MAKE_REF_IMAGES	// if regression testing
+bool CSloganDraw::RegressionTest()
+{
+	enum {
+		REF_FRAMES = TRANS_TYPES * 2,	// reference frames
+		TRANS_PERMS = REF_FRAMES * TRANS_TYPES,	// transition permutations
+	};
+	// either generate reference images, or generate images for all transition
+	// permutations and check them against previously generated reference images
+	const bool	bMakeRefs = SD_CAPTURE == SD_CAPTURE_MAKE_REF_IMAGES;
+	const UINT	nOutputFrames = bMakeRefs ? REF_FRAMES : TRANS_PERMS;
+	// swap chain buffers are initially blank; CaptureFrame supresses
+	// those initial blank frames, and we must account for that here,
+	// plus one extra because OnDraw calls us before CaptureFrame
+	const UINT	nEndFrame = nOutputFrames + m_nSwapChainBuffers + 1;
+	if (m_nFrames == nEndFrame) {	// if last frame captured
+		CWnd*	pMainWnd = theApp.m_pMainWnd;
+		ASSERT(pMainWnd != NULL);	// sanity check
+		SetCapture(false);	// stop capturing immediately
+		if (bMakeRefs) {	// if making reference images
+			pMainWnd->PostMessage(WM_QUIT);	// exit app
+		} else {	// checking permutations against reference
+			static const LPCTSTR CAPTURE_FILENAME_FORMAT = _T("cap%06d.tif");
+			CString	sRefFolder(_T("C:\\Chris\\MyProjects\\Sloganeer\\testref"));
+			CIntArrayEx	aDiff;	// array of differences, as frame indices
+			for (int iFrame = 0; iFrame < TRANS_PERMS; iFrame++) {	// for each frame
+				bool	bIsOddFrame = iFrame & 1;
+				int	iRefFrame = bIsOddFrame ? iFrame % REF_FRAMES
+					: iFrame / REF_FRAMES * 2;
+				CString	sFileName;
+				sFileName.Format(CAPTURE_FILENAME_FORMAT, iRefFrame);
+				CString	sRefPath = sRefFolder + '\\' + sFileName;
+				sFileName.Format(CAPTURE_FILENAME_FORMAT, iFrame);
+				CString	sTestPath(sFileName);
+				TRY {
+					// compare files method throws MFC exceptions
+					if (!FilesEqual(sTestPath, sRefPath))	// if frames differ
+						aDiff.Add(iFrame);	// add frame index to error list
+				}
+				CATCH (CException, e) {
+					TCHAR	szMsg[MAX_PATH];
+					e->GetErrorMessage(szMsg, _countof(szMsg));
+					const UINT	nMsgFlags = MB_OK | MB_ICONERROR;
+					MessageBox(pMainWnd->m_hWnd, szMsg, theApp.m_pszAppName, nMsgFlags);
+					pMainWnd->PostMessage(WM_QUIT);	// exit app
+					return false;
+				}
+				END_CATCH
+			}
+			// display test result; we must use MessageBox instead of
+			// AfxMessageBox because we're running in a worker thread
+			CString	sMsg(_T("Regression Test\n\n"));
+			UINT	nMsgFlags = MB_OK;
+			int	nDiffs = aDiff.GetSize();
+			if (nDiffs) {	// if differences found
+				CString	sVal;
+				sVal.Format(_T("FAIL: %d unexpected frames\n"), nDiffs);
+				sMsg += sVal;
+				const int	nMaxDiffs = 100;	// keep dialog reasonable
+				for (int iDiff = 0; iDiff < min(nDiffs, nMaxDiffs); iDiff++) {
+					CString	sVal;
+					if (iDiff)
+						sMsg += _T(", ");	// add separator
+					sVal.Format(_T("%d"), aDiff[iDiff]);
+					sMsg += sVal;
+				}
+				if (nDiffs >= nMaxDiffs)	// if too many differences
+					sMsg += _T(" ...");	// indicate overflow
+				nMsgFlags |= MB_ICONERROR;
+			} else {	// no differences
+				sMsg += _T("Pass");	// all good
+				nMsgFlags |= MB_ICONINFORMATION;
+			}
+			MessageBox(pMainWnd->m_hWnd, sMsg, theApp.m_pszAppName, nMsgFlags);
+			pMainWnd->PostMessage(WM_QUIT);	// exit app
+		}
+	}
+	const bool	bIsOddFrame = m_nFrames & 1;
+	const int	iState = bIsOddFrame ? ST_TRANS_OUT : ST_TRANS_IN;
+	StartTrans(iState, 1);	// start a new transition
+	// override transition type
+	if (bMakeRefs) {	// if generating reference frames
+		m_iTransType = (m_nFrames / 2) % TRANS_TYPES;
+	} else {	// checking permutations against reference
+		m_iTransType = bIsOddFrame ? (m_nFrames / 2) % TRANS_TYPES 
+			: m_nFrames / REF_FRAMES % TRANS_TYPES;
+	}
+	m_fTransProgress = 1.0 / 3;	// override transition progress
+	m_nHoldDuration = 0;	// no hold
+	m_nPauseDuration = 0;	// no pause either
+	srand(0);	// ensure consistent behavior for transitions that use randomness
+	return true;
+}
+#endif	// SD_CAPTURE
 
 void CSloganDraw::StartTrans(int nState, float fDuration)
 {
@@ -218,18 +354,17 @@ void CSloganDraw::StartIdle(int nDuration)
 
 bool CSloganDraw::ContinueIdle()
 {
+#if SD_CAPTURE	// if capturing frames
+	return false;	// draw during idle, so idle gets captured
+#endif	// SD_CAPTURE
 	ULONGLONG	nNow = GetTickCount64();
 	if (nNow < m_nWakeTime) {	// if more idle time remains
-#if CAPTURE_FRAMES	// if capturing frames
-		return false;	// draw during idle, so idle gets captured
-#else	// not capturing frames
 		// block instead of drawing, to reduce power usage
 		DWORD	nTimeout = static_cast<DWORD>(m_nWakeTime - nNow);
 		// wait for wake signal or timeout
 		DWORD	nRet = WaitForSingleObject(m_evtWake, nTimeout);
 		if (nRet == WAIT_OBJECT_0)	// if wake signal
 			return false;	// idle is incomplete
-#endif	// CAPTURE_FRAMES
 	}
 	return true;	// idle is over
 }
@@ -701,6 +836,9 @@ bool CSloganDraw::OnDraw()
 		m_fTransProgress = 1;
 		bTransComplete = true;
 	}
+#if SD_CAPTURE >= SD_CAPTURE_MAKE_REF_IMAGES	// if regression testing
+	bTransComplete = RegressionTest();
+#endif	// SD_CAPTURE
 	switch (m_iTransType) {	// switch on transition type
 	case TT_SCROLL_LR:
 	case TT_SCROLL_RL:
@@ -780,14 +918,9 @@ bool CSloganDraw::OnDraw()
 	default:
 		NODEFAULTCASE;	// logic error
 	}
-#if CAPTURE_FRAMES	// if capturing frames
-	if (!m_capture.IsCreated()) {
-		// optionally specify a destination folder for the image sequence; default is current directory
-		LPCTSTR	pszOutFolderPath = NULL;
-		if (!m_capture.Create(m_pD3DDevice, m_pSwapChain, pszOutFolderPath))	// create capture instance
-			return false;
-	}
-	m_capture.CaptureFrame();
-#endif	// CAPTURE_FRAMES
+#if SD_CAPTURE	// if capturing frames
+	CaptureFrame();
+	m_nFrames++;
+#endif	// SD_CAPTURE
 	return true;
 }

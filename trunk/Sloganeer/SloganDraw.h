@@ -15,6 +15,7 @@
 		05		01nov25	add vertical converge transition
 		06		06nov25	add horizontal converge transition
 		07		07nov25	add melt transition
+		08		10nov25	add regression test
 
 */
 
@@ -28,11 +29,16 @@
 #include "SloganParams.h"
 #include "MeltProbe.h"
 
-#define CAPTURE_FRAMES 0	// non-zero to capture frames
+#define	SD_CAPTURE_NONE				0	// disable capture
+#define	SD_CAPTURE_RECORD			1	// record displayed frames as an image sequence
+#define	SD_CAPTURE_MAKE_REF_IMAGES	2	// generate reference images for regression test
+#define	SD_CAPTURE_REGRESSION_TEST	3	// regression test against saved reference images
 
-#if CAPTURE_FRAMES
+#define SD_CAPTURE SD_CAPTURE_NONE	// one of the above values
+
+#if SD_CAPTURE
 #include "D2DCapture.h"
-#endif	// CAPTURE_FRAMES
+#endif	// SD_CAPTURE
 
 class CSloganDraw : public CRenderThread, protected CSloganParams, protected CTextRenderer {
 public:
@@ -122,15 +128,17 @@ protected:
 	float	m_fMeltMaxStroke;	// maximum outline stroke for melt effect, in DIPs
 	CMeltProbeWorker	m_thrMeltWorker;	// melt probe worker thread instance
 	CArrayEx<float, float>	m_aMeltStroke;	// array of cached melt outline strokes
+	UINT	m_nFrames;			// frame counter, used during capture
+	UINT	m_nSwapChainBuffers;	// number of swap chain buffers
 
-#if CAPTURE_FRAMES	// if capturing frames
+#if SD_CAPTURE	// if capturing frames
 	class CMyD2DCapture : public CD2DCapture {
 	public:
 		virtual void	OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate);
 		CSloganDraw	*m_pParent;	// pointer to parent instance
 	};
 	CMyD2DCapture	m_capture;	// frame capture instance
-#endif	// CAPTURE_FRAMES
+#endif	// SD_CAPTURE
 
 // Overrides
 	virtual void	OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate);
@@ -179,6 +187,9 @@ protected:
 	bool	MeasureMeltStroke();
 	bool	GetLineMetrics();
 	bool	MakeCharToLineTable();
+	bool	SetCapture(bool bEnable = true);
+	bool	CaptureFrame();
+	bool	RegressionTest();
 	static double	Lerp(double a, double b, double t);
 };
 

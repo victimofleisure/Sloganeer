@@ -37,3 +37,18 @@ CString	GetLastErrorString()
 {
 	return(FormatSystemError(GetLastError()));
 }
+
+bool FilesEqual(LPCTSTR pszFile1, LPCTSTR pszFile2)
+{
+	CFile f1(pszFile1, CFile::modeRead);
+	CFile f2(pszFile2, CFile::modeRead);
+	UINT nSize = (UINT)f1.GetLength();
+	if (nSize != (UINT)f2.GetLength())
+		return false;
+	CByteArray b1, b2;
+	b1.SetSize(nSize);
+	b2.SetSize(nSize);
+	f1.Read(b1.GetData(), nSize);
+	f2.Read(b2.GetData(), nSize);
+	return !memcmp(b1.GetData(), b2.GetData(), nSize);
+}

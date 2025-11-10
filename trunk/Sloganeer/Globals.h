@@ -60,6 +60,7 @@ bool ShowListColumnHeaderMenu(CWnd *pWnd, CListCtrl& list, CPoint point);
 HRESULT PromptForFiles(CStringArrayEx& saPath, int nFilters = 0, const COMDLG_FILTERSPEC* pFilter = NULL, int iSelFilter = 0);
 int WildcardDeleteFile(CString sPath);
 void MakeSelectionRange(CIntArrayEx& arrSelection, int iFirstItem, int nItems);
+bool FilesEqual(LPCTSTR pszFile1, LPCTSTR pszFile2);
 
 // data validation method to flunk a control
 void DDV_Fail(CDataExchange* pDX, int nIDC);
