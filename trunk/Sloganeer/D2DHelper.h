@@ -5,10 +5,11 @@
 /*
 		chris korda
 
-		rev		date		comments
+		rev		date	comments
 		00		21feb25	initial version
 		01		27oct25	add size and inflate methods
 		02		01nov25	add more constructors
+		03		11nov25	add glyph iterator
 
 */
 
@@ -130,3 +131,16 @@ inline bool CKD2DRectF::PtInRect(const D2D_POINT_2F& pt) const
 { 
 	return pt.x >= left && pt.y >= top && pt.x < right && pt.y < bottom;
 }
+
+class CGlyphIter {
+public:
+	CGlyphIter(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun);
+	bool	GetNext(UINT& iGlyph, CKD2DRectF& rGlyph);
+
+protected:
+	CD2DPointF	m_ptOrigin;		// current origin
+	DWRITE_GLYPH_RUN const* m_pGlyphRun;	// pointer to run
+	float	m_fAscent;		// scaled ascent
+	float	m_fDescent;		// scaled descent
+	UINT	m_iGlyph;		// index of current glyph
+};

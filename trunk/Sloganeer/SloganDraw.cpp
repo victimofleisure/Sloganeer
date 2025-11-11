@@ -17,6 +17,7 @@
 		07		07nov25	add melt transition
 		08		09nov25	fix typewriter breaking fade; reset drawing effect
 		09		10nov25	add regression test
+		10		11nov25	add elevator transition
 
 */
 
@@ -788,6 +789,37 @@ bool CSloganDraw::TransMelt(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE m
 	return S_OK;
 }
 
+void CSloganDraw::TransElevator()
+{
+	m_pTextLayout->Draw(0, this, 0, 0);
+}
+
+void CSloganDraw::TransElevator(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
+{
+	double	fPhase = m_fTransProgress;
+	if (!IsTransOut())	// if incoming transition
+		fPhase = 1 - fPhase;	// invert phase
+	m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
+	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun);
+	CKD2DRectF	rGlyph;
+	UINT	iGlyph;
+	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
+		int	iChar = pGlyphRunDescription->textPosition + iGlyph;
+		if (m_sSlogan[iChar] != ' ') {	// if non-blank character
+			float	fGlyphWidth = pGlyphRun->glyphAdvances[iGlyph];
+			float	fDoorWidth = DTF((fGlyphWidth + AA_MARGIN) * fPhase / 2);
+			float	fDoorLeft = rGlyph.left + fDoorWidth;
+			float	fDoorRight = rGlyph.right - fDoorWidth;
+			CD2DRectF	rDoor(rGlyph.left, rGlyph.top, fDoorLeft, rGlyph.bottom);
+			m_pD2DDeviceContext->FillRectangle(rDoor, m_pBkgndBrush);	// left door
+			rDoor.left = fDoorRight;
+			rDoor.right = rGlyph.right;
+			m_pD2DDeviceContext->FillRectangle(rDoor, m_pBkgndBrush);	// right door
+		}
+	}
+}
+
 HRESULT CSloganDraw::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOriginX, 
 	FLOAT fBaselineOriginY, DWRITE_MEASURING_MODE measuringMode, DWRITE_GLYPH_RUN const* pGlyphRun, 
 	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, IUnknown* pClientDrawingEffect)
@@ -811,6 +843,9 @@ HRESULT CSloganDraw::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOr
 		break;
 	case TT_MELT:
 		TransMelt(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
+		break;
+	case TT_ELEVATOR:
+		TransElevator(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
 		break;
 	default:
 		NODEFAULTCASE;
@@ -865,6 +900,9 @@ bool CSloganDraw::OnDraw()
 		break;
 	case TT_MELT:
 		TransMelt();
+		break;
+	case TT_ELEVATOR:
+		TransElevator();
 		break;
 	default:
 		NODEFAULTCASE;	// logic error

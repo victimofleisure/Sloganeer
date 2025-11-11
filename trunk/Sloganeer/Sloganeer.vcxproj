@@ -24,6 +24,7 @@
     <ClCompile Include="Benchmark.cpp" />
     <ClCompile Include="D2DCapture.cpp" />
     <ClCompile Include="D2DDevCtx.cpp" />
+    <ClCompile Include="D2DHelper.cpp" />
     <ClCompile Include="Event.cpp" />
     <ClCompile Include="MeltProbe.cpp" />
     <ClCompile Include="SloganParams.cpp" />

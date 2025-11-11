@@ -16,6 +16,7 @@
 		06		06nov25	add horizontal converge transition
 		07		07nov25	add melt transition
 		08		10nov25	add regression test
+		09		11nov25	add elevator transition
 
 */
 
@@ -82,6 +83,7 @@ protected:
 		TT_CONVERGE_HORZ,	// converge horizontally
 		TT_CONVERGE_VERT,	// converge vertically
 		TT_MELT,		// outline with increasing stroke width
+		TT_ELEVATOR,	// per-character horizontal reveal from middle
 		TRANS_TYPES
 	};
 	enum {
@@ -182,6 +184,9 @@ protected:
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
 	void	TransMelt();
 	bool	TransMelt(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
+	void	TransElevator();
+	void	TransElevator(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
 	bool	LaunchMeltWorker();
 	bool	MeasureMeltStroke();
