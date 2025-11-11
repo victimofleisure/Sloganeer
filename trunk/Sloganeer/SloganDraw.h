@@ -16,7 +16,7 @@
 		06		06nov25	add horizontal converge transition
 		07		07nov25	add melt transition
 		08		10nov25	add regression test
-		09		11nov25	add elevator transition
+		09		11nov25	add elevator and clock transitions
 
 */
 
@@ -83,7 +83,8 @@ protected:
 		TT_CONVERGE_HORZ,	// converge horizontally
 		TT_CONVERGE_VERT,	// converge vertically
 		TT_MELT,		// outline with increasing stroke width
-		TT_ELEVATOR,	// per-character horizontal reveal from middle
+		TT_ELEVATOR,	// per-character horizontal reveal
+		TT_CLOCK,		// per-character radial reveal
 		TRANS_TYPES
 	};
 	enum {
@@ -177,16 +178,19 @@ protected:
 	void	TransScale();
 	void	TransTile();
 	void	InitTiling(const CKD2DRectF& rText);
-	void	TransConverge();
+	bool	TransConverge();
 	void	TransConvergeHorz(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
 	void	TransConvergeVert(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
-	void	TransMelt();
+	bool	TransMelt();
 	bool	TransMelt(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
-	void	TransElevator();
+	bool	TransElevator();
 	void	TransElevator(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
+	bool	TransClock();
+	bool	TransClock(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
 	bool	LaunchMeltWorker();
 	bool	MeasureMeltStroke();

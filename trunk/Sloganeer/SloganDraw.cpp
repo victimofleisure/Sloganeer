@@ -17,7 +17,7 @@
 		07		07nov25	add melt transition
 		08		09nov25	fix typewriter breaking fade; reset drawing effect
 		09		10nov25	add regression test
-		10		11nov25	add elevator transition
+		10		11nov25	add elevator and clock transitions
 
 */
 
@@ -25,6 +25,8 @@
 #include "Sloganeer.h"
 #include "SloganDraw.h"
 #include <algorithm>	// for swap
+#define _USE_MATH_DEFINES
+#include "math.h"
 
 #define SEED_WITH_TIME 1	// non-zero to seed pseudorandom sequence with current time
 
@@ -175,7 +177,7 @@ bool CSloganDraw::CreateStrokeStyle()
 bool CSloganDraw::ResetDrawingEffect()
 {
 	ASSERT(m_pTextLayout != NULL);
-	int	nTextLen = m_sSlogan.GetLength();
+	UINT	nTextLen = static_cast<UINT>(m_sSlogan.GetLength());
 	DWRITE_TEXT_RANGE	tr = {0, nTextLen};	// for all characters in layout
 	CHECK(m_pTextLayout->SetDrawingEffect(NULL, tr));	// remove drawing effect
 	return true;
@@ -509,8 +511,8 @@ void CSloganDraw::TransFade()
 
 void CSloganDraw::TransTypewriter()
 {
-	int	nTextLen = m_sSlogan.GetLength();
-	int	nCharsTyped = Round(nTextLen * m_fTransProgress);
+	UINT	nTextLen = static_cast<UINT>(m_sSlogan.GetLength());
+	UINT	nCharsTyped = static_cast<UINT>(Round(nTextLen * m_fTransProgress));
 	DWRITE_TEXT_RANGE	trShow = {0, nCharsTyped};
 	DWRITE_TEXT_RANGE	trHide = {nCharsTyped, nTextLen - nCharsTyped};
 	if (IsTransOut()) {	// if outgoing transition
@@ -562,7 +564,7 @@ void CSloganDraw::InitTiling(const CKD2DRectF& rText)
 	float	fIdealTileCount = dwDisplayFreq * m_fTransDuration;
 	// compute tile size: divide text area by ideal tile count and take square root
 	CD2DSizeF	szText(rText.Size());
-	m_fTileSize = sqrt(szText.width * szText.height / fIdealTileCount);
+	m_fTileSize = DTF(sqrt(szText.width * szText.height / fIdealTileCount));
 	// compute tile layout; round up to ensure text is completely covered
 	m_szTileLayout = CSize(
 		Round(ceil(szText.width / m_fTileSize)),	// number of tile columns
@@ -638,13 +640,14 @@ bool CSloganDraw::MakeCharToLineTable()
 	return true;
 }
 
-void CSloganDraw::TransConverge()
+bool CSloganDraw::TransConverge()
 {
 	if (!MakeCharToLineTable())
-		return;
+		return false;
 	m_bIsGlyphRising = false;
 	m_iGlyphLine = 0;
-	m_pTextLayout->Draw(0, this, 0, 0);
+	CHECK(m_pTextLayout->Draw(0, this, 0, 0));
+	return true;
 }
 
 void CSloganDraw::TransConvergeHorz(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
@@ -750,7 +753,7 @@ bool CSloganDraw::MeasureMeltStroke()
 	return true;
 }
 
-void CSloganDraw::TransMelt()
+bool CSloganDraw::TransMelt()
 {
 	if (m_bIsTransStart) {	// if start of transition
 		if (m_aMeltStroke[m_iSlogan]) {	// if cached melt stroke available
@@ -761,9 +764,10 @@ void CSloganDraw::TransMelt()
 	}
 	// if pausing between slogans, and outgoing transition complete
 	if (m_nPauseDuration && IsTransOut() && m_fTransProgress >= 1)
-		return;	// avoid potentially showing scraps of unerased text while paused
+		return true;	// avoid potentially showing scraps of unerased text while paused
 	m_pD2DDeviceContext->DrawTextLayout(CD2DPointF(0, 0), m_pTextLayout, m_pDrawBrush);	// fill text
-	m_pTextLayout->Draw(0, this, 0, 0);	// erase text outline
+	CHECK(m_pTextLayout->Draw(0, this, 0, 0));	// erase text outline
+	return true;
 }
 
 bool CSloganDraw::TransMelt(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
@@ -789,9 +793,10 @@ bool CSloganDraw::TransMelt(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE m
 	return S_OK;
 }
 
-void CSloganDraw::TransElevator()
+bool CSloganDraw::TransElevator()
 {
-	m_pTextLayout->Draw(0, this, 0, 0);
+	CHECK(m_pTextLayout->Draw(0, this, 0, 0));
+	return true;
 }
 
 void CSloganDraw::TransElevator(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
@@ -820,6 +825,52 @@ void CSloganDraw::TransElevator(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MO
 	}
 }
 
+bool CSloganDraw::TransClock()
+{
+	CHECK(m_pTextLayout->Draw(0, this, 0, 0));
+	return true;
+}
+
+bool CSloganDraw::TransClock(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
+{
+	double	fPhase = m_fTransProgress;
+	if (!IsTransOut())	// if incoming transition
+		fPhase = 1 - fPhase;	// invert phase
+	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun);
+	CKD2DRectF	rGlyph;
+	UINT	iGlyph;
+	float	fMaxGlyphSize = 0;
+	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
+		CD2DSizeF	szGlyph(rGlyph.Size());
+		float	fGlyphSize = max(szGlyph.width, szGlyph.height);
+		if (fGlyphSize > fMaxGlyphSize)
+			fMaxGlyphSize = fGlyphSize;
+	}
+	float	fRadius = DTF(fMaxGlyphSize * M_SQRT2 / 2);
+	CComPtr<ID2D1PathGeometry> pPathGeom;
+	CHECK(m_pD2DFactory->CreatePathGeometry(&pPathGeom));
+	CComPtr<ID2D1GeometrySink> pGeomSink;
+	CHECK(pPathGeom->Open(&pGeomSink));
+	AddPieWedge(pGeomSink, CD2DPointF(0, 0), CD2DSizeF(fRadius, fRadius), 180, DTF(fPhase));
+	CHECK(pGeomSink->Close());
+	m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
+	iterGlyph.Reset();
+	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
+		int	iChar = pGlyphRunDescription->textPosition + iGlyph;
+		if (m_sSlogan[iChar] != ' ') {	// if non-blank character
+			CD2DPointF	ptCenter(rGlyph.CenterPoint());
+			auto mTranslate(D2D1::Matrix3x2F::Translation(ptCenter.x, ptCenter.y));
+			m_pD2DDeviceContext->PushAxisAlignedClip(rGlyph, D2D1_ANTIALIAS_MODE_ALIASED);
+			m_pD2DDeviceContext->SetTransform(mTranslate);
+			m_pD2DDeviceContext->FillGeometry(pPathGeom, m_pBkgndBrush);
+			m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
+			m_pD2DDeviceContext->PopAxisAlignedClip();
+		}
+	}
+	return true;
+}
+
 HRESULT CSloganDraw::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOriginX, 
 	FLOAT fBaselineOriginY, DWRITE_MEASURING_MODE measuringMode, DWRITE_GLYPH_RUN const* pGlyphRun, 
 	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, IUnknown* pClientDrawingEffect)
@@ -846,6 +897,9 @@ HRESULT CSloganDraw::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOr
 		break;
 	case TT_ELEVATOR:
 		TransElevator(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
+		break;
+	case TT_CLOCK:
+		TransClock(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
 		break;
 	default:
 		NODEFAULTCASE;
@@ -903,6 +957,9 @@ bool CSloganDraw::OnDraw()
 		break;
 	case TT_ELEVATOR:
 		TransElevator();
+		break;
+	case TT_CLOCK:
+		TransClock();
 		break;
 	default:
 		NODEFAULTCASE;	// logic error

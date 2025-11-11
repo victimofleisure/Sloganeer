@@ -233,7 +233,7 @@ bool CMeltProbe::WriteBitmap(IWICBitmap* pBitmap, LPCTSTR pszImagePath)
 	CHECK(pFrame->SetSize(uiWidth, uiHeight));	// set desired image dimensions
 	WICPixelFormatGUID formatGUID = GUID_WICPixelFormat32bppBGRA;	// pixel format GUID
 	CHECK(pFrame->SetPixelFormat(&formatGUID));	// set desired pixel format
-	WICRect	rBmp = {0, 0, uiWidth, uiHeight};
+	WICRect	rBmp = {0, 0, static_cast<int>(uiWidth), static_cast<int>(uiHeight)};
 	CHECK(pFrame->WriteSource(m_pWICBmp, &rBmp));
 	CHECK(pFrame->Commit());	// commit frame to image
 	CHECK(pEncoder->Commit());	// commit all image changes and close stream

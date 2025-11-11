@@ -1,3 +1,4 @@
+
 // Copyleft 2025 Chris Korda
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the Free
@@ -17,7 +18,7 @@
 		07		06nov25	1.0.00.015
 		08		09nov25	1.0.00.018
 		09		10nov25	1.0.00.019
-		10		11nov25	1.0.00.020
+		10		11nov25	1.0.00.021
 
 		DON'T FORGET TO CHANGE VERSION RESOURCE IN .RC2
 

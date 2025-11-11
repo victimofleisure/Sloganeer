@@ -136,6 +136,7 @@ class CGlyphIter {
 public:
 	CGlyphIter(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun);
 	bool	GetNext(UINT& iGlyph, CKD2DRectF& rGlyph);
+	void	Reset();
 
 protected:
 	CD2DPointF	m_ptOrigin;		// current origin
@@ -143,4 +144,14 @@ protected:
 	float	m_fAscent;		// scaled ascent
 	float	m_fDescent;		// scaled descent
 	UINT	m_iGlyph;		// index of current glyph
+	float	m_fOriginX;		// original origin X for reset
 };
+
+inline void CGlyphIter::Reset()
+{
+	m_iGlyph = 0;
+	m_ptOrigin.x = m_fOriginX;
+}
+
+void	AddEllipse(ID2D1GeometrySink *pSink, D2D1_POINT_2F ptOrigin, D2D1_SIZE_F szRadius);
+void	AddPieWedge(ID2D1GeometrySink *pSink, D2D1_POINT_2F ptOrigin, D2D1_SIZE_F szRadius, float fStartAngle, float fWedgeFrac);
