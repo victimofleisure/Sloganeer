@@ -107,6 +107,11 @@ void CSloganeerApp::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPC
 		sSrcFileName.GetString(), nLineNum, sSrcFileDate.GetString());
 	sErrorMsg += '\n' + FormatSystemError(hr);
 	WriteLogEntry(sErrorMsg);
+	UINT	nMBFlags = MB_RETRYCANCEL | MB_ICONSTOP;
+	if (AfxMessageBox(sErrorMsg, nMBFlags) == IDCANCEL) {	// if user canceled
+		if (m_pMainWnd != NULL)	// if valid main window pointer
+			PostMessage(m_pMainWnd->m_hWnd, WM_QUIT, 0, 0);	// exit app
+	}
 }
 
 bool CSloganeerApp::WriteLogEntry(CString sLogEntry)

@@ -259,19 +259,14 @@ bool CSloganDraw::RegressionTest()
 						aDiff.Add(iFrame);	// add frame index to error list
 				}
 				CATCH (CException, e) {
-					TCHAR	szMsg[MAX_PATH];
-					e->GetErrorMessage(szMsg, _countof(szMsg));
-					const UINT	nMsgFlags = MB_OK | MB_ICONERROR;
-					MessageBox(pMainWnd->m_hWnd, szMsg, theApp.m_pszAppName, nMsgFlags);
+					e->ReportError();
 					pMainWnd->PostMessage(WM_QUIT);	// exit app
 					return false;
 				}
 				END_CATCH
 			}
-			// display test result; we must use MessageBox instead of
-			// AfxMessageBox because we're running in a worker thread
 			CString	sMsg(_T("Regression Test\n\n"));
-			UINT	nMsgFlags = MB_OK;
+			UINT	nMBFlags = MB_OK;
 			int	nDiffs = aDiff.GetSize();
 			if (nDiffs) {	// if differences found
 				CString	sVal;
@@ -287,12 +282,12 @@ bool CSloganDraw::RegressionTest()
 				}
 				if (nDiffs >= nMaxDiffs)	// if too many differences
 					sMsg += _T(" ...");	// indicate overflow
-				nMsgFlags |= MB_ICONERROR;
+				nMBFlags |= MB_ICONERROR;
 			} else {	// no differences
 				sMsg += _T("Pass");	// all good
-				nMsgFlags |= MB_ICONINFORMATION;
+				nMBFlags |= MB_ICONINFORMATION;
 			}
-			MessageBox(pMainWnd->m_hWnd, sMsg, theApp.m_pszAppName, nMsgFlags);
+			AfxMessageBox(sMsg, nMBFlags);
 			pMainWnd->PostMessage(WM_QUIT);	// exit app
 		}
 	}
