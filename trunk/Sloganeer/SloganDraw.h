@@ -90,6 +90,10 @@ protected:
 		TT_SKEW,		// tip over or return to upright
 		TRANS_TYPES
 	};
+	enum {	// GetPhase flags
+		GP_INVERT	= 0x01,		// invert phase
+		GP_EASING	= 0x02,		// apply easing
+	};
 	enum {
 		AA_MARGIN = 1,	// extra margin to account for antialiasing
 	};
@@ -172,7 +176,7 @@ protected:
 	bool	OnFontChange();
 	bool	OnTextChange();
 	CD2DSizeF	GetTextBounds(CKD2DRectF& rText) const;
-	double	GetPhase(bool bIsReversed = false) const;
+	double	GetPhase(UINT nFlags = 0) const;
 	bool	CreateStrokeStyle();
 	bool	ResetDrawingEffect();
 	void	TransScroll();

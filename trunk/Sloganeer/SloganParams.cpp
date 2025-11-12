@@ -8,6 +8,7 @@
 		revision history:
 		rev		date	comments
         00      30oct25	initial version
+        01      12nov25	add easing
 
 */
 
@@ -36,6 +37,7 @@ CSloganParams::CSloganParams() :
 	m_sFontName = L"Arial";
 	m_fFontSize = 150.0f;
 	m_nFontWeight = DWRITE_FONT_WEIGHT_BLACK;
+	m_fEasing = 0.15f;
 }
 
 CParamsParser::~CParamsParser()
@@ -124,6 +126,9 @@ void CParamsParser::ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast)
 				break;
 			case FLAG_drawcolor:
 				m_params.m_clrDraw = D2D1::ColorF(std::stoi(pszParam, 0, 16));	// hexadecimal
+				break;
+			case FLAG_easing:
+				m_params.m_fEasing = std::stof(pszParam) / 100;
 				break;
 			default:
 				NODEFAULTCASE;	// logic error

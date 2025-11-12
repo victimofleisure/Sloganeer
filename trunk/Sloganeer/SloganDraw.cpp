@@ -28,6 +28,7 @@
 #include <algorithm>	// for swap
 #define _USE_MATH_DEFINES
 #include "math.h"
+#include "Easing.h"
 
 #define SEED_WITH_TIME 1	// non-zero to seed pseudorandom sequence with current time
 
@@ -431,10 +432,18 @@ CD2DSizeF CSloganDraw::GetTextBounds(CKD2DRectF& rText) const
 	return szRT;	// return render target size
 }
 
-inline double CSloganDraw::GetPhase(bool bIsReversed) const
+double CSloganDraw::GetPhase(UINT nFlags) const
 {
-	double	fPhase = m_fTransProgress;
-	if (IsTransOut() == bIsReversed)	// if transition should be reversed
+	bool	bOutgoing = IsTransOut();
+	double	fPhase;	// normalized position from 0 to 1
+	if (nFlags & GP_EASING) {	// if easing enabled
+		// if incoming transition, ease out, otherwise ease in
+		fPhase = EaseInOut(!bOutgoing, m_fTransProgress, m_fEasing);
+	} else {	// easing disabled
+		fPhase = m_fTransProgress;	// linear
+	}
+	bool	bInvert = nFlags & GP_INVERT;
+	if (bOutgoing == bInvert)	// if transition should be reversed
 		fPhase = 1 - fPhase;	// invert phase
 	return fPhase;
 }
@@ -444,12 +453,10 @@ void CSloganDraw::TransScroll()
 	CKD2DRectF	rText;
 	CD2DSizeF	szRT(GetTextBounds(rText));
 	CD2DSizeF	szText(rText.Size());
-	double	fPhase;
-	if (IsTransOut()) {	// if outgoing transition
-		fPhase = m_fTransProgress; 
-	} else {	// incoming transition
-		fPhase = m_fTransProgress - 1;	// reverse progress
-	}
+	bool	bIncoming = !IsTransOut();
+	double	fPhase = EaseInOut(bIncoming, m_fTransProgress, m_fEasing);
+	if (bIncoming)	// if incoming transition
+		fPhase = fPhase - 1;	// reverse direction
 	if (m_iTransType == TT_SCROLL_RL || m_iTransType == TT_SCROLL_BT)	// if reversed
 		fPhase = -fPhase;	// negate phase
 	CD2DPointF	ptOrigin(0, 0);
@@ -513,7 +520,7 @@ double CSloganDraw::Lerp(double a, double b, double t)
 
 void CSloganDraw::TransFade()
 {
-	double	fPhase = GetPhase(true);	// reversed
+	double	fPhase = GetPhase(GP_INVERT);
 	m_pVarBrush->SetColor(D2D1::ColorF(
 		DTF(Lerp(m_clrBkgnd.r, m_clrDraw.r, fPhase)),
 		DTF(Lerp(m_clrBkgnd.g, m_clrDraw.g, fPhase)),
@@ -542,7 +549,10 @@ void CSloganDraw::TransTypewriter()
 
 void CSloganDraw::TransScale()
 {
-	float	fPhase = DTF(GetPhase(true));
+	UINT	nGPFlags = GP_INVERT;
+	if (m_iTransType == TT_SCALE_SPIN)	// if spinning
+		nGPFlags |= GP_EASING;	// apply easing
+	float	fPhase = DTF(GetPhase(nGPFlags));
 	CD2DSizeF	szScale;
 	switch (m_iTransType) {
 	case TT_SCALE_HORZ:
@@ -663,7 +673,7 @@ void CSloganDraw::TransConvergeHorz(CD2DPointF ptBaselineOrigin, DWRITE_MEASURIN
 	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
 {
 	// odd lines slide left and even lines slide right, or vice versa
-	double	fPhase = GetPhase();
+	double	fPhase = GetPhase(GP_EASING);	// apply easing
 	CKD2DRectF	rText;
 	CD2DSizeF	szRT = GetTextBounds(rText);
 	float	fSlideSpan = DTF(max(szRT.width - rText.left, rText.right) * fPhase);
@@ -701,7 +711,7 @@ void CSloganDraw::TransConvergeVert(CD2DPointF ptBaselineOrigin, DWRITE_MEASURIN
 	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
 {
 	// odd characters fall and even characters rise, or vice versa
-	double	fPhase = GetPhase();
+	double	fPhase = GetPhase(GP_EASING);	// apply easing
 	CKD2DRectF	rText;
 	CD2DSizeF	szRT = GetTextBounds(rText);
 	float	fSlideSpan = DTF(max(szRT.height - rText.top, rText.bottom) * fPhase);

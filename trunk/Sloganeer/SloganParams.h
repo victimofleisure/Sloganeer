@@ -8,6 +8,7 @@
 		revision history:
 		rev		date	comments
         00      30oct25	initial version
+        01      12nov25	add easing
 
 */
 
@@ -32,6 +33,7 @@ public:
 	int		m_nFontWeight;		// font weight, from 1 to 999
 	D2D1::ColorF	m_clrBkgnd;	// background color
 	D2D1::ColorF	m_clrDraw;	// drawing color
+	double	m_fEasing;			// fraction of motion to ease, from 0 to 1
 
 // Attributes
 	void	SetSlogans(const LPCTSTR *aSlogan, int nSlogans);

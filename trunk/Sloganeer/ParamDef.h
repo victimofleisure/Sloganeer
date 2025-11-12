@@ -10,6 +10,7 @@
         00      24oct25	initial version
 		01		29oct25	add pause and color parameters
 		02		30oct25	add nowrap parameter
+        03      12nov25	add easing
 
 */
 
@@ -18,7 +19,7 @@
 PARAMDEF(fullscreen)	// start application in full screen mode
 PARAMDEF(fontsize)		// font size in points
 PARAMDEF(fontname)		// font name
-PARAMDEF(fontweight)	// font weight from 1 - 999
+PARAMDEF(fontweight)	// font weight, from 1 - 999
 PARAMDEF(transdur)		// transition duration in seconds (fractions allowed)
 PARAMDEF(outdur)		// outgoing transition duration in seconds (fractions allowed)
 PARAMDEF(holddur)		// hold duration in seconds (fractions allowed)
@@ -27,6 +28,7 @@ PARAMDEF(seqtext)		// display slogans in sequential order instead of randomizing
 PARAMDEF(bgcolor)		// background color in hexadecimal
 PARAMDEF(drawcolor)		// drawing color in hexadecimal
 PARAMDEF(nowrap)		// disables automatic word wrapping
+PARAMDEF(easing)		// percentage of motion to ease (fractions allowed)
 
 #undef PARAMDEF
 #endif
