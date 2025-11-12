@@ -68,12 +68,14 @@ The slogans file must be in either ANSI or UTF-8 format. To use non-ANSI charact
 9. Scale horizontally
 10. Scale vertically
 11. Scale both axes
-12. Reveal or cover with tiles
-13. Converge horizontally
-14. Converge vertically
-15. Melt or grow by erasing outline
-16. Per-character horizontal reveal
-17. Per-character radial reveal
+12. Scale both axes and rotate
+13. Reveal or cover with tiles
+14. Converge horizontally
+15. Converge vertically
+16. Melt or grow by erasing outline
+17. Per-character horizontal reveal
+18. Per-character radial reveal
+19. Tip over or return to upright
 
 ### Defaults
 
