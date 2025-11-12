@@ -169,6 +169,7 @@ protected:
 	bool	OnFontChange();
 	bool	OnTextChange();
 	CD2DSizeF	GetTextBounds(CKD2DRectF& rText) const;
+	double	GetPhase(bool bIsReversed = false) const;
 	bool	CreateStrokeStyle();
 	bool	ResetDrawingEffect();
 	void	TransScroll();

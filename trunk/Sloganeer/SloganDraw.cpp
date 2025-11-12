@@ -430,6 +430,14 @@ CD2DSizeF CSloganDraw::GetTextBounds(CKD2DRectF& rText) const
 	return szRT;	// return render target size
 }
 
+inline double CSloganDraw::GetPhase(bool bIsReversed) const
+{
+	double	fPhase = m_fTransProgress;
+	if (IsTransOut() == bIsReversed)	// if transition should be reversed
+		fPhase = 1 - fPhase;	// invert phase
+	return fPhase;
+}
+
 void CSloganDraw::TransScroll()
 {
 	CKD2DRectF	rText;
@@ -504,13 +512,11 @@ double CSloganDraw::Lerp(double a, double b, double t)
 
 void CSloganDraw::TransFade()
 {
-	double	fBright = DTF(m_fTransProgress);
-	if (IsTransOut())	// if outgoing transition
-		fBright = 1 - fBright;	// invert brightness
+	double	fPhase = GetPhase(true);	// reversed
 	m_pVarBrush->SetColor(D2D1::ColorF(
-		DTF(Lerp(m_clrBkgnd.r, m_clrDraw.r, fBright)),
-		DTF(Lerp(m_clrBkgnd.g, m_clrDraw.g, fBright)),
-		DTF(Lerp(m_clrBkgnd.b, m_clrDraw.b, fBright))
+		DTF(Lerp(m_clrBkgnd.r, m_clrDraw.r, fPhase)),
+		DTF(Lerp(m_clrBkgnd.g, m_clrDraw.g, fPhase)),
+		DTF(Lerp(m_clrBkgnd.b, m_clrDraw.b, fPhase))
 	));
 	CD2DPointF	ptOrigin(0, 0);
 	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pVarBrush); // draw text
@@ -535,22 +541,17 @@ void CSloganDraw::TransTypewriter()
 
 void CSloganDraw::TransScale()
 {
-	float	fScale;
-	if (IsTransOut()) {	// if outgoing transition
-		fScale = DTF(1 - m_fTransProgress);
-	} else {	// hold or incoming transition
-		fScale = DTF(m_fTransProgress);
-	}
+	float	fPhase = DTF(GetPhase(true));
 	CD2DSizeF	szScale;
 	switch (m_iTransType) {
 	case TT_SCALE_HORZ:
-		szScale = CD2DSizeF(fScale, 1);	// scale horizontally
+		szScale = CD2DSizeF(fPhase, 1);	// scale horizontally
 		break;
 	case TT_SCALE_VERT:
-		szScale = CD2DSizeF(1, fScale);	// scale vertically
+		szScale = CD2DSizeF(1, fPhase);	// scale vertically
 		break;
 	case TT_SCALE_BOTH:
-		szScale = CD2DSizeF(fScale, fScale);	// scale both axes
+		szScale = CD2DSizeF(fPhase, fPhase);	// scale both axes
 		break;
 	default:
 		NODEFAULTCASE;	// improper call
@@ -591,6 +592,7 @@ void CSloganDraw::InitTiling(const CKD2DRectF& rText)
 
 void CSloganDraw::TransTile()
 {
+	double	fPhase = GetPhase();
 	CKD2DRectF	rText;
 	GetTextBounds(rText);
 	if (m_bIsTransStart) {	// if start of transition
@@ -598,12 +600,6 @@ void CSloganDraw::TransTile()
 	}
 	CD2DPointF	ptOrigin(0, 0);
 	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pDrawBrush);	// draw text
-	float	fPhase;
-	if (IsTransOut()) {	// if outgoing transition
-		fPhase = DTF(m_fTransProgress);
-	} else {	// hold or incoming transition
-		fPhase = DTF(1 - m_fTransProgress);
-	}
 	int	nTiles = Round(m_aTileIdx.GetSize() * fPhase);	// number of tiles to draw
 	for (int iTile = 0; iTile < nTiles; iTile++) {	// for each drawn tile
 		int	nTileIdx = m_aTileIdx[iTile];	// get tile's randomized index
@@ -661,9 +657,7 @@ void CSloganDraw::TransConvergeHorz(CD2DPointF ptBaselineOrigin, DWRITE_MEASURIN
 	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
 {
 	// odd lines slide left and even lines slide right, or vice versa
-	double	fPhase = m_fTransProgress;
-	if (!IsTransOut())	// if incoming transition
-		fPhase = 1 - fPhase;	// invert phase
+	double	fPhase = GetPhase();
 	CKD2DRectF	rText;
 	CD2DSizeF	szRT = GetTextBounds(rText);
 	float	fSlideSpan = DTF(max(szRT.width - rText.left, rText.right) * fPhase);
@@ -701,9 +695,7 @@ void CSloganDraw::TransConvergeVert(CD2DPointF ptBaselineOrigin, DWRITE_MEASURIN
 	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
 {
 	// odd characters fall and even characters rise, or vice versa
-	double	fPhase = m_fTransProgress;
-	if (!IsTransOut())	// if incoming transition
-		fPhase = 1 - fPhase;	// invert phase
+	double	fPhase = GetPhase();
 	CKD2DRectF	rText;
 	CD2DSizeF	szRT = GetTextBounds(rText);
 	float	fSlideSpan = DTF(max(szRT.height - rText.top, rText.bottom) * fPhase);
@@ -780,9 +772,7 @@ bool CSloganDraw::TransMelt()
 bool CSloganDraw::TransMelt(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
 {
-	double	fPhase = m_fTransProgress;
-	if (!IsTransOut())	// if incoming transition
-		fPhase = 1 - fPhase;	// invert phase
+	double	fPhase = GetPhase();
 	CComPtr<ID2D1PathGeometry> pPathGeom;
 	CHECK(m_pD2DFactory->CreatePathGeometry(&pPathGeom));
 	CComPtr<ID2D1GeometrySink> pGeomSink;
@@ -809,9 +799,7 @@ bool CSloganDraw::TransElevator()
 void CSloganDraw::TransElevator(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
 {
-	double	fPhase = m_fTransProgress;
-	if (!IsTransOut())	// if incoming transition
-		fPhase = 1 - fPhase;	// invert phase
+	double	fPhase = GetPhase();
 	m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
 	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun);
 	CKD2DRectF	rGlyph;
@@ -841,9 +829,7 @@ bool CSloganDraw::TransClock()
 bool CSloganDraw::TransClock(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
 {
-	double	fPhase = m_fTransProgress;
-	if (!IsTransOut())	// if incoming transition
-		fPhase = 1 - fPhase;	// invert phase
+	double	fPhase = GetPhase();
 	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun);
 	CKD2DRectF	rGlyph;
 	UINT	iGlyph;
