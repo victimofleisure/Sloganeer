@@ -23,7 +23,7 @@ Simple example: `Sloganeer myslogans.txt -fontname Calibri -fontsize 120`
 |&#8209;bgcolor&nbsp;COLOR|Background color in hexadecimal.|
 |&#8209;drawcolor&nbsp;COLOR|Drawing color in hexadecimal.|
 |&#8209;nowrap|Disables automatic word wrapping.|
-|&#8209;easing|The percentage of motion to ease. Only applies to transition types that support easing.|
+|&#8209;easing PCT|The percentage of motion to ease. Only applies to transition types that support easing.|
 
 ### Examples
 
