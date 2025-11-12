@@ -23,6 +23,7 @@ Simple example: `Sloganeer myslogans.txt -fontname Calibri -fontsize 120`
 |&#8209;bgcolor&nbsp;COLOR|Background color in hexadecimal.|
 |&#8209;drawcolor&nbsp;COLOR|Drawing color in hexadecimal.|
 |&#8209;nowrap|Disables automatic word wrapping.|
+|&#8209;easing|The percentage of motion to ease. Only applies to transition types that support easing.|
 
 ### Examples
 
@@ -79,7 +80,7 @@ The slogans file must be in either ANSI or UTF-8 format. To use non-ANSI charact
 
 ### Defaults
 
-Randomized slogan order, white text on black background, 150 point Arial Black (weight 900), each transition takes two seconds, with one second of hold time and no pause between slogans.
+Randomized slogan order, white text on black background, 150 point Arial Black (weight 900), each transition takes two seconds, with one second of hold time, no pause between slogans, and 15% easing.
 
 ### Shortcuts
 
