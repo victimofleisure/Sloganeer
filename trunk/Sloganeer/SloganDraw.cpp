@@ -194,6 +194,12 @@ bool CSloganDraw::SetCapture(bool bEnable)
 	if (bEnable == m_capture.IsCreated())	// if state unchanged
 		return true;	// nothing to do
 	if (bEnable) {	// if starting capture
+		// full screen mode must be established before capture instance is created,
+		// so process pending render commands, in case full screen is one of them
+		CRenderCmd	cmd;
+		while (m_qCmd.Pop(cmd)) {	// while commands remain
+			ProcessCommand(cmd);	// process command
+		}
 		DXGI_SWAP_CHAIN_DESC	desc;
 		CHECK(m_pSwapChain->GetDesc(&desc));
 		m_nSwapChainBuffers = desc.BufferCount;	// store swap chain buffer count
@@ -352,17 +358,18 @@ void CSloganDraw::StartIdle(int nDuration)
 
 bool CSloganDraw::ContinueIdle()
 {
-#if SD_CAPTURE	// if capturing frames
-	return false;	// draw during idle, so idle gets captured
-#endif	// SD_CAPTURE
 	ULONGLONG	nNow = GetTickCount64();
 	if (nNow < m_nWakeTime) {	// if more idle time remains
+#if SD_CAPTURE	// if capturing frames
+		return false;	// draw during idle, so idle gets captured
+#else
 		// block instead of drawing, to reduce power usage
 		DWORD	nTimeout = static_cast<DWORD>(m_nWakeTime - nNow);
 		// wait for wake signal or timeout
 		DWORD	nRet = WaitForSingleObject(m_evtWake, nTimeout);
 		if (nRet == WAIT_OBJECT_0)	// if wake signal
 			return false;	// idle is incomplete
+#endif	// SD_CAPTURE
 	}
 	return true;	// idle is over
 }
