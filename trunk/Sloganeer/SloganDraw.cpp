@@ -549,10 +549,7 @@ void CSloganDraw::TransTypewriter()
 
 void CSloganDraw::TransScale()
 {
-	UINT	nGPFlags = GP_INVERT;
-	if (m_iTransType == TT_SCALE_SPIN)	// if spinning
-		nGPFlags |= GP_EASING;	// apply easing
-	float	fPhase = DTF(GetPhase(nGPFlags));
+	float	fPhase = DTF(GetPhase(GP_INVERT | GP_EASING));
 	CD2DSizeF	szScale;
 	switch (m_iTransType) {
 	case TT_SCALE_HORZ:
