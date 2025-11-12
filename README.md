@@ -51,29 +51,29 @@ For example, to set incoming transitions to 1 second, a hold time of 3 seconds, 
 
 ### Slogans file
 
-The slogans file is a plain text file containing the slogans to be displayed. Each non-blank line of the file is interpreted as a single slogan. You can create multi-line slogans by inserting tab characters where you want line breaks. Each tab in a slogan is replaced with a newline when the text is displayed.
+The slogans file is a plain text file containing the slogans to be displayed. Each non-empty line of the file is interpreted as a single slogan. You can create multi-line slogans by inserting tab characters where you want line breaks. Each tab in a slogan is replaced with a newline when the text is displayed. To create a blank slogan, use a line containing a single space.
 
 The slogans file must be in either ANSI or UTF-8 format. To use non-ANSI characters, UTF-8 format is strongly recommended. UTF-8 supports nearly all languages including Chinese, Japanese, Arabic, and Hindi.
 
 ### Transitions
 
-* Scroll from left to right
-* Scroll from right to left
-* Scroll from top to bottom
-* Scroll from bottom to top
-* Reveal or cover from left to right
-* Reveal or cover from top to bottom
-* Reveal or cover one letter at a time
-* Fade to or from background color
-* Scale horizontally
-* Scale vertically
-* Scale both axes
-* Reveal or cover with tiles
-* Converge horizontally
-* Converge vertically
-* Melt or grow by erasing outline
-* Per-character horizontal reveal
-* Per-character radial reveal
+1. Scroll from left to right
+2. Scroll from right to left
+3. Scroll from top to bottom
+4. Scroll from bottom to top
+5. Reveal or cover from left to right
+6. Reveal or cover from top to bottom
+7. Reveal or cover one letter at a time
+8. Fade to or from background color
+9. Scale horizontally
+10. Scale vertically
+11. Scale both axes
+12. Reveal or cover with tiles
+13. Converge horizontally
+14. Converge vertically
+15. Melt or grow by erasing outline
+16. Per-character horizontal reveal
+17. Per-character radial reveal
 
 ### Defaults
 
