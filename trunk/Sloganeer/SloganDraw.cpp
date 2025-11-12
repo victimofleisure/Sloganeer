@@ -18,7 +18,7 @@
 		08		09nov25	fix typewriter breaking fade; reset drawing effect
 		09		10nov25	add regression test
 		10		11nov25	add elevator and clock transitions
-		11		12nov25	add skew transition
+		11		12nov25	add skew and spin transitions
 
 */
 
@@ -552,6 +552,7 @@ void CSloganDraw::TransScale()
 		szScale = CD2DSizeF(1, fPhase);	// scale vertically
 		break;
 	case TT_SCALE_BOTH:
+	case TT_SCALE_SPIN:
 		szScale = CD2DSizeF(fPhase, fPhase);	// scale both axes
 		break;
 	default:
@@ -560,6 +561,10 @@ void CSloganDraw::TransScale()
 	CD2DSizeF	szRT(m_pD2DDeviceContext->GetSize());	// get render target size
 	CD2DPointF	ptCenter(szRT.width / 2, szRT.height / 2);	// scaling center point
 	auto mScale(D2D1::Matrix3x2F::Scale(szScale, ptCenter));	// create scaling matrix
+	if (m_iTransType == TT_SCALE_SPIN) {	// if spinning too
+		auto mRotation(D2D1::Matrix3x2F::Rotation(fPhase * 360, ptCenter));	// create rotation matrix
+		mScale = mScale * mRotation;	// apply rotation matrix
+	}
 	m_pD2DDeviceContext->SetTransform(mScale);	// apply scaling matrix
 	CD2DPointF	ptOrigin(0, 0);
 	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pDrawBrush);	// draw text
@@ -971,6 +976,7 @@ bool CSloganDraw::OnDraw()
 	case TT_SCALE_HORZ:
 	case TT_SCALE_VERT:
 	case TT_SCALE_BOTH:
+	case TT_SCALE_SPIN:
 		TransScale();
 		break;
 	case TT_TILE:

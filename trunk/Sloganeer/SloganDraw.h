@@ -17,7 +17,7 @@
 		07		07nov25	add melt transition
 		08		10nov25	add regression test
 		09		11nov25	add elevator and clock transitions
-		10		12nov25	add skew transition
+		10		12nov25	add skew and spin transitions
 
 */
 
@@ -80,6 +80,7 @@ protected:
 		TT_SCALE_HORZ,	// scale horizontally
 		TT_SCALE_VERT,	// scale vertically
 		TT_SCALE_BOTH,	// scale both axes
+		TT_SCALE_SPIN,	// scale both axes and rotate
 		TT_TILE,		// reveal or cover with tiles
 		TT_CONVERGE_HORZ,	// converge horizontally
 		TT_CONVERGE_VERT,	// converge vertically
