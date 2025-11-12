@@ -80,7 +80,7 @@ The slogans file must be in either ANSI or UTF-8 format. To use non-ANSI charact
 
 ### Defaults
 
-Randomized slogan order, white text on black background, 150 point Arial Black (weight 900), each transition takes two seconds, with one second of hold time, and no pause between slogans. Easing defaults to 15% for transitions that support it.
+Randomized slogan order, white text on black background, 150 point Arial Black (weight 900). Each transition takes two seconds, with one second of hold time, and no pause between slogans. Easing is 15% for transitions that support it.
 
 ### Shortcuts
 
