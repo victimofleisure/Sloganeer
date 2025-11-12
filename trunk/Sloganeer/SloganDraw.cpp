@@ -18,6 +18,7 @@
 		08		09nov25	fix typewriter breaking fade; reset drawing effect
 		09		10nov25	add regression test
 		10		11nov25	add elevator and clock transitions
+		11		12nov25	add skew transition
 
 */
 
@@ -864,6 +865,37 @@ bool CSloganDraw::TransClock(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE 
 	return true;
 }
 
+bool CSloganDraw::TransSkew()
+{
+	CHECK(m_pTextLayout->Draw(0, this, 0, 0));
+	return true;
+}
+
+void CSloganDraw::TransSkew(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
+{
+	double	fPhase = !IsTransOut() ? (1 - m_fTransProgress) : -m_fTransProgress;
+	auto mSkew(D2D1::Matrix3x2F::Skew(DTF(90 * fPhase), 0, ptBaselineOrigin));
+	m_pD2DDeviceContext->SetTransform(mSkew);
+	m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
+	m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
+}
+
+void CSloganDraw::DrawGlyphBounds(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun)
+{
+	CKD2DRectF	rGlyph;
+	UINT	iGlyph;
+	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun);
+	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
+		m_pD2DDeviceContext->DrawRectangle(rGlyph, m_pDrawBrush);
+	}
+	if (pGlyphRun->glyphCount) {
+		CD2DSizeF	szRT = m_pD2DDeviceContext->GetSize();
+		m_pD2DDeviceContext->DrawLine(CD2DPointF(0, ptBaselineOrigin.y),
+			CD2DPointF(szRT.width, ptBaselineOrigin.y), m_pDrawBrush);	// draw baseline too
+	}
+}
+
 HRESULT CSloganDraw::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOriginX, 
 	FLOAT fBaselineOriginY, DWRITE_MEASURING_MODE measuringMode, DWRITE_GLYPH_RUN const* pGlyphRun, 
 	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, IUnknown* pClientDrawingEffect)
@@ -893,6 +925,9 @@ HRESULT CSloganDraw::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOr
 		break;
 	case TT_CLOCK:
 		TransClock(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
+		break;
+	case TT_SKEW:
+		TransSkew(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
 		break;
 	default:
 		NODEFAULTCASE;
@@ -953,6 +988,9 @@ bool CSloganDraw::OnDraw()
 		break;
 	case TT_CLOCK:
 		TransClock();
+		break;
+	case TT_SKEW:
+		TransSkew();
 		break;
 	default:
 		NODEFAULTCASE;	// logic error

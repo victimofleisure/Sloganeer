@@ -17,6 +17,7 @@
 		07		07nov25	add melt transition
 		08		10nov25	add regression test
 		09		11nov25	add elevator and clock transitions
+		10		12nov25	add skew transition
 
 */
 
@@ -85,6 +86,7 @@ protected:
 		TT_MELT,		// outline with increasing stroke width
 		TT_ELEVATOR,	// per-character horizontal reveal
 		TT_CLOCK,		// per-character radial reveal
+		TT_SKEW,		// tip over or return to upright
 		TRANS_TYPES
 	};
 	enum {
@@ -193,6 +195,9 @@ protected:
 	bool	TransClock();
 	bool	TransClock(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
+	bool	TransSkew();
+	void	TransSkew(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
 	bool	LaunchMeltWorker();
 	bool	MeasureMeltStroke();
 	bool	GetLineMetrics();
@@ -200,6 +205,7 @@ protected:
 	bool	SetCapture(bool bEnable = true);
 	bool	CaptureFrame();
 	bool	RegressionTest();
+	void	DrawGlyphBounds(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun);
 	static double	Lerp(double a, double b, double t);
 };
 
