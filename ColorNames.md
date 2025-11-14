@@ -1,3 +1,4 @@
 | Name | Swatch | Hex |
 |------|--------|-----|
-| Red  | <span style="display:inline-block;width:1.2em;height:1.2em;border:1px solid #ccc;background:#ff0000;"></span> | `#ff0000` |
+| Red  | <div style="display:inline-block;width:2em;height:2em;margin:0.1em;border:1px solid #ccc;background:#00ff00;">&nbsp;</div>
+ | `#ff0000` |
