@@ -8,7 +8,7 @@
 
 Simple example: `Sloganeer myslogans.txt -fontname Calibri -fontsize 120`
 
-*Numeric parameters accept fractional values unless specified otherwise.*
+**Numeric parameters accept fractional values unless specified otherwise.**
 
 |Option|Description|
 |---|---|
