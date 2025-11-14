@@ -8,22 +8,28 @@
 
 Simple example: `Sloganeer myslogans.txt -fontname Calibri -fontsize 120`
 
+*Numeric parameters accept fractional values unless specified otherwise.*
+
 |Option|Description|
 |---|---|
 |slogans_path|The path of an ANSI or UTF-8 text file containing the slogans to display, one slogan per line; if the path contains spaces, enclose it in double quotes.|
 |&#8209;fullscreen|Start the application in full screen mode.|
 |&#8209;fontsize&nbsp;SIZE|Font size in points.|
 |&#8209;fontname&nbsp;NAME|Font name; if the font name contains spaces, enclose it in double quotes.|
-|&#8209;fontweight&nbsp;WEIGHT|Font weight from 1 to 999.|
-|&#8209;transdur&nbsp;SECS|Transition duration in seconds; fractions of a second are allowed. Applies to both incoming and outgoing transitions unless the outdur option is also specified.|
-|&#8209;holddur&nbsp;SECS|Duration for which slogan is immobile, in seconds; fractions of a second are allowed.|
-|&#8209;outdur&nbsp;SECS|Outgoing transition duration in seconds; fractions of a second are allowed. Only needed if outgoing transitions should have a different duration than incoming transitions.|
-|&#8209;pausedur&nbsp;SECS|Duration of pause between slogans, in seconds; fractions of a second are allowed.|
+|&#8209;fontweight&nbsp;WEIGHT|Font weight from 1 to 999. Integer only.|
+|&#8209;transdur&nbsp;SECS|Transition duration in seconds. Applies to both incoming and outgoing transitions unless the outdur option is also specified.|
+|&#8209;holddur&nbsp;SECS|Duration for which slogan is immobile, in seconds.|
+|&#8209;outdur&nbsp;SECS|Outgoing transition duration in seconds. Only needed if outgoing transitions should have a different duration than incoming transitions.|
+|&#8209;pausedur&nbsp;SECS|Duration of pause between slogans, in seconds.|
 |&#8209;seqtext|Display slogans in sequential order instead of randomizing them.|
 |&#8209;bgcolor&nbsp;COLOR|Background color in hexadecimal.|
 |&#8209;drawcolor&nbsp;COLOR|Drawing color in hexadecimal.|
 |&#8209;nowrap|Disables automatic word wrapping.|
-|&#8209;easing PCT|The percentage of motion to ease; fractions of a percent are allowed. Only applies to transition types that support easing.|
+|&#8209;easing PCT|The percentage of motion to ease. Only applies to transition types that support easing.|
+|&#8209;record PATH|Destination folder for recording an image sequence.|
+|&#8209;recsize SIZE|Recording frame size in pixels, with width and height separated by an 'x' as in 1920x1080.|
+|&#8209;recrate FPS|Recording frame frame rate in frames per second.|
+|&#8209;recdur SECS|Recording duration in seconds.|
 
 ### Examples
 
