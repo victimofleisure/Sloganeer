@@ -81,6 +81,11 @@ BOOL CSloganeerApp::InitInstance()
 	}
 	END_CATCH
 
+	if (FAILED(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED))) {
+		AfxMessageBox(IDS_ERR_CANT_INIT_COM);
+		return false;
+	}
+
 	CSloganeerDlg dlg(params);
 	m_pMainWnd = &dlg;
 	INT_PTR nResponse = dlg.DoModal();
@@ -93,6 +98,12 @@ BOOL CSloganeerApp::InitInstance()
 	// Since the dialog has been closed, return FALSE so that we exit the
 	//  application, rather than start the application's message pump.
 	return FALSE;
+}
+
+int CSloganeerApp::ExitInstance()
+{
+	CoUninitialize();
+	return CWinApp::ExitInstance();
 }
 
 void CSloganeerApp::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate)

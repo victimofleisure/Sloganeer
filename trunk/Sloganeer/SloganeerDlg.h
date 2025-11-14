@@ -9,6 +9,7 @@
 		rev		date	comments
         00      24oct25	initial version
 		01		30oct25	move parameters to their own class
+		02		14nov25	add delayed create handler
 
 */
 
@@ -51,6 +52,9 @@ protected:
 	virtual BOOL OnInitDialog();
 	virtual BOOL DestroyWindow();
 
+// Helpers
+	bool	Record();
+
 // Message handlers
 	DECLARE_MESSAGE_MAP()
 	afx_msg void OnPaint();
@@ -58,4 +62,5 @@ protected:
 	afx_msg void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg BOOL OnSetCursor(CWnd* pWnd, UINT nHitTest, UINT message);
+	afx_msg LRESULT OnDelayedCreate(WPARAM wParam, LPARAM lParam);
 };

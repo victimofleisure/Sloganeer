@@ -19,6 +19,7 @@
 		09		10nov25	add regression test
 		10		11nov25	add elevator and clock transitions
 		11		12nov25	add skew and spin transitions
+		12		14nov25	add recording
 
 */
 
@@ -29,8 +30,9 @@
 #define _USE_MATH_DEFINES
 #include "math.h"
 #include "Easing.h"
-
-#define SEED_WITH_TIME 1	// non-zero to seed pseudorandom sequence with current time
+#include "PathStr.h"
+#include "SaveObj.h"
+#include "D2DOffscreen.h"
 
 #define DTF(x) static_cast<float>(x)
 
@@ -41,7 +43,7 @@ CSloganDraw::CSloganDraw()
 	Init();
 }
 
-CSloganDraw::CSloganDraw(CSloganParams& params) : CSloganParams(params)
+CSloganDraw::CSloganDraw(const CSloganParams& params) : CSloganParams(params)
 {
 	Init();
 }
@@ -58,6 +60,7 @@ void CSloganDraw::Init()
 	m_bThreadExit = false;
 	m_bIsFullScreen = false;
 	m_bIsTransStart = false;
+	m_bIsRecording = false;
 	m_iState = ST_TRANS_OUT;
 	m_iSlogan = 0;
 	m_iTransType = 0;
@@ -68,20 +71,15 @@ void CSloganDraw::Init()
 	m_bIsGlyphRising = false;
 	m_iGlyphLine = 0;
 	m_fMeltMaxStroke = 0;
-	m_nFrames = 0;
+	m_iFrame = 0;
 	m_nSwapChainBuffers = 0;
-#if SD_CAPTURE	// if capturing frames
-	m_capture.m_pParent = this;
-#endif	// SD_CAPTURE
+	m_fStartTime = 0;
 }
 
 bool CSloganDraw::Create(HWND hWnd)
 {
 	if (!m_evtWake.Create(NULL, false, false, NULL))	// create wake event
 		return false;
-	m_timerTrans.Reset();	// reset transition timer
-	m_rlSloganIdx.Init(m_aSlogan.GetSize());	// init slogan index shuffler
-	m_rlTransType.Init(TRANS_TYPES);	// init transition type shuffler
 	return CreateThread(hWnd);	// create render thread
 }
 
@@ -124,7 +122,7 @@ void CSloganDraw::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCST
 #if SD_CAPTURE	// if capturing frames
 void CSloganDraw::CMyD2DCapture::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate)
 {
-	m_pParent->OnError(hr, pszSrcFileName, nLineNum, pszSrcFileDate);
+	theApp.OnError(hr, pszSrcFileName, nLineNum, pszSrcFileDate);
 }
 #endif	// SD_CAPTURE
 
@@ -148,16 +146,16 @@ void CSloganDraw::DestroyUserResources()
 	m_pTextLayout.Release();
 	m_pDWriteFactory.Release();
 	m_pStrokeStyle.Release();
-	if (m_bThreadExit)
+	if (m_bThreadExit)	// if thread exiting
 		CoUninitialize();	// needed for WIC
 }
 
 bool CSloganDraw::OnThreadCreate()
 {
 	CHECK(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED));	// needed for WIC
-	if (SEED_WITH_TIME) {
-		srand(GetTickCount());	// seed pseudorandom generator with time
-	}
+	srand(m_nRandSeed);	// initialize random number generator
+	m_rlSloganIdx.Init(m_aSlogan.GetSize());	// init slogan index shuffler
+	m_rlTransType.Init(TRANS_TYPES);	// init transition type shuffler
 	if (m_bSeqSlogans) {	// if showing slogans sequentially
 		m_iSlogan = -1;	// avoid skipping first slogan
 	}
@@ -224,9 +222,11 @@ bool CSloganDraw::CaptureFrame()
 	// buffer zero contains meaningful data. The first N frames captured
 	// are leftovers from before drawing started, and should be skipped.
 	//
-	if (m_nFrames < m_nSwapChainBuffers)	// if initial blank frame
+	if (m_iFrame < m_nSwapChainBuffers)	// if initial blank frame
 		return true;	// skip blank frame; not an error
-	return m_capture.CaptureFrame();	// capture frame
+	if (!m_capture.CaptureFrame())	// if capture frame fails
+		m_capture.Destroy();	// abort capture
+	return true;
 }
 #endif	// SD_CAPTURE
 
@@ -245,7 +245,7 @@ bool CSloganDraw::RegressionTest()
 	// those initial blank frames, and we must account for that here,
 	// plus one extra because OnDraw calls us before CaptureFrame
 	const UINT	nEndFrame = nOutputFrames + m_nSwapChainBuffers + 1;
-	if (m_nFrames == nEndFrame) {	// if last frame captured
+	if (m_iFrame == nEndFrame) {	// if last frame captured
 		CWnd*	pMainWnd = theApp.m_pMainWnd;
 		ASSERT(pMainWnd != NULL);	// sanity check
 		SetCapture(false);	// stop capturing immediately
@@ -302,15 +302,15 @@ bool CSloganDraw::RegressionTest()
 			pMainWnd->PostMessage(WM_QUIT);	// exit app
 		}
 	}
-	const bool	bIsOddFrame = m_nFrames & 1;
+	const bool	bIsOddFrame = m_iFrame & 1;
 	const int	iState = bIsOddFrame ? ST_TRANS_OUT : ST_TRANS_IN;
 	StartTrans(iState, 1);	// start a new transition
 	// override transition type
 	if (bMakeRefs) {	// if generating reference frames
-		m_iTransType = (m_nFrames / 2) % TRANS_TYPES;
+		m_iTransType = (m_iFrame / 2) % TRANS_TYPES;
 	} else {	// checking permutations against reference
-		m_iTransType = bIsOddFrame ? (m_nFrames / 2) % TRANS_TYPES 
-			: m_nFrames / REF_FRAMES % TRANS_TYPES;
+		m_iTransType = bIsOddFrame ? (m_iFrame / 2) % TRANS_TYPES 
+			: m_iFrame / REF_FRAMES % TRANS_TYPES;
 	}
 	m_fTransProgress = 1.0 / 3;	// override transition progress
 	m_nHoldDuration = 0;	// no hold
@@ -319,6 +319,56 @@ bool CSloganDraw::RegressionTest()
 	return true;
 }
 #endif	// SD_CAPTURE
+
+double CSloganDraw::GetFrameTime() const
+{
+	// during recording, compute time from frame index to avoid jitter
+	return m_iFrame * (1.0 / m_fRecFrameRate);
+}
+
+class CSloganOffscreen : public CD2DOffscreen {
+	virtual void OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate) {
+		theApp.OnError(hr, pszSrcFileName, nLineNum, pszSrcFileDate);
+	}
+};
+
+bool CSloganDraw::Record()
+{
+	CSloganOffscreen	offScreen;
+	if (!offScreen.Create(CD2DSizeU(m_szRecFrameSize)))
+		return false;
+	// set recording state to true; restored automatically when we exit
+	CSaveObj<bool>	saveRecording(m_bIsRecording, true);
+	// use CopyTo instead of Attach because we don't own these objects,
+	// we're only borrowing them; CopyTo adds a reference to the object
+	offScreen.m_pD2DFactory.CopyTo(&m_pD2DFactory);
+	offScreen.m_pD2DDeviceContext.CopyTo(&m_pD2DDeviceContext);
+	if (!CreateUserResources())
+		return false;
+	if (!OnThreadCreate())
+		return false;
+	UINT	nRecFrames = Round(m_fRecDuration * m_fRecFrameRate);
+	for (m_iFrame = 0; m_iFrame < nRecFrames; m_iFrame++) {	// for each frame
+		offScreen.m_pD2DDeviceContext->BeginDraw();	// begin draw
+		bool	bDrawResult = OnDraw();	// draw slogan
+		CHECK(offScreen.m_pD2DDeviceContext->EndDraw());	// end draw
+		if (!bDrawResult)	// if drawing failed
+			return false;	// error already handled
+		CString	sImagePath(MakeImageSequenceFileName(m_sRecFolderPath, m_iFrame));
+		if (!offScreen.Write(sImagePath))	// write frame to file
+			return false;
+	}
+	return true;
+}
+
+CString	CSloganDraw::MakeImageSequenceFileName(CString sFolderPath, UINT iFrame)
+{
+	CString	sSeqNum;
+	sSeqNum.Format(_T("%06d"), iFrame);
+	CPathStr	sImagePath(sFolderPath);
+	sImagePath.Append(_T("\\img") + sSeqNum + _T(".png"));
+	return sImagePath;
+}
 
 void CSloganDraw::StartTrans(int nState, float fDuration)
 {
@@ -334,7 +384,11 @@ void CSloganDraw::StartTrans(int nState, float fDuration)
 	m_iState = nState;	// set state
 	m_fTransDuration = fDuration;
 	m_bIsTransStart = true;	// set transition start flag
-	m_timerTrans.Reset();	// reset transition timer
+	if (m_bIsRecording) {	// if recording
+		m_fStartTime = GetFrameTime();	// compute time from frame index
+	} else {	// not recording
+		m_timerTrans.Reset();	// reset transition timer
+	}
 	m_iTransType = m_rlTransType.GetNext(m_iTransType);	// get next transition type
 	m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());	// remove transform if any
 }
@@ -355,11 +409,20 @@ void CSloganDraw::StartSlogan()
 
 void CSloganDraw::StartIdle(int nDuration)
 {
-	m_nWakeTime = GetTickCount64() + nDuration;	// set wake time
+	if (m_bIsRecording) {	// if recording
+		// compute time from frame index
+		m_nWakeTime = Round64(GetFrameTime() * 1000 + nDuration);
+	} else {	// not recording
+		m_nWakeTime = GetTickCount64() + nDuration;	// set wake time
+	}
 }
 
 bool CSloganDraw::ContinueIdle()
 {
+	if (m_bIsRecording) {	// if recording
+		ULONGLONG	nNow = Round64(GetFrameTime() * 1000);
+		return nNow >= m_nWakeTime;
+	}
 	ULONGLONG	nNow = GetTickCount64();
 	if (nNow < m_nWakeTime) {	// if more idle time remains
 #if SD_CAPTURE	// if capturing frames
@@ -432,6 +495,13 @@ CD2DSizeF CSloganDraw::GetTextBounds(CKD2DRectF& rText) const
 	return szRT;	// return render target size
 }
 
+void CSloganDraw::DrawTextBounds()
+{
+	CKD2DRectF	rText;
+	GetTextBounds(rText);
+	m_pD2DDeviceContext->DrawRectangle(rText, m_pDrawBrush);
+}
+
 double CSloganDraw::GetPhase(UINT nFlags) const
 {
 	bool	bOutgoing = IsTransOut();
@@ -446,6 +516,17 @@ double CSloganDraw::GetPhase(UINT nFlags) const
 	if (bOutgoing == bInvert)	// if transition should be reversed
 		fPhase = 1 - fPhase;	// invert phase
 	return fPhase;
+}
+
+inline double CSloganDraw::GetFrameRate()
+{
+	if (m_bIsRecording) {	// if recording
+		return m_fRecFrameRate;	// use record frame rate
+	} else {	// not recording
+		DWORD	dwDisplayFreq;
+		GetDisplayFrequency(dwDisplayFreq);	// use display frequency
+		return dwDisplayFreq;
+	}
 }
 
 void CSloganDraw::TransScroll()
@@ -580,9 +661,7 @@ void CSloganDraw::TransScale()
 void CSloganDraw::InitTiling(const CKD2DRectF& rText)
 {
 	// ideal tile count is one tile for each frame of transition
-	DWORD	dwDisplayFreq;
-	GetDisplayFrequency(dwDisplayFreq);
-	float	fIdealTileCount = dwDisplayFreq * m_fTransDuration;
+	float	fIdealTileCount = DTF(GetFrameRate() * m_fTransDuration);
 	// compute tile size: divide text area by ideal tile count and take square root
 	CD2DSizeF	szText(rText.Size());
 	m_fTileSize = DTF(sqrt(szText.width * szText.height / fIdealTileCount));
@@ -950,7 +1029,12 @@ HRESULT CSloganDraw::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOr
 bool CSloganDraw::OnDraw()
 {
 	m_pD2DDeviceContext->Clear(m_clrBkgnd);	// clear frame to background color
-	double	fTransElapsed = m_timerTrans.Elapsed();	// elapsed time since transition started
+	double	fTransElapsed;	// elapsed time since transition started
+	if (m_bIsRecording) {	// if recording
+		fTransElapsed = GetFrameTime() - m_fStartTime;	// compute time from frame index
+	} else {	// not recording
+		fTransElapsed = m_timerTrans.Elapsed();	// get elapsed time from transition timer
+	}
 	double	fTransRemain = m_fTransDuration - fTransElapsed;	// remaining transition time
 	bool	bTransComplete;
 	if (fTransRemain > 0) {	// if transition has time remaining
@@ -1008,11 +1092,6 @@ bool CSloganDraw::OnDraw()
 	default:
 		NODEFAULTCASE;	// logic error
 	}
-#if 0	// draw bounds (debug only)
-	CKD2DRectF	rText;
-	GetTextBounds(rText);
-	m_pD2DDeviceContext->DrawRectangle(rText, m_pDrawBrush);
-#endif
 	m_bIsTransStart = false;	// reset transition start flag
 	switch (m_iState) {
 	case ST_TRANS_IN:
@@ -1054,7 +1133,7 @@ bool CSloganDraw::OnDraw()
 	}
 #if SD_CAPTURE	// if capturing frames
 	CaptureFrame();
-	m_nFrames++;
+	m_iFrame++;
 #endif	// SD_CAPTURE
 	return true;
 }

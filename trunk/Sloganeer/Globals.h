@@ -17,6 +17,7 @@
 #include "WObject.h"	// ck: ultra-minimal base class used by many of my objects
 #include "ArrayEx.h"	// ck: wraps MFC dynamic arrays, adding speed and features
 #include "Round.h"		// ck: round floating point to integer
+#include "Benchmark.h"	// ck: wraps hardware performance counter
 #include <math.h>
 
 // define registry section for settings

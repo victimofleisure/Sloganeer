@@ -15,7 +15,6 @@
 #include "stdafx.h"
 #include "Sloganeer.h"
 #include "MeltProbe.h"
-#include "Benchmark.h"
 #include <bitset>
 
 #define DTF(x) static_cast<float>(x)

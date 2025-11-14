@@ -18,6 +18,7 @@
 		08		10nov25	add regression test
 		09		11nov25	add elevator and clock transitions
 		10		12nov25	add skew and spin transitions
+		11		14nov25	add recording
 
 */
 
@@ -26,9 +27,8 @@
 #include "RenderThread.h"
 #include "Event.h"
 #include "RandList.h"
-#include "Benchmark.h"
-#include "D2DHelper.h"
 #include "SloganParams.h"
+#include "D2DHelper.h"
 #include "MeltProbe.h"
 
 #define	SD_CAPTURE_NONE				0	// disable capture
@@ -46,18 +46,20 @@ class CSloganDraw : public CRenderThread, protected CSloganParams, protected CTe
 public:
 // Construction
 	CSloganDraw();
-	CSloganDraw(CSloganParams& params);
+	CSloganDraw(const CSloganParams& params);
 	~CSloganDraw();
 	bool	Create(HWND hWnd);
 	void	Destroy();
 
 // Attributes
 	bool	IsFullScreen() const;
-	const CSloganParams&	GetParms() const;
+	const CSloganParams&	GetParams() const;
 
 // Operations
 	void	Resize();
 	bool	FullScreen(bool bEnable);
+	bool	Record();
+	static CString	MakeImageSequenceFileName(CString sFolderPath, UINT iFrame);
 
 protected:
 // Constants
@@ -122,6 +124,7 @@ protected:
 	bool	m_bThreadExit;		// true if render thread exit requested
 	bool	m_bIsFullScreen;	// true if in full screen mode
 	bool	m_bIsTransStart;	// true if starting a transition
+	bool	m_bIsRecording;		// true if recording a video
 	int		m_iState;			// index of current state
 	int		m_iSlogan;			// index of current slogan
 	int		m_iTransType;		// index of current transition type
@@ -138,14 +141,14 @@ protected:
 	float	m_fMeltMaxStroke;	// maximum outline stroke for melt effect, in DIPs
 	CMeltProbeWorker	m_thrMeltWorker;	// melt probe worker thread instance
 	CArrayEx<float, float>	m_aMeltStroke;	// array of cached melt outline strokes
-	UINT	m_nFrames;			// frame counter, used during capture
+	UINT	m_iFrame;			// frame counter, used during capture and recording
 	UINT	m_nSwapChainBuffers;	// number of swap chain buffers
+	double	m_fStartTime;		// used for recording
 
 #if SD_CAPTURE	// if capturing frames
 	class CMyD2DCapture : public CD2DCapture {
 	public:
 		virtual void	OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate);
-		CSloganDraw	*m_pParent;	// pointer to parent instance
 	};
 	CMyD2DCapture	m_capture;	// frame capture instance
 #endif	// SD_CAPTURE
@@ -176,7 +179,9 @@ protected:
 	bool	OnFontChange();
 	bool	OnTextChange();
 	CD2DSizeF	GetTextBounds(CKD2DRectF& rText) const;
+	void	DrawTextBounds();
 	double	GetPhase(UINT nFlags = 0) const;
+	double	GetFrameRate();
 	bool	CreateStrokeStyle();
 	bool	ResetDrawingEffect();
 	void	TransScroll();
@@ -211,6 +216,7 @@ protected:
 	bool	CaptureFrame();
 	bool	RegressionTest();
 	void	DrawGlyphBounds(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun);
+	double	GetFrameTime() const;
 	static double	Lerp(double a, double b, double t);
 };
 
@@ -224,7 +230,7 @@ inline bool CSloganDraw::IsFullScreen() const
 	return m_bIsFullScreen;
 }
 
-inline const CSloganParams& CSloganDraw::GetParms() const
+inline const CSloganParams& CSloganDraw::GetParams() const
 {
 	return *this;	// automatic upcast
 }

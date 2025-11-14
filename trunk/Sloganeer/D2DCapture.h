@@ -25,6 +25,7 @@ public:
 
 // Attributes
 	bool	IsCreated() const;
+	void	SetFormat(GUID guidContainerFormat, LPCTSTR pszFileExtension);
 
 // Operations
 	bool	Create(ID3D11Device* pDevice, IDXGISwapChain1* pSwapChain, 
@@ -93,6 +94,8 @@ protected:
 	int		m_nStagedFrames;	// number of frames staged
 	int		m_nCapturedFrames;	// number of frames captured
 	bool	m_bExitFlag;		// true if destroying writers
+	GUID	m_guidContainerFormat;	// identifier of WIC container format
+	LPCTSTR	m_pszFileExtension;	// file extension appropriate for format
 
 // Helpers
 	void	Init();
@@ -108,4 +111,11 @@ inline bool CD2DCapture::IsCreated() const
 {
 	int	nWriters = m_aWriter.GetSize();
 	return (nWriters && m_aWriter[nWriters - 1].IsCreated());
+}
+
+inline void CD2DCapture::SetFormat(GUID guidContainerFormat, LPCTSTR pszFileExtension)
+{
+	ASSERT(pszFileExtension != NULL);
+	m_guidContainerFormat = guidContainerFormat;
+	m_pszFileExtension = pszFileExtension;
 }

@@ -9,6 +9,7 @@
 		rev		date	comments
         00      30oct25	initial version
         01      12nov25	add easing
+		02		14nov25	add recording
 
 */
 
@@ -33,11 +34,22 @@ public:
 	int		m_nFontWeight;		// font weight, from 1 to 999
 	D2D1::ColorF	m_clrBkgnd;	// background color
 	D2D1::ColorF	m_clrDraw;	// drawing color
-	double	m_fEasing;			// fraction of motion to ease, from 0 to 1
+	UINT	m_nRandSeed;		// starting point for random number generation
+	float	m_fEasing;			// fraction of motion to ease, from 0 to 1
+	CString	m_sRecFolderPath;	// recording destination folder path
+	CSize	m_szRecFrameSize;	// recording frame size in pixels
+	float	m_fRecFrameRate;	// recording frame rate
+	float	m_fRecDuration;		// recording duration in seconds
 
 // Attributes
 	void	SetSlogans(const LPCTSTR *aSlogan, int nSlogans);
+	bool	IsRecording() const;
 };
+
+inline bool CSloganParams::IsRecording() const
+{
+	return !m_sRecFolderPath.IsEmpty();
+}
 
 class CParamsParser : public CCommandLineInfo {
 public:
@@ -62,10 +74,13 @@ protected:
 
 // Data members
 	CSloganParams&	m_params;	// reference to parameters instance
-	int		m_iFlag;	// index of flag expecting a parameter
-	bool	m_bError;	// true if error occurred
-	bool	m_bHasOutDur;	// true if outgoing duration was specified
+	int		m_iFlag;			// index of flag expecting a parameter
+	bool	m_bError;			// true if error occurred
+	bool	m_bHasOutDur;		// true if outgoing duration was specified
+	bool	m_bHasRandSeed;		// true if random number seed was specified
 
 // Helpers
+	template<typename T> void Convert(LPCTSTR pszParam, T& val);
+	template<typename T> bool Scan(LPCTSTR pszParam, T& val, T minVal = 0, T maxVal = 0);
 	void	OnError(int nErrID, LPCTSTR pszParam);
 };

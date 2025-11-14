@@ -52,3 +52,20 @@ bool FilesEqual(LPCTSTR pszFile1, LPCTSTR pszFile2)
 	f2.Read(b2.GetData(), nSize);
 	return !memcmp(b1.GetData(), b2.GetData(), nSize);
 }
+
+int WildcardDeleteFile(CString sPath)
+{
+	// Note that the destination path is double-null terminated. CString's
+	// get buffer method allocates the specified number of characters plus
+	// one for the null terminator, but we need space for two terminators,
+	// hence we must increment nPathLen.
+	int	nPathLen = sPath.GetLength();
+	LPTSTR	pszPath = sPath.GetBufferSetLength(nPathLen + 1);
+	pszPath[nPathLen + 1] = '\0';	// double-null terminated string
+	SHFILEOPSTRUCT	SHFileOp;
+	ZeroMemory(&SHFileOp, sizeof(SHFileOp));
+	SHFileOp.wFunc = FO_DELETE;
+	SHFileOp.pFrom = pszPath;
+	SHFileOp.fFlags = FOF_SILENT | FOF_NOCONFIRMATION | FOF_FILESONLY | FOF_NORECURSION;
+	return SHFileOperation(&SHFileOp);
+}

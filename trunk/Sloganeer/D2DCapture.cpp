@@ -12,6 +12,7 @@
 */
 
 #include "stdafx.h"
+#include "resource.h"
 #include "D2DCapture.h"
 #include "PathStr.h"
 
@@ -38,11 +39,16 @@ void CD2DCapture::Init()
 	m_nStagedFrames = 0;
 	m_nCapturedFrames = 0;
 	m_bExitFlag = false;
+	m_guidContainerFormat = GUID_ContainerFormatTiff;
+	m_pszFileExtension = _T(".tif");
 }
 
 void CD2DCapture::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate)
 {
-	// optionally override in derived class to report error
+	UNREFERENCED_PARAMETER(hr);
+	UNREFERENCED_PARAMETER(pszSrcFileName);
+	UNREFERENCED_PARAMETER(nLineNum);
+	UNREFERENCED_PARAMETER(pszSrcFileDate);
 }
 
 bool CD2DCapture::Create(ID3D11Device* pDevice, IDXGISwapChain1* pSwapChain, LPCTSTR pszOutFolderPath, int nWriters, int nRingBufSize)
@@ -134,6 +140,7 @@ bool CD2DCapture::CaptureFrame()
 	pBackbuf->GetDesc(&desc);
 	CSize	szFrame(desc.Width, desc.Height);
 	if (szFrame != m_szFrame) {	// if frame size changed, fatal error
+		AfxMessageBox(IDS_ERR_CAPTURE_FRAME_SIZE_CHANGE);
 		return false;	// frame resize during capture is unsupported
 	}
 	FRAME	frame;
@@ -231,9 +238,9 @@ bool CD2DCapture::CWriter::WriteFrame(const FRAME& frame)
 	CString	sImageFileName;
 	sImageFileName.Format(_T("%06d"), frame.iFrame);
 	CPathStr	sImagePath(m_pCapture->m_sOutFolderPath);
-	sImagePath.Append(_T("cap") + sImageFileName + _T(".tif"));	// make image file path
+	sImagePath.Append(_T("cap") + sImageFileName + m_pCapture->m_pszFileExtension);	// make image file path
 	CComPtr<IWICBitmapEncoder> pEncoder;
-	CHECK(m_pWICFactory->CreateEncoder(GUID_ContainerFormatTiff, NULL, &pEncoder));	// create encoder
+	CHECK(m_pWICFactory->CreateEncoder(m_pCapture->m_guidContainerFormat, NULL, &pEncoder));	// create encoder
 	CComPtr<IWICStream> pStream;
 	CHECK(m_pWICFactory->CreateStream(&pStream));	// create WIC stream
 	CHECK(pStream->InitializeFromFilename(sImagePath, GENERIC_WRITE)); // initialize stream
