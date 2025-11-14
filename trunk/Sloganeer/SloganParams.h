@@ -44,6 +44,11 @@ public:
 // Attributes
 	void	SetSlogans(const LPCTSTR *aSlogan, int nSlogans);
 	bool	IsRecording() const;
+
+// Constants
+	static const LPCTSTR m_sDefaultText;
+	static const LPCTSTR m_aColorName[];
+	static const COLORREF m_aColorVal[];
 };
 
 inline bool CSloganParams::IsRecording() const
@@ -51,14 +56,21 @@ inline bool CSloganParams::IsRecording() const
 	return !m_sRecFolderPath.IsEmpty();
 }
 
-class CParamsParser : public CCommandLineInfo {
+class CParamParser : public CCommandLineInfo {
 public:
 // Construction
-	CParamsParser(CSloganParams& params);
-	virtual ~CParamsParser();
+	CParamParser(CSloganParams& params);
+	virtual ~CParamParser();
 
 // Operations
-	bool	Parse();
+	bool	ParseCommandLine();
+	static	CString	GetAppVersionString();
+	static	void	ShowAppVersion();
+	static	CString	GetHelpString();
+	static	void	ShowHelp();
+	static	void	ShowLicense();
+	static	void	BreakIntoLines(CString sText, CStringArrayEx& arrLine, int nMaxLine = 80);
+	static	void	WriteHelpMarkdown(LPCTSTR pszOutputPath);
 
 protected:
 // Constants
@@ -67,7 +79,15 @@ protected:
 		#include "ParamDef.h"
 		FLAGS
 	};
-	static const LPCTSTR m_aFlag[FLAGS];
+	enum {
+		#define HELPEXAMPLEDEF(name) EXAMPLE_##name,
+		#include "ParamDef.h"
+		EXAMPLES
+	};
+	static const LPCTSTR m_aFlag[FLAGS];	// array of flag name strings
+	static const int m_aFlagHelpID[FLAGS];	// array of flag help string resource IDs
+	static const int m_aFlagExampleID[EXAMPLES];	// array of flag example string resource IDs
+	static const LPCTSTR m_pszCopyrightNotice;	// copyright notice
 
 // Overrides
 	virtual void ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast);
@@ -78,9 +98,16 @@ protected:
 	bool	m_bError;			// true if error occurred
 	bool	m_bHasOutDur;		// true if outgoing duration was specified
 	bool	m_bHasRandSeed;		// true if random number seed was specified
+	bool	m_bShowHelp;		// true if we should show help
+	bool	m_bShowLicense;		// true if we should show licence
+	CString	m_sHelpMarkdownPath;	// path to output markdown file
 
 // Helpers
 	template<typename T> void Convert(LPCTSTR pszParam, T& val);
 	template<typename T> bool Scan(LPCTSTR pszParam, T& val, T minVal = 0, T maxVal = 0);
 	void	OnError(int nErrID, LPCTSTR pszParam);
+	static	CString	UnpackHelp(CString& sParam, int nParamHelpResID, bool bArgumentUpperCase = true);
+	static	CString	UnpackHelpEx(LPCTSTR pszParam, int nParamHelpResID, bool bArgumentUpperCase = true);
+	static	void	ShowParamHelp(LPCTSTR pszParamName, int nParamHelpResID, bool bArgumentUpperCase = true);
+	static	void	WriteParamHelpMarkdown(CStdioFile& fOut, LPCTSTR pszParamName, int nParamHelpResID, bool bArgumentUpperCase = true);
 };

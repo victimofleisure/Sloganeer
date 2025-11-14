@@ -62,6 +62,7 @@ HRESULT PromptForFiles(CStringArrayEx& saPath, int nFilters = 0, const COMDLG_FI
 int WildcardDeleteFile(CString sPath);
 void MakeSelectionRange(CIntArrayEx& arrSelection, int iFirstItem, int nItems);
 bool FilesEqual(LPCTSTR pszFile1, LPCTSTR pszFile2);
+bool AttachStdoutToParentConsole();
 
 // data validation method to flunk a control
 void DDV_Fail(CDataExchange* pDX, int nIDC);

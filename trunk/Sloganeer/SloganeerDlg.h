@@ -42,6 +42,7 @@ protected:
 	enum {
 		IDM_ABOUTBOX = 0x0010,
 		IDM_FULLSCREEN = 0x0020,
+		IDM_SHOWHELP = 0x0030,
 	};
 
 // Member data
@@ -53,7 +54,9 @@ protected:
 	virtual BOOL DestroyWindow();
 
 // Helpers
+	bool	CustomizeSystemMenu();
 	bool	Record();
+	void	ShowHelp();
 
 // Message handlers
 	DECLARE_MESSAGE_MAP()

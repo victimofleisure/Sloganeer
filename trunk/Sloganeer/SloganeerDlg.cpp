@@ -22,6 +22,7 @@
 #include "AboutDlg.h"
 #include "ProgressDlg.h"
 #include "PathStr.h"
+#include "HelpDlg.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -92,6 +93,47 @@ bool CSloganeerDlg::Record()
 	return true;
 }
 
+bool CSloganeerDlg::CustomizeSystemMenu()
+{
+	// IDM_ABOUTBOX must be in the system command range.
+	ASSERT((IDM_ABOUTBOX & 0xFFF0) == IDM_ABOUTBOX);
+	ASSERT(IDM_ABOUTBOX < 0xF000);
+	CMenu* pSysMenu = GetSystemMenu(FALSE);
+	if (pSysMenu == NULL)
+		return false;
+	BOOL bNameValid;
+	CString sMenuItem;
+	bNameValid = sMenuItem.LoadString(IDS_ABOUTBOX);
+	ASSERT(bNameValid);
+	if (!sMenuItem.IsEmpty())
+	{
+		// append about box to system menu
+		pSysMenu->AppendMenu(MF_SEPARATOR);
+		pSysMenu->AppendMenu(MF_STRING, IDM_ABOUTBOX, sMenuItem);
+	}
+	bNameValid = sMenuItem.LoadString(IDS_HELP);
+	ASSERT(bNameValid);
+	if (!sMenuItem.IsEmpty())
+	{
+		// append about box to system menu
+		pSysMenu->AppendMenu(MF_STRING, IDM_SHOWHELP, sMenuItem);
+	}
+	bNameValid = sMenuItem.LoadString(IDS_FULL_SCREEN);
+	ASSERT(bNameValid);
+	if (!sMenuItem.IsEmpty())
+	{
+		// insert full screen command into system menu, before minimize
+		pSysMenu->InsertMenu(SC_MINIMIZE, 0, IDM_FULLSCREEN, sMenuItem);
+	}
+	return true;
+}
+
+void CSloganeerDlg::ShowHelp()
+{
+	CHelpDlg	dlgHelp;
+	dlgHelp.DoModal();
+}
+
 BEGIN_MESSAGE_MAP(CSloganeerDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_KEYDOWN()
@@ -107,32 +149,7 @@ BOOL CSloganeerDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
-	// IDM_ABOUTBOX must be in the system command range.
-	ASSERT((IDM_ABOUTBOX & 0xFFF0) == IDM_ABOUTBOX);
-	ASSERT(IDM_ABOUTBOX < 0xF000);
-
-	CMenu* pSysMenu = GetSystemMenu(FALSE);
-	if (pSysMenu != NULL)
-	{
-		BOOL bNameValid;
-		CString strAboutMenu;
-		bNameValid = strAboutMenu.LoadString(IDS_ABOUTBOX);
-		ASSERT(bNameValid);
-		if (!strAboutMenu.IsEmpty())
-		{
-			// append about box to system menu
-			pSysMenu->AppendMenu(MF_SEPARATOR);
-			pSysMenu->AppendMenu(MF_STRING, IDM_ABOUTBOX, strAboutMenu);
-		}
-		CString strFullScreenMenu;
-		bNameValid = strFullScreenMenu.LoadString(IDS_FULL_SCREEN);
-		ASSERT(strFullScreenMenu);
-		if (!strFullScreenMenu.IsEmpty())
-		{
-			// insert full screen command into system menu, before minimize
-			pSysMenu->InsertMenu(SC_MINIMIZE, 0, IDM_FULLSCREEN, strFullScreenMenu);
-		}
-	}
+	CustomizeSystemMenu();
 
 	// Set the icon for this dialog.  The framework does this automatically
 	//  when the application's main window is not a dialog
@@ -197,6 +214,9 @@ void CSloganeerDlg::OnSysCommand(UINT nID, LPARAM lParam)
 	case IDM_FULLSCREEN:
 		m_sd.FullScreen(!m_sd.IsFullScreen());
 		break;
+	case IDM_SHOWHELP:
+		ShowHelp();
+		break;
 	default:
 		CDialogEx::OnSysCommand(nID, lParam);
 	}
@@ -204,8 +224,13 @@ void CSloganeerDlg::OnSysCommand(UINT nID, LPARAM lParam)
 
 void CSloganeerDlg::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 {
-	if (nChar == VK_F11) {
+	switch (nChar) {
+	case VK_F11:
 		m_sd.FullScreen(!m_sd.IsFullScreen());
+		break;
+	case VK_F1:
+		ShowHelp();
+		break;
 	}
 	CDialogEx::OnKeyDown(nChar, nRepCnt, nFlags);
 }

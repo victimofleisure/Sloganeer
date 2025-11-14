@@ -70,9 +70,9 @@ BOOL CSloganeerApp::InitInstance()
 	SetRegistryKey(_T("Anal Software"));
 
 	CSloganParams	params;
-	CParamsParser	parser(params);
+	CParamParser	parser(params);
 	TRY {
-		if (!parser.Parse())
+		if (!parser.ParseCommandLine())
 			return false;
 	}
 	CATCH (CFileException, e) {
@@ -102,6 +102,7 @@ BOOL CSloganeerApp::InitInstance()
 
 int CSloganeerApp::ExitInstance()
 {
+
 	CoUninitialize();
 	return CWinApp::ExitInstance();
 }

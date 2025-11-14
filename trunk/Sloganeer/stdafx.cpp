@@ -69,3 +69,19 @@ int WildcardDeleteFile(CString sPath)
 	SHFileOp.fFlags = FOF_SILENT | FOF_NOCONFIRMATION | FOF_FILESONLY | FOF_NORECURSION;
 	return SHFileOperation(&SHFileOp);
 }
+
+bool AttachStdoutToParentConsole()
+{
+    if (!AttachConsole(ATTACH_PARENT_PROCESS))
+        return false;
+	FILE	*pStream = NULL;
+	if (freopen_s(&pStream, "CONOUT$", "w", stdout))
+		return false;
+	HANDLE	hStdOut = CreateFile(_T("CONOUT$"), GENERIC_READ | GENERIC_WRITE, 0,
+		NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hStdOut == INVALID_HANDLE_VALUE)
+		return false;
+	if (!SetStdHandle(STD_OUTPUT_HANDLE, hStdOut))
+		return false;
+	return true;
+}

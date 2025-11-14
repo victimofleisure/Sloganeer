@@ -28,6 +28,7 @@
     <ClCompile Include="D2DOffscreen.cpp" />
     <ClCompile Include="Easing.cpp" />
     <ClCompile Include="Event.cpp" />
+    <ClCompile Include="HelpDlg.cpp" />
     <ClCompile Include="MeltProbe.cpp" />
     <ClCompile Include="ProgressDlg.cpp" />
     <ClCompile Include="SloganParams.cpp" />
@@ -56,12 +57,14 @@
     <ClInclude Include="Benchmark.h" />
     <ClInclude Include="CritSec.h" />
     <ClInclude Include="D2DCapture.h" />
+    <ClInclude Include="ColorNameDef.h" />
     <ClInclude Include="D2DDevCtx.h" />
     <ClInclude Include="D2DHelper.h" />
     <ClInclude Include="D2DOffscreen.h" />
     <ClInclude Include="Easing.h" />
     <ClInclude Include="Event.h" />
     <ClInclude Include="Globals.h" />
+    <ClInclude Include="HelpDlg.h" />
     <ClInclude Include="ILockRingBuf.h" />
     <ClInclude Include="MeltProbe.h" />
     <ClInclude Include="ParamDef.h" />
