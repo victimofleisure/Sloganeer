@@ -28,7 +28,7 @@ Simple example: `Sloganeer myslogans.txt -fontname Calibri -fontsize 120`
 |&#8209;easing PCT|The percentage of motion to ease. Only applies to transition types that support easing.|
 |&#8209;record PATH|Destination folder for recording an image sequence.|
 |&#8209;recsize SIZE|Recording frame size in pixels, with width and height separated by an 'x' as in 1920x1080.|
-|&#8209;recrate FPS|Recording frame frame rate in frames per second.|
+|&#8209;recrate FPS|Recording frame rate in frames per second.|
 |&#8209;recdur SECS|Recording duration in seconds.|
 
 ### Examples
