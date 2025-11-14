@@ -98,4 +98,5 @@ There is no installer. Unzip the distribution file and run the executable. The a
 
 ### Development
 
-There's a [development blog](https://sloganeers.blogspot.com/). See you there!
+* There's a [development blog](https://sloganeers.blogspot.com/). See you there!
+* The issues list is [here](SloganeerToDo.md).
