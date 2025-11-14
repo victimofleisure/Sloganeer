@@ -1,3 +1,3 @@
 | Name | Swatch | Hex |
 |------|--------|-----|
-| Red  | <span style="color:red;">XXXXX</span> | `#ff0000` |
+| Red  | <div style="color:red;">XXXXX</div> | `#ff0000` |
