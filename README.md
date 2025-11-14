@@ -21,7 +21,7 @@ Simple example: `Sloganeer myslogans.txt -fontname Calibri -fontsize 120`
 |&#8209;holddur&nbsp;SECS|Duration for which slogan is immobile, in seconds.|
 |&#8209;outdur&nbsp;SECS|Outgoing transition duration in seconds. Only needed if outgoing transitions should have a different duration than incoming transitions.|
 |&#8209;pausedur&nbsp;SECS|Duration of pause between slogans, in seconds.|
-|&#8209;seqtext|Display slogans in sequential order instead of randomizing them.|
+|&#8209;seqtext|Display slogans sequentially instead of shuffling them.|
 |&#8209;bgcolor&nbsp;COLOR|Background color in hexadecimal.|
 |&#8209;drawcolor&nbsp;COLOR|Drawing color in hexadecimal.|
 |&#8209;nowrap|Disables automatic word wrapping.|
