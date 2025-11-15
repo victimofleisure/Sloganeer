@@ -78,6 +78,8 @@ void CSloganDraw::Init()
 
 bool CSloganDraw::Create(HWND hWnd)
 {
+	if (m_aSlogan.IsEmpty())	// at least one slogan required
+		return false;
 	if (!m_evtWake.Create(NULL, false, false, NULL))	// create wake event
 		return false;
 	return CreateThread(hWnd);	// create render thread

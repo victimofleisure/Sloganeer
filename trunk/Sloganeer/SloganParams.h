@@ -10,6 +10,7 @@
         00      30oct25	initial version
         01      12nov25	add easing
 		02		14nov25	add recording
+		03		15nov25	add color names
 
 */
 
@@ -45,8 +46,12 @@ public:
 	void	SetSlogans(const LPCTSTR *aSlogan, int nSlogans);
 	bool	IsRecording() const;
 
+// Operations
+	void	ReadSlogans(LPCTSTR pszPath);
+	static COLORREF	FindColor(LPCTSTR pszName);
+	static W64INT BinarySearch(const LPCTSTR* aStr, W64INT nStrings, LPCTSTR pszTarget);
+
 // Constants
-	static const LPCTSTR m_sDefaultText;
 	static const LPCTSTR m_aColorName[];
 	static const COLORREF m_aColorVal[];
 };
@@ -55,59 +60,3 @@ inline bool CSloganParams::IsRecording() const
 {
 	return !m_sRecFolderPath.IsEmpty();
 }
-
-class CParamParser : public CCommandLineInfo {
-public:
-// Construction
-	CParamParser(CSloganParams& params);
-	virtual ~CParamParser();
-
-// Operations
-	bool	ParseCommandLine();
-	static	CString	GetAppVersionString();
-	static	void	ShowAppVersion();
-	static	CString	GetHelpString();
-	static	void	ShowHelp();
-	static	void	ShowLicense();
-	static	void	BreakIntoLines(CString sText, CStringArrayEx& arrLine, int nMaxLine = 80);
-	static	void	WriteHelpMarkdown(LPCTSTR pszOutputPath);
-
-protected:
-// Constants
-	enum {
-		#define PARAMDEF(name) FLAG_##name,
-		#include "ParamDef.h"
-		FLAGS
-	};
-	enum {
-		#define HELPEXAMPLEDEF(name) EXAMPLE_##name,
-		#include "ParamDef.h"
-		EXAMPLES
-	};
-	static const LPCTSTR m_aFlag[FLAGS];	// array of flag name strings
-	static const int m_aFlagHelpID[FLAGS];	// array of flag help string resource IDs
-	static const int m_aFlagExampleID[EXAMPLES];	// array of flag example string resource IDs
-	static const LPCTSTR m_pszCopyrightNotice;	// copyright notice
-
-// Overrides
-	virtual void ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast);
-
-// Data members
-	CSloganParams&	m_params;	// reference to parameters instance
-	int		m_iFlag;			// index of flag expecting a parameter
-	bool	m_bError;			// true if error occurred
-	bool	m_bHasOutDur;		// true if outgoing duration was specified
-	bool	m_bHasRandSeed;		// true if random number seed was specified
-	bool	m_bShowHelp;		// true if we should show help
-	bool	m_bShowLicense;		// true if we should show licence
-	CString	m_sHelpMarkdownPath;	// path to output markdown file
-
-// Helpers
-	template<typename T> void Convert(LPCTSTR pszParam, T& val);
-	template<typename T> bool Scan(LPCTSTR pszParam, T& val, T minVal = 0, T maxVal = 0);
-	void	OnError(int nErrID, LPCTSTR pszParam);
-	static	CString	UnpackHelp(CString& sParam, int nParamHelpResID, bool bArgumentUpperCase = true);
-	static	CString	UnpackHelpEx(LPCTSTR pszParam, int nParamHelpResID, bool bArgumentUpperCase = true);
-	static	void	ShowParamHelp(LPCTSTR pszParamName, int nParamHelpResID, bool bArgumentUpperCase = true);
-	static	void	WriteParamHelpMarkdown(CStdioFile& fOut, LPCTSTR pszParamName, int nParamHelpResID, bool bArgumentUpperCase = true);
-};

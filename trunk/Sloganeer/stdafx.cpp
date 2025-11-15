@@ -8,6 +8,7 @@
 		revision history:
 		rev		date	comments
         00      26oct25	initial version
+        01      15nov25	add attach stdout to parent console
 
 */
 
@@ -72,16 +73,28 @@ int WildcardDeleteFile(CString sPath)
 
 bool AttachStdoutToParentConsole()
 {
+	// if stdout is already a console, file or pipe, leave it be
+	HANDLE	hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	if (hStdOut != NULL && hStdOut != INVALID_HANDLE_VALUE) {
+		DWORD	nFileType = GetFileType(hStdOut);
+		switch (nFileType) {
+		case FILE_TYPE_CHAR:
+		case FILE_TYPE_DISK:
+		case FILE_TYPE_PIPE:
+			return true;	// stdout is already usable
+		}
+	}
+	// try to attach stdout to console of parent process
     if (!AttachConsole(ATTACH_PARENT_PROCESS))
         return false;
 	FILE	*pStream = NULL;
 	if (freopen_s(&pStream, "CONOUT$", "w", stdout))
 		return false;
-	HANDLE	hStdOut = CreateFile(_T("CONOUT$"), GENERIC_READ | GENERIC_WRITE, 0,
+	hStdOut = CreateFile(_T("CONOUT$"), GENERIC_READ | GENERIC_WRITE, 0,
 		NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hStdOut == INVALID_HANDLE_VALUE)
 		return false;
 	if (!SetStdHandle(STD_OUTPUT_HANDLE, hStdOut))
 		return false;
-	return true;
+	return true;	// success
 }

@@ -18,8 +18,7 @@
 #include "Sloganeer.h"
 #include "HelpDlg.h"
 #include "afxdialogex.h"
-#include "SloganParams.h"
-
+#include "ParamParser.h"
 
 // CHelpDlg dialog
 
@@ -28,7 +27,6 @@ IMPLEMENT_DYNAMIC(CHelpDlg, CDialog)
 CHelpDlg::CHelpDlg(CWnd* pParent /*=NULL*/)
 	: CDialog(CHelpDlg::IDD, pParent)
 {
-
 }
 
 CHelpDlg::~CHelpDlg()
@@ -47,22 +45,31 @@ END_MESSAGE_MAP()
 
 // CHelpDlg message handlers
 
-
 BOOL CHelpDlg::OnInitDialog()
 {
 	CDialog::OnInitDialog();
-	m_edit.SetTabStops(80);
+	m_edit.SetTabStops(80);	// hand-tune as needed
 	CString	sHelp(CParamParser::GetHelpString());
-	sHelp.Replace(_T("\n"), _T("\r\n"));
-	m_edit.SetWindowText(sHelp);
-	m_edit.PostMessage(EM_SETSEL, -1, 0);
+	sHelp.Replace(_T("\n"), _T("\r\n"));	// replace newline with CRLF
+	m_edit.SetWindowText(sHelp);	// pass help text to edit control
+	m_edit.PostMessage(EM_SETSEL, -1, 0);	// remove initial selection
 	return TRUE;  // return TRUE unless you set the focus to a control
 }
 
 void CHelpDlg::OnSize(UINT nType, int cx, int cy)
 {
 	CDialog::OnSize(nType, cx, cy);
-	if (m_edit.m_hWnd) {
-		m_edit.MoveWindow(0, 0, cx, cy);
+	if (m_edit.m_hWnd) {	// if control exists
+		m_edit.MoveWindow(0, 0, cx, cy);	// fit control to window
 	}
+}
+
+
+BOOL CHelpDlg::PreTranslateMessage(MSG* pMsg)
+{
+	// dialog lacks an OK button so handle Enter key explicitly
+	if (pMsg->message == WM_KEYDOWN && pMsg->wParam == VK_RETURN) {
+		OnOK();	// close dialog
+	}
+	return CDialog::PreTranslateMessage(pMsg);
 }

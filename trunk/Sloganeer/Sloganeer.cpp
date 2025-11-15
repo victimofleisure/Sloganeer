@@ -19,8 +19,8 @@
 #include "Sloganeer.h"
 #include "SloganeerDlg.h"
 #include "Win32Console.h"
-#include "VersionInfo.h"
-#include "StdioFileEx.h"
+#include "ParamParser.h"
+#include "StdioFileEx.h"	// for log file
 #include "PathStr.h"
 
 #ifdef _DEBUG
@@ -69,8 +69,7 @@ BOOL CSloganeerApp::InitInstance()
 
 	SetRegistryKey(_T("Anal Software"));
 
-	CSloganParams	params;
-	CParamParser	parser(params);
+	CParamParser	parser;
 	TRY {
 		if (!parser.ParseCommandLine())
 			return false;
@@ -86,7 +85,7 @@ BOOL CSloganeerApp::InitInstance()
 		return false;
 	}
 
-	CSloganeerDlg dlg(params);
+	CSloganeerDlg dlg(parser);
 	m_pMainWnd = &dlg;
 	INT_PTR nResponse = dlg.DoModal();
 	if (nResponse == -1)

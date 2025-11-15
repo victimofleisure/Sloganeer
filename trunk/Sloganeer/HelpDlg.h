@@ -35,4 +35,5 @@ public:
 	virtual BOOL OnInitDialog();
 	CEdit m_edit;
 	afx_msg void OnSize(UINT nType, int cx, int cy);
+	virtual BOOL PreTranslateMessage(MSG* pMsg);
 };

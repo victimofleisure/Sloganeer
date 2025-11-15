@@ -11,7 +11,8 @@
 
 */
 
-// Direct2D defines 140 named colors which match the HTML standard
+// Direct2D defines 140 named colors that match the HTML standard, except
+// for some spelling differences; the names are listed in ascending order
 
 #ifdef COLORNAMEDEF
 
@@ -82,8 +83,8 @@ COLORNAMEDEF(LightBlue)
 COLORNAMEDEF(LightCoral)
 COLORNAMEDEF(LightCyan)
 COLORNAMEDEF(LightGoldenrodYellow)
-COLORNAMEDEF(LightGreen)
 COLORNAMEDEF(LightGray)
+COLORNAMEDEF(LightGreen)
 COLORNAMEDEF(LightPink)
 COLORNAMEDEF(LightSalmon)
 COLORNAMEDEF(LightSeaGreen)
