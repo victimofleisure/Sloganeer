@@ -49,6 +49,7 @@ HELPEXAMPLEDEF(fontname)
 HELPEXAMPLEDEF(fontweight)
 HELPEXAMPLEDEF(transdur)
 HELPEXAMPLEDEF(bgcolor)
+HELPEXAMPLEDEF(drawcolor)
 					
 #undef HELPEXAMPLEDEF
 #endif

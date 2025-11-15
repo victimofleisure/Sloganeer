@@ -23,8 +23,8 @@ Simple example: `Sloganeer myslogans.txt -fontname Calibri -fontsize 120`
 |&#8209;outdur&nbsp;SECS|Outgoing transition duration in seconds. Only needed if outgoing transitions should have a different duration than incoming transitions.|
 |&#8209;pausedur&nbsp;SECS|Duration of pause between slogans, in seconds.|
 |&#8209;seqtext|Display slogans sequentially instead of shuffling them.|
-|&#8209;bgcolor&nbsp;COLOR|Background color in hexadecimal.|
-|&#8209;drawcolor&nbsp;COLOR|Drawing color in hexadecimal.|
+|&#8209;bgcolor&nbsp;COLOR|Background color as a hexadecimal value or an HTML color name.|
+|&#8209;drawcolor&nbsp;COLOR|Drawing color as a hexadecimal value or an HTML color name.|
 |&#8209;nowrap|Disables automatic word wrapping.|
 |&#8209;easing&nbsp;PCT|The percentage of motion to ease. Only applies to transition types that support easing.|
 |&#8209;seed|Starting point for random number generation; integer only. If not specified, seed is current time so that each run is different.|
@@ -33,16 +33,18 @@ Simple example: `Sloganeer myslogans.txt -fontname Calibri -fontsize 120`
 |&#8209;recrate&nbsp;FPS|Recording frame rate in frames per second.|
 |&#8209;recdur&nbsp;SECS|Recording duration in seconds.|
 |&#8209;markdown&nbsp;PATH|Write help markdown to the specified file.|
+|&#8209;license|Display the license.|
 
 ### Examples
 
 |Example|Description|
 |---|---|
 |&#8209;fontsize&nbsp;90|Set the font size to 90 points.|
-|&#8209;fontname&nbsp;"Times&nbsp;New&nbsp;Roman"|Set the font name to Times New Roman.|
+|&#8209;fontname&nbsp;Georgia|Set the font name to Georgia.|
 |&#8209;fontweight&nbsp;400|Set the font weight to 400.|
 |&#8209;transdur&nbsp;2.5|Set the transition duration to 2.5 seconds.|
 |&#8209;bgcolor&nbsp;A9A9A9|Set the background color to dark gray.|
+|&#8209;drawcolor&nbsp;green|Set the drawing color to green.|
 
 Each slogan cycles through the following four states:
 
