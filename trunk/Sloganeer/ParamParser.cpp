@@ -148,7 +148,11 @@ void CParamParser::ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast)
 				m_iFlag = iFlag;	// flag requires a parameter
 			}
 		} else {	// flag not found
-			OnError(IDS_ERR_UNKNOWN_FLAG, pszParam);
+			if (!_tcsicmp(pszParam, _T("h"))) {	// if help alias
+				m_bShowHelp = true;
+			} else {	// unknown flag
+				OnError(IDS_ERR_UNKNOWN_FLAG, pszParam);
+			}
 		}
 	} else {	// parameter
 		float	fParam;

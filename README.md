@@ -13,7 +13,7 @@ Simple example: `Sloganeer myslogans.txt -fontname Calibri -fontsize 120`
 |Option|Description|
 |---|---|
 |SLOGANS_PATH|The path of an ANSI or UTF-8 text file containing the slogans to display, one slogan per line; if the path contains spaces, enclose it in double quotes.|
-|&#8209;help|Show help.|
+|&#8209;help|Show help; -h is also accepted.|
 |&#8209;fullscreen|Start the application in full screen mode.|
 |&#8209;fontsize&nbsp;SIZE|Font size in points.|
 |&#8209;fontname&nbsp;NAME|Font name; if the font name contains spaces, enclose it in double quotes.|
