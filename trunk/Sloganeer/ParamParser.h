@@ -60,7 +60,8 @@ protected:
 
 // Helpers
 	template<typename T> void Convert(LPCTSTR pszParam, T& val);
-	template<typename T> bool Scan(LPCTSTR pszParam, T& val, T minVal = 0, T maxVal = 0);
+	template<typename T> void Scan(LPCTSTR pszParam, T& val);
+	template<typename T> bool Scan(LPCTSTR pszParam, T& val, T minVal, T maxVal);
 	bool	Scan(LPCTSTR pszParam, D2D1::ColorF& color);
 	void	OnError(int nErrID, LPCTSTR pszParam);
 	static	void	BreakIntoLines(CString sText, CStringArrayEx& arrLine, int nMaxLine = 80);

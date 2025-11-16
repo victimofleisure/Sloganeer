@@ -74,6 +74,11 @@ CONVERSION_FUNC_DEF(UINT, stoi);
 CONVERSION_FUNC_DEF(LONG, stoi);
 CONVERSION_FUNC_DEF(float, stof);
 
+template<typename T> void CParamParser::Scan(LPCTSTR pszParam, T& val)
+{
+	Convert(pszParam, val);
+}
+
 template<typename T> bool CParamParser::Scan(LPCTSTR pszParam, T& val, T minVal, T maxVal)
 {
 	T param;
@@ -176,12 +181,12 @@ void CParamParser::ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast)
 					m_bHasOutDur = true;
 					break;
 				case FLAG_holddur:
-					if (Scan(pszParam, fParam))
-						m_nHoldDuration = Round(fParam * 1000);	// convert to milliseconds
+					Scan(pszParam, fParam);
+					m_nHoldDuration = Round(fParam * 1000);	// convert to milliseconds
 					break;
 				case FLAG_pausedur:
-					if (Scan(pszParam, fParam))
-						m_nPauseDuration = Round(fParam * 1000);	// convert to milliseconds
+					Scan(pszParam, fParam);
+					m_nPauseDuration = Round(fParam * 1000);	// convert to milliseconds
 					break;
 				case FLAG_bgcolor:
 					Scan(pszParam, m_clrBkgnd);
