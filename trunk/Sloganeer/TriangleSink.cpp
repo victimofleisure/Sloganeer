@@ -89,67 +89,105 @@ void CTriangleSink::AddTriangles(const D2D1_TRIANGLE* triangles, UINT32 triangle
 		GLYPH_TRIANGLE&	gt = m_aTriangle[iGlyphTri];
 		gt.D2D1_TRIANGLE::operator=(t);	// copy triangle into array
 		gt.fAngle = static_cast<float>(atan2(d.x, d.y));	// set triangle's angle
-		double	fLen = sqrt(d.x * d.x + d.y * d.y);
+
+		// remainder of this method is for CalcTravel
+		double fLen = d.Length();
 		const double fEpsilon = 1e-5;
 		if (fLen < fEpsilon)
-			continue;
-		DPoint	ptUV(d / fLen);	// compute unit vector
-		float	triMax = 0;
-		float	fDist = CalcTravel(m_szRT, m_ptGlyphCenterWorld, ptUV);
-		triMax = max(triMax, fDist);
-		m_fTravel = max(m_fTravel, triMax);
-	}
-}
+			continue;   // direction undefined, skip this tri
 
-inline bool my_isfinite(double x)
-{
-    return _finite(x) && !_isnan(x);
+		DPoint ptUV = d / fLen; // unit vector for this triangle
+
+		// Compute a conservative radius for the triangle around its centroid
+		double r1 = (p1 - ptCentroid).Length();
+		double r2 = (p2 - ptCentroid).Length();
+		double r3 = (p3 - ptCentroid).Length();
+		float triRadius = static_cast<float>(max(r1, max(r2, r3)));
+
+		// Centroid in world coords:
+		// assuming glyph local origin is m_ptGlyphCenterLocal and
+		// m_ptGlyphCenterWorld is the world position of that origin.
+		DPoint ptCentroidWorld(
+			m_ptGlyphCenterWorld.x + (ptCentroid.x - m_ptGlyphCenterLocal.x),
+			m_ptGlyphCenterWorld.y + (ptCentroid.y - m_ptGlyphCenterLocal.y)
+		);
+
+		float fDist = CalcTravel(m_szRT, ptCentroidWorld, ptUV, triRadius);
+
+		m_fTravel = max(m_fTravel, fDist);
+	}
 }
 
 // this method was written by GPT5
-float CTriangleSink::CalcTravel(D2D1_SIZE_F rtSize, D2D1_POINT_2F glyphCenterWorld, D2D1_POINT_2F uv)
+float CTriangleSink::CalcTravel(
+	const CD2DSizeF& szRT,
+	const DPoint& ptWorld,   // point in world coords
+	const DPoint& dir,       // direction (doesn't need to be normalized)
+	float triRadius)         // radius of triangle around ptWorld
 {
-	// Recenter so (0,0) is the center of the window.
-	const float halfW = rtSize.width  * 0.5f;
-	const float halfH = rtSize.height * 0.5f;
+	const double eps = 1e-6;
 
-	// Recenter so rect is [-halfW, +halfW] x [-halfH, +halfH]
-	float cx = glyphCenterWorld.x - halfW;
-	float cy = glyphCenterWorld.y - halfH;
+	// Normalize direction
+	double dx = dir.x;
+	double dy = dir.y;
+	double len = sqrt(dx * dx + dy * dy);
+	if (len < eps)
+		return 0.0f; // degenerate direction
 
-	// If glyph center starts outside the rect, it's already "offscreen"
-	// in the assembled pose. Let it contribute zero travel so it doesn't
-	// blow up the global max.
-	if (cx <= -halfW || cx >= halfW ||
-		cy <= -halfH || cy >= halfH) {
+	dx /= len;
+	dy /= len;
+
+	// Center the RT: we want bounds [-halfW, +halfW] x [-halfH, +halfH]
+	double halfW = szRT.width  * 0.5;
+	double halfH = szRT.height * 0.5;
+
+	// Express origin in centered coordinates
+	double ox = ptWorld.x - halfW;
+	double oy = ptWorld.y - halfH;
+
+	// Slab-based ray vs AABB clip
+	double tMin = 0.0;
+	double tMax = std::numeric_limits<double>::infinity();
+
+	auto clipAxis = [&](double o, double d, double minB, double maxB) -> bool {
+		if (fabs(d) < eps) {
+			// Ray is parallel to this axis slab: must already be within bounds
+			if (o < minB || o > maxB)
+				return false;   // no intersection at all
+			return true;        // no change to tMin/tMax
+		}
+
+		double t1 = (minB - o) / d;
+		double t2 = (maxB - o) / d;
+		if (t1 > t2)
+			Swap(t1, t2);
+
+		// Intersect this [t1, t2] with current [tMin, tMax]
+		if (t2 < tMin || t1 > tMax)
+			return false;   // disjoint
+
+		if (t1 > tMin) tMin = t1;
+		if (t2 < tMax) tMax = t2;
+		return true;
+	};
+
+	// X slab: [-halfW, +halfW]
+	if (!clipAxis(ox, dx, -halfW, +halfW))
 		return 0.0f;
-	}
 
-	float tMin = std::numeric_limits<float>::infinity();
+	// Y slab: [-halfH, +halfH]
+	if (!clipAxis(oy, dy, -halfH, +halfH))
+		return 0.0f;
 
-	// Right side: x = +halfW
-	if (uv.x > 0.0f) {
-		float t = (halfW - cx) / uv.x;
-		if (t > 0.0f && t < tMin) tMin = t;
-	}
-	// Left side: x = -halfW
-	if (uv.x < 0.0f) {
-		float t = (-halfW - cx) / uv.x;
-		if (t > 0.0f && t < tMin) tMin = t;
-	}
-	// Bottom: y = +halfH
-	if (uv.y > 0.0f) {
-		float t = (halfH - cy) / uv.y;
-		if (t > 0.0f && t < tMin) tMin = t;
-	}
-	// Top: y = -halfH
-	if (uv.y < 0.0f) {
-		float t = (-halfH - cy) / uv.y;
-		if (t > 0.0f && t < tMin) tMin = t;
-	}
+	// After clipping, [tMin, tMax] is the interval where the point is inside the RT.
+	// Because we initialized tMin=0, this is already ray-clipped to t>=0.
+	if (tMax < 0.0)
+		return 0.0f;  // intersection is entirely behind the origin
 
-	if (!my_isfinite(tMin))
-		return 0.0f; // purely defensive: direction is pointing "inside" forever?
+	// The last contact with the RT is at tMax.
+	float tExit = static_cast<float>(tMax);
 
-	return tMin;
+	// Inflate by triangle radius so the *whole* triangle is out,
+	// not just the representative point.
+	return max(0.0f, tExit + triRadius);
 }

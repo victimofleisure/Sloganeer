@@ -15,6 +15,8 @@
 
 #include "D2DHelper.h"
 
+class DPoint;
+
 class CTriangleSink : public ID2D1TessellationSink {
 public:
 // Construction
@@ -59,7 +61,7 @@ protected:
 	float	m_fTravel;	// smallest radius that positions all triangles offscreen
 
 // Helpers
-	static float CalcTravel(D2D1_SIZE_F rtSize, D2D1_POINT_2F glyphCenterWorld, D2D1_POINT_2F uv);
+	static float CalcTravel(const CD2DSizeF& szRT, const DPoint& ptWorld, const DPoint& dir, float triRadius);
 };
 
 inline int CTriangleSink::GetTriangleCount() const
