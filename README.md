@@ -88,6 +88,7 @@ The slogans file must be in either ANSI or UTF-8 format. To use non-ANSI charact
 17. Per-character horizontal reveal
 18. Per-character radial reveal
 19. Tip over or return to upright
+20. Explode each letter into fragments
 
 ### Defaults
 
