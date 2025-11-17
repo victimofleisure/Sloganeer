@@ -26,6 +26,7 @@
     <ClCompile Include="D2DDevCtx.cpp" />
     <ClCompile Include="D2DHelper.cpp" />
     <ClCompile Include="D2DOffscreen.cpp" />
+    <ClCompile Include="DPoint.cpp" />
     <ClCompile Include="Easing.cpp" />
     <ClCompile Include="Event.cpp" />
     <ClCompile Include="HelpDlg.cpp" />
@@ -47,6 +48,7 @@
     </ClCompile>
     <ClCompile Include="StdioFileEx.cpp" />
     <ClCompile Include="TextRenderer.cpp" />
+    <ClCompile Include="TriangleSink.cpp" />
     <ClCompile Include="VersionInfo.cpp" />
     <ClCompile Include="Win32Console.cpp" />
     <ClCompile Include="WinAppCK.cpp" />
@@ -62,6 +64,7 @@
     <ClInclude Include="D2DDevCtx.h" />
     <ClInclude Include="D2DHelper.h" />
     <ClInclude Include="D2DOffscreen.h" />
+    <ClInclude Include="DPoint.h" />
     <ClInclude Include="Easing.h" />
     <ClInclude Include="Event.h" />
     <ClInclude Include="Globals.h" />
@@ -85,6 +88,7 @@
     <ClInclude Include="StdioFileEx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="TextRenderer.h" />
+    <ClInclude Include="TriangleSink.h" />
     <ClInclude Include="Version.h" />
     <ClInclude Include="VersionInfo.h" />
     <ClInclude Include="Win32Console.h" />

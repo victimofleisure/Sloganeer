@@ -1,0 +1,88 @@
+// Copyleft 2025 Chris Korda
+// This program is free software; you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the Free
+// Software Foundation; either version 2 of the License, or any later version.
+/*
+        chris korda
+ 
+		revision history:
+		rev		date	comments
+        00      16nov25	initial version
+
+*/
+
+#pragma once
+
+#include "D2DHelper.h"
+
+class CTriangleSink : public ID2D1TessellationSink {
+public:
+// Construction
+	CTriangleSink();
+
+// Types
+	struct GLYPH_TRIANGLE : D2D1_TRIANGLE {
+		float	fAngle;	// angle of line between centroid and glyph center, in radians
+	};
+
+// Attributes
+	int		GetTriangleCount() const;
+	const GLYPH_TRIANGLE&	GetTriangle(int iTri) const;
+	int		GetGlyphCount() const;
+	int		GetGlyphTriangleCount(int iGlyph) const;
+	float	GetTravel() const;
+
+// Operations
+	void	OnStartTrans(CD2DSizeF szRT);
+	void	OnDraw();
+	HRESULT	TessellateGlyph(CD2DPointF ptBaselineOrigin, const CKD2DRectF& rGlyph, const ID2D1PathGeometry *pPathGeom);
+	void	GetNextGlyph(int& iStartTri, int& iEndTri);
+
+// Overrides
+	IFACEMETHOD(QueryInterface)(REFIID riid, void** ppv);
+	IFACEMETHOD_(ULONG, AddRef)() { return 1; }
+	IFACEMETHOD_(ULONG, Release)() { return 1; }
+	IFACEMETHOD_(void, AddTriangles)(const D2D1_TRIANGLE* triangles, UINT32 trianglesCount);
+	IFACEMETHOD(Close)() { return S_OK; }
+
+protected:
+// Data members
+	CArrayEx<GLYPH_TRIANGLE, GLYPH_TRIANGLE&> m_aTriangle;	// array of glyph triangles
+	CD2DPointF	m_ptBaselineOrigin;	// baseline origin in world coordinates
+	CKD2DRectF	m_rGlyph;			// glyph bounds in world coordinates
+	CD2DPointF	m_ptGlyphCenterWorld;	// center of glyph in world coordinates
+	CD2DPointF	m_ptGlyphCenterLocal;	// center of glyph in local coordinates
+	CD2DSizeF	m_szRT;				// render target size
+	CIntArrayEx	m_aGlyphTriCount;	// array of per-glyph triangle counts
+	int		m_iGlyphFirstTri;	// index of glyph's first triangle within array
+	int		m_iCurGlyph;		// index of current glyph for iterator
+	float	m_fTravel;	// smallest radius that positions all triangles offscreen
+
+// Helpers
+	static float CalcTravel(D2D1_SIZE_F rtSize, D2D1_POINT_2F glyphCenterWorld, D2D1_POINT_2F uv);
+};
+
+inline int CTriangleSink::GetTriangleCount() const
+{
+	return m_aTriangle.GetSize();
+}
+
+inline const CTriangleSink::GLYPH_TRIANGLE& CTriangleSink::GetTriangle(int iTri) const
+{
+	return m_aTriangle[iTri];
+}
+
+inline int CTriangleSink::GetGlyphCount() const
+{
+	return m_aGlyphTriCount.GetSize();
+}
+
+inline int CTriangleSink::GetGlyphTriangleCount(int iGlyph) const
+{
+	return m_aGlyphTriCount[iGlyph];
+}
+
+inline float CTriangleSink::GetTravel() const
+{
+	return m_fTravel;
+}

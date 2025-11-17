@@ -20,6 +20,7 @@
 		10		11nov25	add elevator and clock transitions
 		11		12nov25	add skew and spin transitions
 		12		14nov25	add recording
+		13		17nov25	add explode transition
 
 */
 
@@ -33,6 +34,7 @@
 #include "PathStr.h"
 #include "SaveObj.h"
 #include "D2DOffscreen.h"
+#include "DPoint.h"
 
 #define DTF(x) static_cast<float>(x)
 
@@ -70,10 +72,10 @@ void CSloganDraw::Init()
 	m_ptTileOffset = CD2DPointF(0, 0);
 	m_bIsGlyphRising = false;
 	m_iGlyphLine = 0;
-	m_fMeltMaxStroke = 0;
 	m_iFrame = 0;
 	m_nSwapChainBuffers = 0;
 	m_fStartTime = 0;
+	m_fMeltMaxStroke = 0;
 }
 
 bool CSloganDraw::Create(HWND hWnd)
@@ -188,6 +190,10 @@ bool CSloganDraw::ResetDrawingEffect()
 void CSloganDraw::OnResize()
 {
 	OnTextChange();
+	if (m_iState == ST_TRANS_IN || m_iState == ST_TRANS_OUT) {
+		if (m_iTransType == TT_EXPLODE)
+			m_bIsTransStart = true;	// redo tessellation
+	}
 }
 
 #if SD_CAPTURE	// if capturing frames
@@ -502,6 +508,21 @@ void CSloganDraw::DrawTextBounds()
 	CKD2DRectF	rText;
 	GetTextBounds(rText);
 	m_pD2DDeviceContext->DrawRectangle(rText, m_pDrawBrush);
+}
+
+void CSloganDraw::DrawGlyphBounds(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun)
+{
+	CKD2DRectF	rGlyph;
+	UINT	iGlyph;
+	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun);
+	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
+		m_pD2DDeviceContext->DrawRectangle(rGlyph, m_pDrawBrush);
+	}
+	if (pGlyphRun->glyphCount) {
+		CD2DSizeF	szRT = m_pD2DDeviceContext->GetSize();
+		m_pD2DDeviceContext->DrawLine(CD2DPointF(0, ptBaselineOrigin.y),
+			CD2DPointF(szRT.width, ptBaselineOrigin.y), m_pDrawBrush);	// draw baseline too
+	}
 }
 
 double CSloganDraw::GetPhase(UINT nFlags) const
@@ -974,19 +995,68 @@ void CSloganDraw::TransSkew(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE m
 	m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
 }
 
-void CSloganDraw::DrawGlyphBounds(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun)
+bool CSloganDraw::TransExplode()
 {
-	CKD2DRectF	rGlyph;
-	UINT	iGlyph;
+	if (m_bIsTransStart) {
+		m_triSink.OnStartTrans(m_pD2DDeviceContext->GetSize());
+	}
+	m_triSink.OnDraw();
+	CHECK(m_pTextLayout->Draw(0, this, 0, 0));
+	return true;
+}
+
+bool CSloganDraw::TransExplode(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
+{
+	const DWRITE_GLYPH_RUN& run = *pGlyphRun;
 	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun);
-	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
-		m_pD2DDeviceContext->DrawRectangle(rGlyph, m_pDrawBrush);
+	CKD2DRectF	rGlyph;
+	UINT	iTemp;
+	if (m_bIsTransStart) {
+		for (UINT iGlyph = 0; iGlyph < run.glyphCount; iGlyph++) {
+			iterGlyph.GetNext(iTemp, rGlyph);
+			CComPtr<ID2D1PathGeometry> pPathGeom;
+			CHECK(m_pD2DFactory->CreatePathGeometry(&pPathGeom));
+			CComPtr<ID2D1GeometrySink> pGeomSink;
+			CHECK(pPathGeom->Open(&pGeomSink));
+			CComPtr<IDWriteFontFace> pFontFace = run.fontFace;
+			CHECK(pFontFace->GetGlyphRunOutline(run.fontEmSize, 
+				run.glyphIndices + iGlyph, run.glyphAdvances + iGlyph, 
+				run.glyphOffsets + iGlyph, 1, run.isSideways, run.bidiLevel, pGeomSink));
+			CHECK(pGeomSink->Close());
+			CHECK(m_triSink.TessellateGlyph(ptBaselineOrigin, rGlyph, pPathGeom));
+		}
+		iterGlyph.Reset();
 	}
-	if (pGlyphRun->glyphCount) {
-		CD2DSizeF	szRT = m_pD2DDeviceContext->GetSize();
-		m_pD2DDeviceContext->DrawLine(CD2DPointF(0, ptBaselineOrigin.y),
-			CD2DPointF(szRT.width, ptBaselineOrigin.y), m_pDrawBrush);	// draw baseline too
+	double	fPhase = GetPhase();
+	fPhase = EaseIn(fPhase, 1);
+	double	fRad = m_triSink.GetTravel() * fPhase;
+	for (UINT iGlyph = 0; iGlyph < run.glyphCount; iGlyph++) {
+		iterGlyph.GetNext(iTemp, rGlyph);
+		CComPtr<ID2D1PathGeometry> pTriGeom;
+		CHECK(m_pD2DFactory->CreatePathGeometry(&pTriGeom));
+		CComPtr<ID2D1GeometrySink> pTriSink;
+		CHECK(pTriGeom->Open(&pTriSink));
+		int	iStartTri, iEndTri;
+		m_triSink.GetNextGlyph(iStartTri, iEndTri);
+		for (int iTri = iStartTri; iTri < iEndTri; iTri++) {
+			const CTriangleSink::GLYPH_TRIANGLE&	gt = m_triSink.GetTriangle(iTri);
+			float	x = DTF(sin(gt.fAngle) * fRad);
+			float	y = DTF(cos(gt.fAngle) * fRad);
+			D2D1_TRIANGLE	t = gt;
+			t.point1.x += x; t.point2.x += x; t.point3.x += x;
+			t.point1.y += y; t.point2.y += y; t.point3.y += y;
+			pTriSink->BeginFigure(t.point1, D2D1_FIGURE_BEGIN_FILLED);
+			pTriSink->AddLines(&t.point2, 2);
+			pTriSink->EndFigure(D2D1_FIGURE_END_CLOSED);
+		}
+		CHECK(pTriSink->Close());
+		auto mTranslate(D2D1::Matrix3x2F::Translation(rGlyph.left, ptBaselineOrigin.y));
+		m_pD2DDeviceContext->SetTransform(mTranslate);
+		m_pD2DDeviceContext->FillGeometry(pTriGeom, m_pDrawBrush);
+		m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
 	}
+	return true;
 }
 
 HRESULT CSloganDraw::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOriginX, 
@@ -1021,6 +1091,9 @@ HRESULT CSloganDraw::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOr
 		break;
 	case TT_SKEW:
 		TransSkew(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
+		break;
+	case TT_EXPLODE:
+		TransExplode(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
 		break;
 	default:
 		NODEFAULTCASE;
@@ -1090,6 +1163,9 @@ bool CSloganDraw::OnDraw()
 		break;
 	case TT_SKEW:
 		TransSkew();
+		break;
+	case TT_EXPLODE:
+		TransExplode();
 		break;
 	default:
 		NODEFAULTCASE;	// logic error

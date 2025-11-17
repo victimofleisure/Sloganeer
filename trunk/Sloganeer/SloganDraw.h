@@ -19,6 +19,7 @@
 		09		11nov25	add elevator and clock transitions
 		10		12nov25	add skew and spin transitions
 		11		14nov25	add recording
+		12		17nov25	add explode transition
 
 */
 
@@ -30,6 +31,7 @@
 #include "SloganParams.h"
 #include "D2DHelper.h"
 #include "MeltProbe.h"
+#include "TriangleSink.h"
 
 #define	SD_CAPTURE_NONE				0	// disable capture
 #define	SD_CAPTURE_RECORD			1	// record displayed frames as an image sequence
@@ -90,6 +92,7 @@ protected:
 		TT_ELEVATOR,	// per-character horizontal reveal
 		TT_CLOCK,		// per-character radial reveal
 		TT_SKEW,		// tip over or return to upright
+		TT_EXPLODE,		// explode each letter into fragments
 		TRANS_TYPES
 	};
 	enum {	// GetPhase flags
@@ -138,12 +141,19 @@ protected:
 	bool	m_bIsGlyphRising;	// true if glyph is rising; for vertical converge
 	int		m_iGlyphLine;		// index of line text renderer is currently on
 	CIntArrayEx	m_aCharToLine;	// for each character of slogan, index of its line
+
+	// recording and capture
+	UINT	m_iFrame;			// frame counter
+	UINT	m_nSwapChainBuffers;	// number of swap chain buffers
+	double	m_fStartTime;		// start time of current state in seconds
+
+	// melt transition
 	float	m_fMeltMaxStroke;	// maximum outline stroke for melt effect, in DIPs
 	CMeltProbeWorker	m_thrMeltWorker;	// melt probe worker thread instance
 	CArrayEx<float, float>	m_aMeltStroke;	// array of cached melt outline strokes
-	UINT	m_iFrame;			// frame counter, used during capture and recording
-	UINT	m_nSwapChainBuffers;	// number of swap chain buffers
-	double	m_fStartTime;		// used for recording
+
+	// explode transition
+	CTriangleSink	m_triSink;	// triangle sink containing array of triangles
 
 #if SD_CAPTURE	// if capturing frames
 	class CMyD2DCapture : public CD2DCapture {
@@ -207,6 +217,9 @@ protected:
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
 	bool	TransSkew();
 	void	TransSkew(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
+	bool	TransExplode();
+	bool	TransExplode(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
 	bool	LaunchMeltWorker();
 	bool	MeasureMeltStroke();

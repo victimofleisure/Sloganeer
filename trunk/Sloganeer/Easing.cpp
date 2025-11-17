@@ -17,6 +17,8 @@
 
 // s is the normalized progress of the motion, from 0 to 1
 // F is the fraction of the motion to ease, from 0 to 1
+//
+// these methods were written by GPT5
 
 double EaseIn(double s, double F)
 {
