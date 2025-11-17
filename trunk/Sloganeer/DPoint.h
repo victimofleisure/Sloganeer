@@ -9,11 +9,13 @@
 		00		28jan03	initial version
 		01		17apr06	add DPOINT ctor and assignment
 		02		14feb08	add SIZE ctor
-		03		09feb25	rename round function
-		04		12feb25	add POINTFLOAT ctor and conversion
-		05		14feb25	simplify base struct def
-		06		03mar25	modernize style
-		07		12mar25	add Direct2D types
+        03		22jun17	add length, distance and intersect methods
+		04		07dec17	add dot product and normalize
+		05		09feb25	rename round function
+		06		12feb25	add POINTFLOAT ctor and conversion
+		07		14feb25	simplify base struct def
+		08		03mar25	modernize style
+		09		12mar25	add Direct2D types
 
 		double-precision 2D coordinate
 
@@ -60,10 +62,21 @@ public:
 	const double operator[](int i) const;
 	double& operator[](int i);
   	operator POINT() const;
+  	operator CPoint() const;
 	operator POINTFLOAT() const;
 	operator D2D1_POINT_2F() const;
 	static bool Equal(double a, double b);
 	static const double m_fEpsilon;
+	DPoint Square() const;
+	DPoint SquareRoot() const;
+	double Length() const;
+	double Distance(const DPoint& p) const;
+	void Scale(DPoint ptOrigin, double fScale);
+	void Scale(DPoint ptOrigin, DPoint ptScale);
+	void Rotate(DPoint ptOrigin, double fRotation);
+	DPoint Intersect(DPoint p1, DPoint p2, DPoint& vIntersect) const;
+	double Dot(const DPoint& p) const;
+	void Normalize();
 };
 
 inline DPoint::DPoint()
@@ -228,17 +241,27 @@ inline bool DPoint::operator!=(const DPoint& p) const
 
 inline const double DPoint::operator[](int i) const
 {
+	ASSERT(i >= 0 && i < 2);
 	return ((double *)this)[i];
 }
 
 inline double& DPoint::operator[](int i)
 {
+	ASSERT(i >= 0 && i < 2);
 	return ((double *)this)[i];
 }
 
 inline DPoint::operator POINT() const
 {
 	POINT	p;
+	p.x = Round(x);
+	p.y = Round(y);
+	return p;
+}
+
+inline DPoint::operator CPoint() const
+{
+	CPoint	p;
 	p.x = Round(x);
 	p.y = Round(y);
 	return p;
@@ -258,4 +281,44 @@ inline DPoint::operator D2D1_POINT_2F() const
 	pt.x = static_cast<float>(x);
 	pt.y = static_cast<float>(y);
 	return pt;
+}
+
+inline DPoint DPoint::Square() const
+{
+	return DPoint(x * x, y * y);
+}
+
+inline DPoint DPoint::SquareRoot() const
+{
+	return DPoint(sqrt(x), sqrt(y));
+}
+
+inline double DPoint::Length() const
+{
+	return sqrt(x * x + y * y);
+}
+
+inline double DPoint::Distance(const DPoint& p) const
+{
+	return (p - *this).Length();
+}
+
+inline void DPoint::Scale(DPoint ptOrigin, double fScale)
+{
+	*this = (*this - ptOrigin) * fScale + ptOrigin;
+}
+
+inline void DPoint::Scale(DPoint ptOrigin, DPoint ptScale)
+{
+	*this = (*this - ptOrigin) * ptScale + ptOrigin;
+}
+
+inline double DPoint::Dot(const DPoint& p) const
+{
+	return x * p.x + y * p.y;
+}
+
+inline void DPoint::Normalize()
+{
+	*this /= Length();
 }
