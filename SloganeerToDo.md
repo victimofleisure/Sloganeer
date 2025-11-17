@@ -9,11 +9,13 @@
 | 13 | 11/13/25 | 11/14/25 | done | Add recording                                                                              | 1.0.00.025 |      |
 | 3  | 11/13/25 | 11/14/25 | done | Record should check for a preexisting image sequence in the destination folder             | 1.0.00.025 |      |
 | 16 | 11/13/25 | 11/14/25 | done | Add help for both command line and GUI; -help and F1                                       | 1.0.00.026 |      |
-| 16 | 11/13/25 | 11/15/25 | done | allow color names as alternative to hexadecimal values                                     | 1.0.00.027 |      |
+| 17 | 11/13/25 | 11/15/25 | done | allow color names as alternative to hexadecimal values                                     | 1.0.00.027 |      |
+| 15 | 11/13/25 | 11/17/25 | done | explode transition, based on tessellation                                                   | 1.0.00.028 |      |
 | 7  | 11/13/25 |          | todo | A transparent background could be useful for compositing: bkcolor none                     |            |      |
 | 8  | 11/13/25 |          | todo | Add CSV file format to allow per-slogan fonts, colors, and transition types                |            |      |
 | 9  | 11/13/25 |          | todo | CSV file should support assigning a transition type to each slogan, for complete scripting |            |      |
 | 10 | 11/13/25 |          | todo | For CSV colors, in addition to hexadecimal values, also support HTML color names           |            |      |
 | 11 | 11/13/25 |          | todo | For CSV transition types, in addition to indices, also support mnemonic codes              |            |      |
 | 14 | 11/13/25 |          | todo | Research smoke / fog / blur transition                                                     |            |      |
-| 15 | 11/13/25 |          | todo | Research fragments transition, possibly based on tessellation                              |            |      |
+| 18 | 11/17/25 |          | todo | Glyph iterator handles Arabic incorrectly, affecting elevator, clock, etc.                 |            |      |
+| 19 | 11/17/25 |          | todo | Glyph iterator mishandles certain serif fonts such as Georgia by excluding scraps          |            |      |
