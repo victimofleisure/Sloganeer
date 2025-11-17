@@ -137,7 +137,7 @@ void CParamParser::ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast)
 			case FLAG_help:
 				m_bShowHelp = true;
 				break;
-			case FLAG_fullscreen:
+			case FLAG_fullscr:
 				m_bStartFullScreen = true;
 				break;
 			case FLAG_seqtext:
@@ -170,7 +170,7 @@ void CParamParser::ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast)
 				case FLAG_fontname:
 					m_sFontName = pszParam;
 					break;
-				case FLAG_fontweight:
+				case FLAG_fontwt:
 					Scan(pszParam, m_nFontWeight, 1, 999);
 					break;
 				case FLAG_transdur:
@@ -188,10 +188,10 @@ void CParamParser::ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast)
 					Scan(pszParam, fParam);
 					m_nPauseDuration = Round(fParam * 1000);	// convert to milliseconds
 					break;
-				case FLAG_bgcolor:
+				case FLAG_bgclr:
 					Scan(pszParam, m_clrBkgnd);
 					break;
-				case FLAG_drawcolor:
+				case FLAG_drawclr:
 					Scan(pszParam, m_clrDraw);
 					break;
 				case FLAG_seed:

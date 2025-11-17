@@ -23,13 +23,13 @@
 #define IDS_FLAG_EXAMPLE_fontsize       213
 #define IDS_FLAG_EXAMPLE_fontweight     214
 #define IDS_FLAG_EXAMPLE_transdur       215
-#define IDS_FLAG_HELP_bgcolor           216
-#define IDS_FLAG_HELP_drawcolor         217
+#define IDS_FLAG_HELP_bgclr             216
+#define IDS_FLAG_HELP_drawclr           217
 #define IDS_FLAG_HELP_easing            218
 #define IDS_FLAG_HELP_fontname          219
 #define IDS_FLAG_HELP_fontsize          220
-#define IDS_FLAG_HELP_fontweight        221
-#define IDS_FLAG_HELP_fullscreen        222
+#define IDS_FLAG_HELP_fontwt            221
+#define IDS_FLAG_HELP_fullscr           222
 #define IDS_FLAG_HELP_help              223
 #define IDS_FLAG_HELP_holddur           224
 #define IDS_FLAG_HELP_license           225
