@@ -155,3 +155,21 @@ inline void CGlyphIter::Reset()
 
 void	AddEllipse(ID2D1GeometrySink *pSink, D2D1_POINT_2F ptOrigin, D2D1_SIZE_F szRadius);
 void	AddPieWedge(ID2D1GeometrySink *pSink, D2D1_POINT_2F ptOrigin, D2D1_SIZE_F szRadius, float fStartAngle, float fWedgeFrac);
+
+inline D2D1::ColorF RGBAColorF(UINT32 rgba)
+{
+	// adapted from D2D1::ColorF constructor
+	static const UINT32 shiftR = 24;
+	static const UINT32 shiftG = 16;
+	static const UINT32 shiftB = 8;
+	static const UINT32 shiftA = 0;
+	static const UINT32 maskR = 0xff << shiftR;
+	static const UINT32 maskG = 0xff << shiftG;
+	static const UINT32 maskB = 0xff << shiftB;
+	static const UINT32 maskA = 0xff << shiftA;
+	return D2D1::ColorF(
+		static_cast<FLOAT>((rgba & maskR) >> shiftR) / 255.f,
+		static_cast<FLOAT>((rgba & maskG) >> shiftG) / 255.f,
+		static_cast<FLOAT>((rgba & maskB) >> shiftB) / 255.f,
+		static_cast<FLOAT>((rgba & maskA) >> shiftA) / 255.f);
+}

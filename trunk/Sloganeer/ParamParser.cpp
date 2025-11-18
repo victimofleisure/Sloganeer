@@ -21,6 +21,7 @@
 #include "VersionInfo.h"
 #include "HelpDlg.h"
 #include "AboutDlg.h"
+#include "D2DHelper.h"
 
 const LPCTSTR CParamParser::m_aFlag[FLAGS] = {
 	#define PARAMDEF(name) _T(#name),
@@ -108,13 +109,19 @@ template<> bool CParamParser::Scan(LPCTSTR pszParam, CSize& val, CSize minVal, C
 	return true;
 }
 
+
 bool CParamParser::Scan(LPCTSTR pszParam, D2D1::ColorF& color)
 {
-	COLORREF	clr = CSloganParams::FindColor(pszParam);	// find color name
+	UINT32	clr = CSloganParams::FindColor(pszParam);	// find color name
 	if (clr != UINT_MAX) {	// if color name found
 		color = clr;
 	} else {	// not a color name
-		color = D2D1::ColorF(std::stoi(pszParam, 0, 16));	// hexadecimal
+		clr = std::stoul(pszParam, 0, 16);	// hexadecimal to unsigned long
+		if (_tcslen(pszParam) >= 8) {	// if eight-digit color
+			color = RGBAColorF(clr);	// assume RGBA, needs special handling
+		} else {	// regular six-digit color
+			color = D2D1::ColorF(clr);	// assume RGB
+		}
 	}
 	return true;
 }
