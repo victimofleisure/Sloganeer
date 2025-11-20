@@ -69,26 +69,28 @@ The slogans file must be in either ANSI or UTF-8 format. To use non-ANSI charact
 
 ### Transitions
 
-1. Scroll from left to right
-2. Scroll from right to left
-3. Scroll from top to bottom
-4. Scroll from bottom to top
-5. Reveal or cover from left to right
-6. Reveal or cover from top to bottom
-7. Reveal or cover one letter at a time
-8. Fade to or from background color
-9. Scale horizontally
-10. Scale vertically
-11. Scale both axes
-12. Scale both axes and rotate
-13. Reveal or cover with tiles
-14. Converge horizontally
-15. Converge vertically
-16. Melt or grow by erasing outline
-17. Per-character horizontal reveal
-18. Per-character radial reveal
-19. Tip over or return to upright
-20. Explode each letter into fragments
+|Num|Code|Description|
+|---|----|-----------|
+|1.|SLL|Scroll from left to right|
+|2.|SLR|Scroll from right to left|
+|3.|SLD|Scroll from top to bottom|
+|4.|SLU|Scroll from bottom to top|
+|5.|RVH|Reveal or cover from left to right|
+|6.|RVV|Reveal or cover from top to bottom|
+|7.|TWR|Reveal or cover one letter at a time|
+|8.|FAD|Fade to or from background color|
+|9.|SCH|Scale horizontally|
+|10.|SCV|Scale vertically|
+|11.|SCB|Scale both axes|
+|12.|SCS|Scale both axes and rotate|
+|13.|RTL|Reveal or cover with tiles|
+|14.|CVH|Converge horizontally|
+|15.|CVV|Converge vertically|
+|16.|MLT|Melt or grow by erasing outline|
+|17.|ELV|Per-character horizontal reveal|
+|18.|CLK|Per-character radial reveal|
+|19.|SKW|Tip over or return to upright|
+|20.|XPL|Explode each letter into fragments|
 
 ### Defaults
 
