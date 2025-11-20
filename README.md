@@ -69,28 +69,28 @@ The slogans file must be in either ANSI or UTF-8 format. To use non-ANSI charact
 
 ### Transitions
 
-|#|Code|Description|
-|-|----|-----------|
-|1.|SLL|Scroll from left to right|
-|2.|SLR|Scroll from right to left|
-|3.|SLD|Scroll from top to bottom|
-|4.|SLU|Scroll from bottom to top|
-|5.|RVH|Reveal or cover from left to right|
-|6.|RVV|Reveal or cover from top to bottom|
-|7.|TWR|Reveal or cover one letter at a time|
-|8.|FAD|Fade to or from background color|
-|9.|SCH|Scale horizontally|
-|10.|SCV|Scale vertically|
-|11.|SCB|Scale both axes|
-|12.|SCS|Scale both axes and rotate|
-|13.|RTL|Reveal or cover with tiles|
-|14.|CVH|Converge horizontally|
-|15.|CVV|Converge vertically|
-|16.|MLT|Melt or grow by erasing outline|
-|17.|ELV|Per-character horizontal reveal|
-|18.|CLK|Per-character radial reveal|
-|19.|SKW|Tip over or return to upright|
-|20.|XPL|Explode each letter into fragments|
+|#|Code|Name|Description|
+|-|----|----|-----------|
+|1.|SLL|Scroll LR|Scroll from left to right|
+|2.|SLR|Scroll RL|Scroll from right to left|
+|3.|SLD|Scroll TB|Scroll from top to bottom|
+|4.|SLU|Scroll BT|Scroll from bottom to top|
+|5.|RVH|Reveal LR|Reveal or cover from left to right|
+|6.|RVV|Reveal TB|Reveal or cover from top to bottom|
+|7.|TWR|Typewriter|Reveal or cover one letter at a time|
+|8.|FAD|Fade|Fade to or from background color|
+|9.|SCH|Scale Horz|Scale horizontally|
+|10.|SCV|Scale Vert|Scale vertically|
+|11.|SCB|Scale Both|Scale both axes|
+|12.|SCS|Scale Spin|Scale both axes and rotate|
+|13.|RTL|Tile|Reveal or cover with tiles|
+|14.|CVH|Converge Horz|Converge horizontally|
+|15.|CVV|Converge Vert|Converge vertically|
+|16.|MLT|Melt|Melt or grow by erasing outline|
+|17.|ELV|Elevator|Per-character horizontal reveal|
+|18.|CLK|Clock|Per-character radial reveal|
+|19.|SKW|Skew|Tip over or return to upright|
+|20.|XPL|Explode|Explode each letter into fragments|
 
 ### Defaults
 
