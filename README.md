@@ -69,8 +69,8 @@ The slogans file must be in either ANSI or UTF-8 format. To use non-ANSI charact
 
 ### Transitions
 
-|Num|Code|Description|
-|---|----|-----------|
+|#|Code|Description|
+|-|----|-----------|
 |1.|SLL|Scroll from left to right|
 |2.|SLR|Scroll from right to left|
 |3.|SLD|Scroll from top to bottom|
