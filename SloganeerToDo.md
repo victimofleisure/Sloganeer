@@ -1,5 +1,5 @@
 | id | open     | close    | type | description                                                                                | rev        | user |
-| -- | -------- | -------- | ---- | ------------------------------------------------------------------------------------------ | ---------- | ---- |
+|----|----------|----------|------|--------------------------------------------------------------------------------------------|------------|------|
 | 4  | 11/13/25 | 11/14/25 | done | Add parameter validation                                                                   | 1.0.00.025 |      |
 | 6  | 11/13/25 | 11/14/25 | done | Frame size parameter is not implemented; use NxN format                                    | 1.0.00.025 |      |
 | 12 | 11/13/25 | 11/14/25 | done | Verify that parameter color values are actually in RGB and not BGR                         | 1.0.00.025 |      |
@@ -10,12 +10,14 @@
 | 3  | 11/13/25 | 11/14/25 | done | Record should check for a preexisting image sequence in the destination folder             | 1.0.00.025 |      |
 | 16 | 11/13/25 | 11/14/25 | done | Add help for both command line and GUI; -help and F1                                       | 1.0.00.026 |      |
 | 17 | 11/13/25 | 11/15/25 | done | allow color names as alternative to hexadecimal values                                     | 1.0.00.027 |      |
-| 15 | 11/13/25 | 11/17/25 | done | explode transition, based on tessellation                                                   | 1.0.00.028 |      |
-| 7  | 11/13/25 |          | todo | A transparent background could be useful for compositing: bkcolor none                     |            |      |
-| 8  | 11/13/25 |          | todo | Add CSV file format to allow per-slogan fonts, colors, and transition types                |            |      |
-| 9  | 11/13/25 |          | todo | CSV file should support assigning a transition type to each slogan, for complete scripting |            |      |
-| 10 | 11/13/25 |          | todo | For CSV colors, in addition to hexadecimal values, also support HTML color names           |            |      |
-| 11 | 11/13/25 |          | todo | For CSV transition types, in addition to indices, also support mnemonic codes              |            |      |
+| 15 | 11/13/25 | 11/17/25 | done | explode transition, based on tessellation                                                  | 1.0.00.028 |      |
+| 20 | 11/17/25 | 11/17/25 | done | Abbreviate overlong command line flags                                                     | 1.0.00.028 |      |
+| 8  | 11/13/25 | 11/20/25 | done | Add CSV file format to allow per-slogan fonts, colors, and transition types                | 1.0.00.029 |      |
+| 9  | 11/13/25 | 11/20/25 | done | CSV file should support assigning a transition type to each slogan, for complete scripting | 1.0.00.029 |      |
+| 10 | 11/13/25 | 11/20/25 | done | For CSV colors, in addition to hexadecimal values, also support HTML color names           | 1.0.00.029 |      |
+| 11 | 11/13/25 | 11/20/25 | done | For CSV transition types, in addition to indices, also support mnemonic codes              | 1.0.00.029 |      |
+| 7  | 11/13/25 |          | todo | Transparent background color breaks transitions that overpaint with background color       |            |      |
 | 14 | 11/13/25 |          | todo | Research smoke / fog / blur transition                                                     |            |      |
 | 18 | 11/17/25 |          | todo | Glyph iterator handles Arabic incorrectly, affecting elevator, clock, etc.                 |            |      |
 | 19 | 11/17/25 |          | todo | Glyph iterator mishandles certain serif fonts such as Georgia by excluding scraps          |            |      |
+| 21 | 11/18/25 |          | todo | Color cycling though a palette of colors via linear interpolation                          |            |      |
