@@ -12,6 +12,7 @@
 		02		30oct25	add nowrap parameter
         03      12nov25	add easing
 		04		14nov25	add recording
+        05      18nov25	add slogan members
 
 */
 
@@ -46,11 +47,56 @@ PARAMDEF(license)		// display the license
 
 HELPEXAMPLEDEF(fontsize)
 HELPEXAMPLEDEF(fontname)
-HELPEXAMPLEDEF(fontweight)
+HELPEXAMPLEDEF(fontwt)
 HELPEXAMPLEDEF(transdur)
-HELPEXAMPLEDEF(bgcolor)
-HELPEXAMPLEDEF(drawcolor)
+HELPEXAMPLEDEF(bgclr)
+HELPEXAMPLEDEF(drawclr)
 					
 #undef HELPEXAMPLEDEF
 #endif
 
+#ifdef SLOGANDEF
+
+//			name		member
+SLOGANDEF(	text,		sText)
+SLOGANDEF(	fontname,	sFontName)
+SLOGANDEF(	fontsize,	fFontSize)
+SLOGANDEF(	fontwt,		nFontWeight)
+SLOGANDEF(	bgclr,		clrBkgnd)
+SLOGANDEF(	drawclr,	clrDraw)
+SLOGANDEF(	transdur,	fInTransDuration)
+SLOGANDEF(	holddur,	nHoldDuration)
+SLOGANDEF(	outdur,		fOutTransDuration)
+SLOGANDEF(	pausedur,	nPauseDuration)
+SLOGANDEF(	intrans,	aTransType[TD_INCOMING])
+SLOGANDEF(	outtrans,	aTransType[TD_OUTGOING])
+					
+#undef SLOGANDEF
+#endif
+
+#ifdef TRANSTYPEDEF
+
+//				code	name
+TRANSTYPEDEF(	SLL,	SCROLL_LR)		// scroll from left to right
+TRANSTYPEDEF(	SLR,	SCROLL_RL)		// scroll from right to left
+TRANSTYPEDEF(	SLD,	SCROLL_TB)		// scroll from top to bottom
+TRANSTYPEDEF(	SLU,	SCROLL_BT)		// scroll from bottom to top
+TRANSTYPEDEF(	RVH,	REVEAL_LR)		// reveal or cover from left to right
+TRANSTYPEDEF(	RVV,	REVEAL_TB)		// reveal or cover from top to bottom
+TRANSTYPEDEF(	TWR,	TYPEWRITER)		// reveal or cover one letter at a time
+TRANSTYPEDEF(	FAD,	FADE)			// fade to or from background color
+TRANSTYPEDEF(	SCH,	SCALE_HORZ)		// scale horizontally
+TRANSTYPEDEF(	SCV,	SCALE_VERT)		// scale vertically
+TRANSTYPEDEF(	SCB,	SCALE_BOTH)		// scale both axes
+TRANSTYPEDEF(	SCS,	SCALE_SPIN)		// scale both axes and rotate
+TRANSTYPEDEF(	RTL,	TILE)			// reveal or cover with tiles
+TRANSTYPEDEF(	CVH,	CONVERGE_HORZ)	// converge horizontally
+TRANSTYPEDEF(	CVV,	CONVERGE_VERT)	// converge vertically
+TRANSTYPEDEF(	MLT,	MELT)			// outline with increasing stroke width
+TRANSTYPEDEF(	ELV,	ELEVATOR)		// per-character horizontal reveal
+TRANSTYPEDEF(	CLK,	CLOCK)			// per-character radial reveal
+TRANSTYPEDEF(	SKW,	SKEW)			// tip over or return to upright
+TRANSTYPEDEF(	XPL,	EXPLODE)		// explode each letter into fragments
+					
+#undef TRANSTYPEDEF
+#endif

@@ -72,29 +72,6 @@ protected:
 		ST_PAUSE,		// pause between slogans
 		STATES
 	};
-	enum {	// transition types
-		TT_SCROLL_LR,	// scroll from left to right
-		TT_SCROLL_RL,	// scroll from right to left
-		TT_SCROLL_TB,	// scroll from top to bottom
-		TT_SCROLL_BT,	// scroll from bottom to top
-		TT_REVEAL_LR,	// reveal or cover from left to right
-		TT_REVEAL_TB,	// reveal or cover from top to bottom
-		TT_TYPEWRITER,	// reveal or cover one letter at a time
-		TT_FADE,		// fade to or from background color
-		TT_SCALE_HORZ,	// scale horizontally
-		TT_SCALE_VERT,	// scale vertically
-		TT_SCALE_BOTH,	// scale both axes
-		TT_SCALE_SPIN,	// scale both axes and rotate
-		TT_TILE,		// reveal or cover with tiles
-		TT_CONVERGE_HORZ,	// converge horizontally
-		TT_CONVERGE_VERT,	// converge vertically
-		TT_MELT,		// outline with increasing stroke width
-		TT_ELEVATOR,	// per-character horizontal reveal
-		TT_CLOCK,		// per-character radial reveal
-		TT_SKEW,		// tip over or return to upright
-		TT_EXPLODE,		// explode each letter into fragments
-		TRANS_TYPES
-	};
 	enum {	// GetPhase flags
 		GP_INVERT	= 0x01,		// invert phase
 		GP_EASING	= 0x02,		// apply easing
@@ -182,6 +159,7 @@ protected:
 // Helpers
 	void	Init();
 	bool	IsTransOut() const;
+	void	OnCustomSlogan();
 	void	StartSlogan();
 	void	StartTrans(int nState, float fDuration);
 	void	StartIdle(int nDuration);
@@ -190,6 +168,7 @@ protected:
 	bool	OnTextChange();
 	CD2DSizeF	GetTextBounds(CKD2DRectF& rText) const;
 	void	DrawTextBounds();
+	void	DrawGlyphBounds(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun);
 	double	GetPhase(UINT nFlags = 0) const;
 	double	GetFrameRate();
 	bool	CreateStrokeStyle();
@@ -228,7 +207,6 @@ protected:
 	bool	SetCapture(bool bEnable = true);
 	bool	CaptureFrame();
 	bool	RegressionTest();
-	void	DrawGlyphBounds(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun);
 	double	GetFrameTime() const;
 	static double	Lerp(double a, double b, double t);
 };

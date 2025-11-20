@@ -11,6 +11,7 @@
         01      12nov25	add easing
 		02		14nov25	add recording
 		03		15nov25	add color names
+		04		18nov25	add CSV support
 
 */
 
@@ -21,28 +22,31 @@
 
 const LPCTSTR CSloganParams::m_aColorName[] = {
 	#define COLORNAMEDEF(name) _T(#name),
-	#include "ColorNameDef.h"
+	#include "ColorNameDef.h"	// generate code
 };
 
 const COLORREF CSloganParams::m_aColorVal[] = {
 	#define COLORNAMEDEF(name) D2D1::ColorF::##name,
-	#include "ColorNameDef.h"
+	#include "ColorNameDef.h"	// generate code
 };
 
-CSloganParams::CSloganParams() :
-	m_clrBkgnd(D2D1::ColorF::Black),
-	m_clrDraw(D2D1::ColorF::White)
+CSloganParams::CSloganParams()
 {
-	m_bStartFullScreen = false;
-	m_bSeqSlogans = false;
-	m_bNoWordWrap = false;
+	// init base class members
+	m_sFontName = L"Arial";
+	m_fFontSize = 150.0f;
+	m_nFontWeight = DWRITE_FONT_WEIGHT_BLACK;
 	m_nHoldDuration = 1000;
 	m_nPauseDuration = 0;
 	m_fInTransDuration = 2.0f;
 	m_fOutTransDuration = 2.0f;
-	m_sFontName = L"Arial";
-	m_fFontSize = 150.0f;
-	m_nFontWeight = DWRITE_FONT_WEIGHT_BLACK;
+	m_clrBkgnd = D2D1::ColorF::Black;
+	m_clrDraw = D2D1::ColorF::White;
+	// init our members
+	m_bStartFullScreen = false;
+	m_bSeqSlogans = false;
+	m_bNoWordWrap = false;
+	m_bCustomSlogans = false;
 	m_nRandSeed = 0;
 	m_fEasing = 0.15f;
 	m_szRecFrameSize = CSize(1920, 1080);
@@ -54,12 +58,14 @@ void CSloganParams::ReadSlogans(LPCTSTR pszPath)
 {
 	// assume UTF-8 text file containing slogans to display, one per line
 	CStdioFileEx	fSlogan(pszPath, CFile::modeRead);
-	CStringArrayEx	aSlogan;
-	CString	sSlogan;
-	while (fSlogan.ReadString(sSlogan)) {	// read slogan string
-		if (!sSlogan.IsEmpty()) {	// if string isn't empty
-			sSlogan.Replace('\t', '\n');	// replace tabs with newlines
-			aSlogan.Add(sSlogan);	// add slogan to array
+	CSloganArray	aSlogan;
+	CString	sText;
+	CSlogan	slogan(*this);	// set slogan attributes to defaults
+	while (fSlogan.ReadString(sText)) {	// read slogan text
+		if (!sText.IsEmpty()) {	// if string isn't empty
+			sText.Replace('\t', '\n');	// replace tabs with newlines
+			slogan.m_sText = sText;
+			aSlogan.Add(slogan);	// add slogan to array
 		}
 	}
 	m_aSlogan = aSlogan;	// pass slogans to drawing object
@@ -69,7 +75,7 @@ void CSloganParams::SetSlogans(const LPCTSTR *aSlogan, int nSlogans)
 {
 	m_aSlogan.SetSize(nSlogans);	// allocate slogan array
 	for (int iSlogan = 0; iSlogan < nSlogans; iSlogan++) {	// for each slogan
-		m_aSlogan[iSlogan] = aSlogan[iSlogan];	// copy string to array element
+		m_aSlogan[iSlogan].m_sText = aSlogan[iSlogan];	// copy string to array element
 	}
 }
 

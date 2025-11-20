@@ -9,6 +9,7 @@
 		rev		date	comments
         00      08nov25	initial version
         01      09nov25	add worker thread
+        02      18nov25	add slogan customization
 
 */
 
@@ -241,8 +242,6 @@ bool CMeltProbe::WriteBitmap(IWICBitmap* pBitmap, LPCTSTR pszImagePath)
 
 CMeltProbeWorker::CMeltProbeWorker()
 {
-	m_fFontSize = 0;
-	m_nFontWeight = 0;
 	m_paStroke = NULL;
 	m_bIsCOMInit = false;
 	m_bThreadExit = false;
@@ -253,19 +252,15 @@ CMeltProbeWorker::~CMeltProbeWorker()
 	Destroy();
 }
 
-bool CMeltProbeWorker::Create(const CStringArrayEx& aText, CString sFontName, 
-	float fFontSize, int nFontWeight, CD2DPointF ptDPI, CArrayEx<float, float>& aStroke)
+bool CMeltProbeWorker::Create(const CSloganArray& aSlogan, CD2DPointF ptDPI, CArrayEx<float, float>& aStroke)
 {
 	ASSERT(m_pWorker == NULL);	// single worker thread only
 	if (m_pWorker != NULL)	// if worker already running
 		return false;	// can't proceed
 	// the caller is responsible for allocating the stroke result array,
-	// and it must have the same number of elements as the input text array
-	ASSERT(aStroke.GetSize() == aText.GetSize());
-	m_aText = aText;
-	m_sFontName = sFontName;
-	m_fFontSize = fFontSize;
-	m_nFontWeight = nFontWeight;
+	// and it must have the same number of elements as the input slogan array
+	ASSERT(aStroke.GetSize() == aSlogan.GetSize());
+	m_aSlogan = aSlogan;
 	m_ptDPI = ptDPI;
 	m_paStroke = &aStroke;
 	// create thread suspended so we can safely clear its auto delete flag
@@ -327,14 +322,17 @@ bool CMeltProbeWorker::Probe()
 		reinterpret_cast<IUnknown **>(&pDWriteFactory)));
 	CHECK(CreateStrokeStyle(pD2DFactory, &pStrokeStyle));
 	// now find the optimal maximum outline stroke for each text array element
-	int	nTexts = m_aText.GetSize();
-	for (int iText = 0; iText < nTexts; iText++) {	// for each text
+	int	nSlogans = m_aSlogan.GetSize();
+	for (int iSlogan = 0; iSlogan < nSlogans; iSlogan++) {	// for each text
 		if (m_bThreadExit)	// if worker should exit
 			return false;
+		const CSlogan&	slogan(m_aSlogan[iSlogan]);	// access slogan array element
 		CMeltProbe	probe(pD2DFactory, pDWriteFactory, pStrokeStyle);
-		float&	fOutStroke = (*m_paStroke)[iText];	// dereference stroke array element
-		if (!probe.Create(m_aText[iText], m_sFontName, m_fFontSize, m_nFontWeight, m_ptDPI, fOutStroke))
+		float&	fOutStroke = (*m_paStroke)[iSlogan];	// dereference stroke array element
+		if (!probe.Create(slogan.m_sText, slogan.m_sFontName, slogan.m_fFontSize, 
+			slogan.m_nFontWeight, m_ptDPI, fOutStroke)) {
 			return false;	// probe failed; error already handled
+		}
 	}
 	return true;	// success
 }

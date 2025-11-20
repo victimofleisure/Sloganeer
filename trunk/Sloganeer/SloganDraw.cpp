@@ -378,6 +378,37 @@ CString	CSloganDraw::MakeImageSequenceFileName(CString sFolderPath, UINT iFrame)
 	return sImagePath;
 }
 
+void CSloganDraw::OnCustomSlogan()
+{
+	CSlogan	prevSlogan(*this);	// copy current slogan for change detection
+	CSlogan::operator=(m_aSlogan[m_iSlogan]);	// update this slogan from slogan array
+	if (!IsSameFont(prevSlogan)) {	// if font changed
+		OnFontChange();	// update font
+	}
+	if (!IsSameColor(m_clrBkgnd, prevSlogan.m_clrBkgnd)) {	// if background color changed
+		m_pBkgndBrush->SetColor(m_clrBkgnd);	// set background color 
+	}
+	if (!IsSameColor(m_clrDraw, prevSlogan.m_clrDraw)) {	// if draw color changed
+		m_pDrawBrush->SetColor(m_clrDraw);	// set draw color 
+	}
+}
+
+void CSloganDraw::StartSlogan()
+{
+	if (m_bSeqSlogans) {	// if showing slogans sequentially
+		m_iSlogan++;	// next slogan index
+		if (m_iSlogan >= m_aSlogan.GetSize())	// if reached end of slogans
+			m_iSlogan = 0;	// reset to first slogan
+	} else {	// randomizing slogans
+		m_iSlogan = m_rlSloganIdx.GetNext(m_iSlogan);	// get next slogan index
+	}
+	m_sSlogan = m_aSlogan[m_iSlogan].m_sText;	// cache current slogan
+	if (m_bCustomSlogans)	// if doing per-slogan customization
+		OnCustomSlogan();	// customize current slogan
+	OnTextChange();	// update text
+	StartTrans(ST_TRANS_IN, m_fInTransDuration);	// start incoming transition
+}
+
 void CSloganDraw::StartTrans(int nState, float fDuration)
 {
 	ASSERT(nState == ST_TRANS_IN || nState == ST_TRANS_OUT);	// else logic error
@@ -397,22 +428,14 @@ void CSloganDraw::StartTrans(int nState, float fDuration)
 	} else {	// not recording
 		m_timerTrans.Reset();	// reset transition timer
 	}
-	m_iTransType = m_rlTransType.GetNext(m_iTransType);	// get next transition type
-	m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());	// remove transform if any
-}
-
-void CSloganDraw::StartSlogan()
-{
-	StartTrans(ST_TRANS_IN, m_fInTransDuration);	// start incoming transition
-	if (m_bSeqSlogans) {	// if showing slogans sequentially
-		m_iSlogan++;	// next slogan index
-		if (m_iSlogan >= m_aSlogan.GetSize())	// if reached end of slogans
-			m_iSlogan = 0;	// reset to first slogan
-	} else {	// randomizing slogans
-		m_iSlogan = m_rlSloganIdx.GetNext(m_iSlogan);	// get next slogan index
+	int	iTransDir = nState == ST_TRANS_OUT;	// get transition direction
+	// if current slogan specifies a transition type override for this direction
+	if (IsValid(m_aTransType[iTransDir])) {
+		m_iTransType = m_aTransType[iTransDir];	// use specified transition type
+	} else {	// transition type isn't overridden
+		m_iTransType = m_rlTransType.GetNext(m_iTransType);	// get next transition type
 	}
-	m_sSlogan = m_aSlogan[m_iSlogan];	// cache current slogan
-	OnTextChange();	// update text
+	m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());	// remove transform if any
 }
 
 void CSloganDraw::StartIdle(int nDuration)
@@ -838,8 +861,7 @@ bool CSloganDraw::LaunchMeltWorker()
 	CD2DPointF	ptDPI;
 	m_pD2DDeviceContext->GetDpi(&ptDPI.x, &ptDPI.y);
 	m_aMeltStroke.SetSize(m_aSlogan.GetSize());	// allocate destination stroke array
-	return m_thrMeltWorker.Create(m_aSlogan, m_sFontName,	// launch worker thread
-		m_fFontSize, m_nFontWeight, ptDPI, m_aMeltStroke);
+	return m_thrMeltWorker.Create(m_aSlogan, ptDPI, m_aMeltStroke);	// launch worker thread
 }
 
 bool CSloganDraw::MeasureMeltStroke()

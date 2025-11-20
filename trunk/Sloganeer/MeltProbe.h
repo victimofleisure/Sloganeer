@@ -9,6 +9,7 @@
 		rev		date	comments
         00      08nov25	initial version
         01      09nov25	add worker thread
+        02      18nov25	add slogan customization
 
 */
 
@@ -16,6 +17,7 @@
 
 #include "D2DDevCtx.h"
 #include "TextRenderer.h"
+#include "Slogan.h"
 
 class CMeltProbe : public CTextRenderer {
 public:
@@ -76,16 +78,12 @@ class CMeltProbeWorker {
 public:
 	CMeltProbeWorker();
 	~CMeltProbeWorker();
-	bool	Create(const CStringArrayEx& aInText, CString sFontName, float fFontSize, int nFontWeight, 
-		CD2DPointF ptDPI, CArrayEx<float, float>& aOutStroke);
+	bool	Create(const CSloganArray& aSlogan, CD2DPointF ptDPI, CArrayEx<float, float>& aOutStroke);
 	void	Destroy();
 	static HRESULT CreateStrokeStyle(ID2D1Factory1 *pD2DFactory, ID2D1StrokeStyle1 **ppStrokeStyle);
 
 protected:
-	CStringArrayEx	m_aText;	// array of input text strings to probe
-	CString	m_sFontName;	// font name string
-	float	m_fFontSize;	// font size in points
-	int		m_nFontWeight;	// font weight
+	CSloganArray	m_aSlogan;	// array of input slogans to probe
 	CD2DPointF	m_ptDPI;	// caller's DPI
 	CArrayEx<float, float>*	m_paStroke;	// pointer to stroke result array
 	bool	m_bIsCOMInit;	// true if COM initialization succeeded

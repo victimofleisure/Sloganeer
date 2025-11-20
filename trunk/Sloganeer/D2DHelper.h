@@ -10,6 +10,7 @@
 		01		27oct25	add size and inflate methods
 		02		01nov25	add more constructors
 		03		11nov25	add glyph iterator
+		04		18nov25	add RGBA color init
 
 */
 

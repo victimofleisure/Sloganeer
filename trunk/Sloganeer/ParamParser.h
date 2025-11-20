@@ -28,16 +28,19 @@ public:
 	bool	ParseCommandLine();
 	static	CString	GetHelpString();
 
+// Overrides
+	virtual void ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast);
+
 protected:
 // Constants
 	enum {
 		#define PARAMDEF(name) FLAG_##name,
-		#include "ParamDef.h"
+		#include "ParamDef.h"	// generate code
 		FLAGS
 	};
 	enum {
 		#define HELPEXAMPLEDEF(name) EXAMPLE_##name,
-		#include "ParamDef.h"
+		#include "ParamDef.h"	// generate code
 		EXAMPLES
 	};
 	static const LPCTSTR m_aFlag[FLAGS];	// array of flag name strings
@@ -45,9 +48,6 @@ protected:
 	static const int m_aFlagExampleID[EXAMPLES];	// array of flag example string resource IDs
 	static const LPCTSTR m_pszCopyrightNotice;	// copyright notice
 	static const LPCTSTR m_sDefaultSlogan;	// default slogan if none are specified
-
-// Overrides
-	virtual void ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast);
 
 // Data members
 	int		m_iFlag;			// index of flag expecting a parameter
@@ -58,12 +58,14 @@ protected:
 	bool	m_bShowLicense;		// true if we should show licence
 	CString	m_sHelpMarkdownPath;	// path for help markdown output file
 
+// Overrideables
+	virtual void OnError(int nErrID, LPCTSTR pszParam);
+
 // Helpers
 	template<typename T> void Convert(LPCTSTR pszParam, T& val);
 	template<typename T> void Scan(LPCTSTR pszParam, T& val);
 	template<typename T> bool Scan(LPCTSTR pszParam, T& val, T minVal, T maxVal);
 	static	bool	Scan(LPCTSTR pszParam, D2D1::ColorF& color);
-	void	OnError(int nErrID, LPCTSTR pszParam);
 	static	void	BreakIntoLines(CString sText, CStringArrayEx& arrLine, int nMaxLine = 80);
 	static	CString	UnpackHelp(CString& sParam, int nParamHelpResID, bool bArgumentUpperCase = true);
 	static	CString	UnpackHelp(LPCTSTR pszParam, int nParamHelpResID, bool bArgumentUpperCase = true);

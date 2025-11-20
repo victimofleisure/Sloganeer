@@ -11,6 +11,7 @@
         01      12nov25	add easing
 		02		14nov25	add recording
 		03		15nov25	add color names
+		04		18nov25	add CSV support
 
 */
 
@@ -22,20 +23,21 @@
 #include "HelpDlg.h"
 #include "AboutDlg.h"
 #include "D2DHelper.h"
+#include "SloganCSV.h"
 
 const LPCTSTR CParamParser::m_aFlag[FLAGS] = {
 	#define PARAMDEF(name) _T(#name),
-	#include "ParamDef.h"
+	#include "ParamDef.h"	// generate code
 };
 
 const int CParamParser::m_aFlagHelpID[FLAGS] = {
 	#define PARAMDEF(name) IDS_FLAG_HELP_##name,
-	#include "ParamDef.h"
+	#include "ParamDef.h"	// generate code
 };
 
 const int CParamParser::m_aFlagExampleID[EXAMPLES] = {
 	#define HELPEXAMPLEDEF(name) IDS_FLAG_EXAMPLE_##name,
-	#include "ParamDef.h"
+	#include "ParamDef.h"	// generate code
 };
 
 const LPCTSTR CParamParser::m_pszCopyrightNotice = _T("Copyleft 2025 Chris Korda");
@@ -274,9 +276,19 @@ bool CParamParser::ParseCommandLine()
 		return false;	// exit app
 	}
 	if (!m_strFileName.IsEmpty()) {	// if file path specified
-		ReadSlogans(m_strFileName);	// read slogans
-	} else {	// no slogan file
-		m_aSlogan.Add(m_sDefaultSlogan);	// add placeholder
+		// if file format is CSV
+		if (!_tcsicmp(PathFindExtension(m_strFileName), _T(".csv"))) {
+			CSloganCSV	parser(*this, m_aSlogan);	// create CSV slogan parser
+			if (!parser.Read(m_strFileName))	// read slogans from CSV file
+				return false;	// failed to read slogans, fatal error
+			m_bCustomSlogans = true;	// enable per-slogan customization
+		} else {	// assume ANSI or UTF-8 text file
+			ReadSlogans(m_strFileName);	// read slogans from text file
+		}
+	}
+	if (m_aSlogan.IsEmpty()) {	// if no slogans
+		m_sText = m_sDefaultSlogan;
+		m_aSlogan.Add(*this);	// add placeholder slogan
 	}
 	return true;	// proceed with launching app
 }
