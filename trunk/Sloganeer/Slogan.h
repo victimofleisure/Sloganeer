@@ -17,6 +17,7 @@ class CSlogan {
 public:
 // Construction
 	CSlogan();
+	CSlogan(bool bAppDefaults);
 
 // Constants
 	enum {	// columns
@@ -37,6 +38,7 @@ public:
 	enum {
 		INVALID = -1,
 	};
+	static const D2D1::ColorF INVALID_COLOR;
 
 // Public data
 	CString	m_sText;			// text to display

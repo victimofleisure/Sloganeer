@@ -25,18 +25,34 @@ const LPCTSTR CSlogan::m_aTransTypeCode[TRANS_TYPES] = {
 	#include "ParamDef.h"	// generate code
 };
 
+const D2D1::ColorF CSlogan::INVALID_COLOR(INVALID, INVALID, INVALID, INVALID);
+
 CSlogan::CSlogan() :
-	m_clrBkgnd(0),
-	m_clrDraw(0)
+	m_clrBkgnd(INVALID_COLOR),
+	m_clrDraw(INVALID_COLOR)
 {
 	m_fFontSize = INVALID;
 	m_nFontWeight = INVALID;
 	m_nHoldDuration = INVALID;
-	m_clrBkgnd.r = INVALID;
-	m_clrDraw.r = INVALID;
 	m_nPauseDuration = INVALID;
 	m_fInTransDuration = INVALID;
 	m_fOutTransDuration = INVALID;
+	m_aTransType[TD_INCOMING] = INVALID;
+	m_aTransType[TD_OUTGOING] = INVALID;
+}
+
+CSlogan::CSlogan(bool bAppDefaults) :
+	m_clrBkgnd(D2D1::ColorF::Black),
+	m_clrDraw(D2D1::ColorF::White)
+{
+	UNREFERENCED_PARAMETER(bAppDefaults);	// argument is for ctor discrimination only
+	m_sFontName = L"Arial";
+	m_fFontSize = 150.0f;
+	m_nFontWeight = DWRITE_FONT_WEIGHT_BLACK;
+	m_nHoldDuration = 1000;
+	m_nPauseDuration = 0;
+	m_fInTransDuration = 2.0f;
+	m_fOutTransDuration = 2.0f;
 	m_aTransType[TD_INCOMING] = INVALID;
 	m_aTransType[TD_OUTGOING] = INVALID;
 }

@@ -148,7 +148,7 @@ void CMeltProbe::SimplifyText(CString& sText)
 	std::bitset<128> aUsed;
 	for (int iOldChar = 0; iOldChar < nOldLen; iOldChar++) {
 		TCHAR	c = sText[iOldChar];
-		if (c == ' ' || c == '\n' || c == '\t')	// if whitespace
+		if (theApp.IsSpace(c))	// if whitespace
 			continue;	// skip character
 		if (c < 128) {	// if character in ASCII range
 			if (!aUsed[c]) {	// if character is unused

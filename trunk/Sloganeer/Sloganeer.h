@@ -42,6 +42,7 @@ public:
 // Operations
 	void	OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate);
 	bool	WriteLogEntry(CString sLogEntry);
+	static bool	IsSpace(TCHAR c);
 
 // Implementation
 protected:
@@ -49,5 +50,10 @@ protected:
 
 	DECLARE_MESSAGE_MAP()
 };
+
+inline bool CSloganeerApp::IsSpace(TCHAR c)
+{
+	return c == ' ' || c == '\n' || c == '\t';	// nothing fancy
+}
 
 extern CSloganeerApp theApp;

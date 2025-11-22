@@ -846,7 +846,7 @@ void CSloganDraw::TransConvergeVert(CD2DPointF ptBaselineOrigin, DWRITE_MEASURIN
 			m_iGlyphLine = iLine;	// update cached value
 		}
 		float	fOffset = fSlideSpan;
-		if (pGlyphRunDescription->string[iGlyph] != ' ') {	// exclude spaces
+		if (!theApp.IsSpace(pGlyphRunDescription->string[iGlyph])) {	// exclude spaces
 			if (m_bIsGlyphRising)	// if glyph rises
 				fOffset = -fOffset;	// negate offset
 			m_bIsGlyphRising ^= 1;	// alternate
@@ -943,7 +943,7 @@ void CSloganDraw::TransElevator(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MO
 	UINT	iGlyph;
 	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
 		int	iChar = pGlyphRunDescription->textPosition + iGlyph;
-		if (m_sSlogan[iChar] != ' ') {	// if non-blank character
+		if (!theApp.IsSpace(m_sSlogan[iChar])) {	// if non-blank character
 			float	fGlyphWidth = pGlyphRun->glyphAdvances[iGlyph];
 			float	fDoorWidth = DTF((fGlyphWidth + AA_MARGIN) * fPhase / 2);
 			float	fDoorLeft = rGlyph.left + fDoorWidth;
@@ -988,7 +988,7 @@ bool CSloganDraw::TransClock(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE 
 	iterGlyph.Reset();
 	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
 		int	iChar = pGlyphRunDescription->textPosition + iGlyph;
-		if (m_sSlogan[iChar] != ' ') {	// if non-blank character
+		if (!theApp.IsSpace(m_sSlogan[iChar])) {	// if non-blank character
 			CD2DPointF	ptCenter(rGlyph.CenterPoint());
 			auto mTranslate(D2D1::Matrix3x2F::Translation(ptCenter.x, ptCenter.y));
 			m_pD2DDeviceContext->PushAxisAlignedClip(rGlyph, D2D1_ANTIALIAS_MODE_ALIASED);

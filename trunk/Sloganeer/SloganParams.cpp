@@ -30,19 +30,8 @@ const COLORREF CSloganParams::m_aColorVal[] = {
 	#include "ColorNameDef.h"	// generate code
 };
 
-CSloganParams::CSloganParams()
+CSloganParams::CSloganParams() : CSlogan(true)	// app defaults
 {
-	// init base class members
-	m_sFontName = L"Arial";
-	m_fFontSize = 150.0f;
-	m_nFontWeight = DWRITE_FONT_WEIGHT_BLACK;
-	m_nHoldDuration = 1000;
-	m_nPauseDuration = 0;
-	m_fInTransDuration = 2.0f;
-	m_fOutTransDuration = 2.0f;
-	m_clrBkgnd = D2D1::ColorF::Black;
-	m_clrDraw = D2D1::ColorF::White;
-	// init our members
 	m_bStartFullScreen = false;
 	m_bSeqSlogans = false;
 	m_bNoWordWrap = false;
