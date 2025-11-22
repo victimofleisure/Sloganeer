@@ -16,6 +16,7 @@
 | 9  | 11/13/25 | 11/20/25 | done | CSV file should support assigning a transition type to each slogan, for complete scripting | 1.0.00.029 |      |
 | 10 | 11/13/25 | 11/20/25 | done | For CSV colors, in addition to hexadecimal values, also support HTML color names           | 1.0.00.029 |      |
 | 11 | 11/13/25 | 11/20/25 | done | For CSV transition types, in addition to indices, also support mnemonic codes              | 1.0.00.029 |      |
+| 22 | 11/13/25 | 11/22/25 | done | Add random variant of typewriter transition                                                | 1.0.00.030 |      |
 | 7  | 11/13/25 |          | todo | Transparent background color breaks transitions that overpaint with background color       |            |      |
 | 14 | 11/13/25 |          | todo | Research smoke / fog / blur transition                                                     |            |      |
 | 18 | 11/17/25 |          | todo | Glyph iterator handles Arabic incorrectly, affecting elevator, clock, etc.                 |            |      |
