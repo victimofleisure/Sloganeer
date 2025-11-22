@@ -21,6 +21,8 @@
 		11		12nov25	add skew and spin transitions
 		12		14nov25	add recording
 		13		17nov25	add explode transition
+		14		18nov25	add per-slogan customization
+		15		22nov25	add random typewriter variant
 
 */
 
@@ -76,6 +78,8 @@ void CSloganDraw::Init()
 	m_nSwapChainBuffers = 0;
 	m_fStartTime = 0;
 	m_fMeltMaxStroke = 0;
+	m_nCharsTyped = 0;
+	m_iTransVariant = 0;
 }
 
 bool CSloganDraw::Create(HWND hWnd)
@@ -190,9 +194,13 @@ bool CSloganDraw::ResetDrawingEffect()
 void CSloganDraw::OnResize()
 {
 	OnTextChange();
+	m_nCharsTyped = 0;	// for random typewriter transition
 	if (m_iState == ST_TRANS_IN || m_iState == ST_TRANS_OUT) {
-		if (m_iTransType == TT_EXPLODE)
+		switch (m_iTransType) {
+		case TT_EXPLODE:
 			m_bIsTransStart = true;	// redo tessellation
+			break;
+		}
 	}
 }
 
@@ -659,6 +667,12 @@ void CSloganDraw::TransFade()
 
 void CSloganDraw::TransTypewriter()
 {
+	if (m_bIsTransStart)	// if start of transition
+		m_iTransVariant = rand() & 1;	// coin toss for variant
+	if (m_iTransVariant) {	// if variant selected
+		TransRandomTypewriter();	// do variant
+		return;	// skip default behavior
+	}
 	UINT	nTextLen = static_cast<UINT>(m_sSlogan.GetLength());
 	UINT	nCharsTyped = static_cast<UINT>(Round(nTextLen * m_fTransProgress));
 	DWRITE_TEXT_RANGE	trShow = {0, nCharsTyped};
@@ -672,6 +686,35 @@ void CSloganDraw::TransTypewriter()
 	m_pTextLayout->SetDrawingEffect(m_pBkgndBrush, trHide);	// set brush for hidden characters
 	CD2DPointF	ptOrigin(0, 0);
 	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pDrawBrush);	// draw text
+}
+
+void CSloganDraw::TransRandomTypewriter()
+{
+	UINT	nTextLen = static_cast<UINT>(m_sSlogan.GetLength());
+	if (m_bIsTransStart) {	// if start of transition
+		CRandList	rlChar(nTextLen);	// initialize shuffler for entire text
+		m_aCharIdx.FastSetSize(nTextLen);	// only reallocate if text too big
+		m_aCharIdx.FastRemoveAll();	// reset item count without freeing memory
+		for (UINT iChar = 0; iChar < nTextLen; iChar++) {	// for each character
+			int	iRandChar = rlChar.GetNext();	// pick a random character
+			if (!theApp.IsSpace(m_sSlogan[iRandChar]))	// if non-space character
+				m_aCharIdx.Add(iRandChar);	// add character's index to sequence
+		}
+		m_nCharsTyped = 0;	// reset number of characters typed
+	}
+	int	nCharsAvail = m_aCharIdx.GetSize();	// number of non-space characters
+	UINT	nCharsTyped = static_cast<UINT>(Round(nCharsAvail * m_fTransProgress));
+	ID2D1Brush* aBrush[2] = {m_pBkgndBrush, m_pDrawBrush};	// pair of brushes
+	int	iBrush = IsTransOut();	// brushes are swapped for outgoing transition
+	// for each character that's due to be typed, in sequential order
+	for (UINT iChar = m_nCharsTyped; iChar < nCharsTyped; iChar++) {
+		int	iMappedChar = m_aCharIdx[iChar];	// get char's index within text
+		DWRITE_TEXT_RANGE	tr = {iMappedChar, 1};	// set range for only that char
+		m_pTextLayout->SetDrawingEffect(aBrush[!iBrush], tr);	// set brush for char
+	}
+	m_nCharsTyped = nCharsTyped;	// update count of characters typed
+	CD2DPointF	ptOrigin(0, 0);
+	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, aBrush[iBrush]);	// draw text
 }
 
 void CSloganDraw::TransScale()
@@ -1019,7 +1062,7 @@ void CSloganDraw::TransSkew(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE m
 
 bool CSloganDraw::TransExplode()
 {
-	if (m_bIsTransStart) {
+	if (m_bIsTransStart) {	// if start of transition
 		m_triSink.OnStartTrans(m_pD2DDeviceContext->GetSize());
 	}
 	m_triSink.OnDraw();
@@ -1034,7 +1077,7 @@ bool CSloganDraw::TransExplode(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MOD
 	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun);
 	CKD2DRectF	rGlyph;
 	UINT	iTemp;
-	if (m_bIsTransStart) {
+	if (m_bIsTransStart) {	// if start of transition
 		for (UINT iGlyph = 0; iGlyph < run.glyphCount; iGlyph++) {
 			iterGlyph.GetNext(iTemp, rGlyph);
 			CComPtr<ID2D1PathGeometry> pPathGeom;

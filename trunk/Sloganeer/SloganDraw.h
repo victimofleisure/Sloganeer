@@ -20,6 +20,8 @@
 		10		12nov25	add skew and spin transitions
 		11		14nov25	add recording
 		12		17nov25	add explode transition
+		13		18nov25	add per-slogan customization
+		14		22nov25	add random typewriter variant
 
 */
 
@@ -132,6 +134,11 @@ protected:
 	// explode transition
 	CTriangleSink	m_triSink;	// triangle sink containing array of triangles
 
+	// random typewriter transition
+	CIntArrayEx	m_aCharIdx;		// array of character indices within current slogan
+	UINT	m_nCharsTyped;		// count of characters that have been typed so far
+	int		m_iTransVariant;	// index of transition variant; zero for default
+
 #if SD_CAPTURE	// if capturing frames
 	class CMyD2DCapture : public CD2DCapture {
 	public:
@@ -176,6 +183,7 @@ protected:
 	void	TransScroll();
 	void	TransReveal();
 	void	TransTypewriter();
+	void	TransRandomTypewriter();
 	void	TransFade();
 	void	TransScale();
 	void	TransTile();

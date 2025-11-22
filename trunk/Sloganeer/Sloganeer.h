@@ -53,7 +53,7 @@ protected:
 
 inline bool CSloganeerApp::IsSpace(TCHAR c)
 {
-	return c == ' ' || c == '\n' || c == '\t';	// nothing fancy
+	return c == ' ' || (c >= '\n' && c <= '\r');	// true if ASCII whitespace
 }
 
 extern CSloganeerApp theApp;
