@@ -43,6 +43,8 @@
 
 #define CHECK(x) { HRESULT hr = x; if (FAILED(hr)) { OnError(hr, __FILE__, __LINE__, __DATE__); return false; }}
 
+const float CSloganDraw::m_fSpaceWidth = 0.001f;
+
 CSloganDraw::CSloganDraw()
 {
 	Init();
@@ -547,8 +549,11 @@ void CSloganDraw::DrawGlyphBounds(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN 
 	CKD2DRectF	rGlyph;
 	UINT	iGlyph;
 	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun);
+	// bounding boxes can overlap; alternating between two colors helps distinguish them
+	static const D2D1_COLOR_F	aClr[2] = {{0, 1, 0, 1}, {1, 0, 0, 1}};	// green and red
 	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
-		m_pD2DDeviceContext->DrawRectangle(rGlyph, m_pDrawBrush);
+		m_pVarBrush->SetColor(aClr[iGlyph & 1]);	// alternate colors
+		m_pD2DDeviceContext->DrawRectangle(rGlyph, m_pVarBrush);
 	}
 	if (pGlyphRun->glyphCount) {
 		CD2DSizeF	szRT = m_pD2DDeviceContext->GetSize();
@@ -986,8 +991,9 @@ void CSloganDraw::TransElevator(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MO
 	CKD2DRectF	rGlyph;
 	UINT	iGlyph;
 	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
-		int	iChar = pGlyphRunDescription->textPosition + iGlyph;
-		if (!theApp.IsSpace(m_sSlogan[iChar])) {	// if non-blank character
+		// for space testing, don't assume one-to-one mapping of glyphs to characters,
+		// as that breaks in RTL languages; safer to test for a zero width bounding box
+		if (rGlyph.Width() > m_fSpaceWidth) {	// if non-space glyph
 			rGlyph.InflateRect(AA_MARGIN, AA_MARGIN);	// add antialiasing margin
 			float	fGlyphWidth = rGlyph.Width();
 			float	fDoorWidth = DTF((fGlyphWidth + AA_MARGIN) * fPhase / 2);
@@ -1032,8 +1038,7 @@ bool CSloganDraw::TransClock(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE 
 	m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
 	iterGlyph.Reset();
 	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
-		int	iChar = pGlyphRunDescription->textPosition + iGlyph;
-		if (!theApp.IsSpace(m_sSlogan[iChar])) {	// if non-blank character
+		if (rGlyph.Width() > m_fSpaceWidth) {	// if non-space glyph
 			rGlyph.InflateRect(AA_MARGIN, AA_MARGIN);	// add antialiasing margin
 			CD2DPointF	ptCenter(rGlyph.CenterPoint());
 			auto mTranslate(D2D1::Matrix3x2F::Translation(ptCenter.x, ptCenter.y));

@@ -81,6 +81,7 @@ protected:
 	enum {
 		AA_MARGIN = 1,	// extra margin to account for antialiasing
 	};
+	static const float m_fSpaceWidth;	// glyph this wide or less is a space, in DIPs
 
 // Types
 	typedef CArrayEx<DWRITE_GLYPH_OFFSET, DWRITE_GLYPH_OFFSET&> CGlyphOffsetArray;

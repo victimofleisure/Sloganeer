@@ -48,9 +48,15 @@ bool CGlyphIter::GetNext(UINT& iGlyph, CKD2DRectF& rGlyph)
 	float	fAdvanceWidth = gm.advanceWidth * fScale;	// different from fGlyphAdvance
 	float	fLeftBearing = gm.leftSideBearing * fScale;
 	float	fRightBearing = gm.rightSideBearing * fScale;
+	bool	bRTL = m_pGlyphRun->bidiLevel & 1;	// odd level indicates right-to-left
 	// horizontal ink extents (black box) in run direction
-	rGlyph.left = m_ptOrigin.x + fLeftBearing;
-	rGlyph.right = m_ptOrigin.x + fAdvanceWidth - fRightBearing;
+	if (bRTL) {	// if right-to-left
+		rGlyph.left = m_ptOrigin.x - fAdvanceWidth + fLeftBearing;
+		rGlyph.right = m_ptOrigin.x - fRightBearing;
+	} else {	// left-to-right
+		rGlyph.left = m_ptOrigin.x + fLeftBearing;
+		rGlyph.right = m_ptOrigin.x + fAdvanceWidth - fRightBearing;
+	}
 	rGlyph.top = m_ptOrigin.y - m_fAscent;
 	rGlyph.bottom = m_ptOrigin.y + m_fDescent;
 	if (m_pGlyphRun->glyphOffsets) {	// if offsets specified
@@ -58,8 +64,12 @@ bool CGlyphIter::GetNext(UINT& iGlyph, CKD2DRectF& rGlyph)
 		// advanceOffset is along the run direction, ascenderOffset is along Y:
 		rGlyph.OffsetRect(goff.advanceOffset, goff.ascenderOffset);
 	}
-	m_ptOrigin.x += fGlyphAdvance;
-	m_iGlyph++;
+	if (bRTL) {	// if right-to-left
+		m_ptOrigin.x -= fGlyphAdvance;	// negative advance
+	} else {	// left-to-right
+		m_ptOrigin.x += fGlyphAdvance;	// positive advance
+	}
+	m_iGlyph++;	// next glyph
 	return true;
 }
 
