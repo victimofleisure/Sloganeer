@@ -25,10 +25,11 @@ CGlyphIter::CGlyphIter(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGly
 {
 	ASSERT(pGlyphRun != NULL);
 	m_pGlyphRun = pGlyphRun;
-	pGlyphRun->fontFace->GetMetrics(&m_fontMetrics);
-	float	fScale = pGlyphRun->fontEmSize / m_fontMetrics.designUnitsPerEm;
-	m_fAscent = m_fontMetrics.ascent * fScale;
-	m_fDescent = m_fontMetrics.descent * fScale;
+	DWRITE_FONT_METRICS	fontMetrics;	// font metrics for run
+	pGlyphRun->fontFace->GetMetrics(&fontMetrics);
+	m_fEmScale = pGlyphRun->fontEmSize / fontMetrics.designUnitsPerEm;
+	m_fAscent = fontMetrics.ascent * m_fEmScale;
+	m_fDescent = fontMetrics.descent * m_fEmScale;
 	m_iGlyph = 0;
 	m_fOriginX = m_ptOrigin.x;
 }
@@ -44,10 +45,9 @@ bool CGlyphIter::GetNext(UINT& iGlyph, CKD2DRectF& rGlyph)
 	float	fGlyphAdvance = m_pGlyphRun->glyphAdvances[iGlyph];
 	DWRITE_GLYPH_METRICS	gm;
 	m_pGlyphRun->fontFace->GetDesignGlyphMetrics(&nGlyphIndex, 1, &gm);
-	float	fScale = m_pGlyphRun->fontEmSize / m_fontMetrics.designUnitsPerEm;
-	float	fAdvanceWidth = gm.advanceWidth * fScale;	// different from fGlyphAdvance
-	float	fLeftBearing = gm.leftSideBearing * fScale;
-	float	fRightBearing = gm.rightSideBearing * fScale;
+	float	fAdvanceWidth = gm.advanceWidth * m_fEmScale;	// different from fGlyphAdvance
+	float	fLeftBearing = gm.leftSideBearing * m_fEmScale;
+	float	fRightBearing = gm.rightSideBearing * m_fEmScale;
 	bool	bRTL = m_pGlyphRun->bidiLevel & 1;	// odd level indicates right-to-left
 	// horizontal ink extents (black box) in run direction
 	if (bRTL) {	// if right-to-left
@@ -61,8 +61,11 @@ bool CGlyphIter::GetNext(UINT& iGlyph, CKD2DRectF& rGlyph)
 	rGlyph.bottom = m_ptOrigin.y + m_fDescent;
 	if (m_pGlyphRun->glyphOffsets) {	// if offsets specified
 		const DWRITE_GLYPH_OFFSET& goff = m_pGlyphRun->glyphOffsets[iGlyph];
-		// advanceOffset is along the run direction, ascenderOffset is along Y:
-		rGlyph.OffsetRect(goff.advanceOffset, goff.ascenderOffset);
+		// advanceOffset is along the run direction, ascenderOffset is along Y
+		float	fAdvOffset = goff.advanceOffset;
+		if (bRTL)	// if right-to-left
+			fAdvOffset = -fAdvOffset;	// we're in screen coords; flip offset
+		rGlyph.OffsetRect(fAdvOffset, goff.ascenderOffset);
 	}
 	if (bRTL) {	// if right-to-left
 		m_ptOrigin.x -= fGlyphAdvance;	// negative advance

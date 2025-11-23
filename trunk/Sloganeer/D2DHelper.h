@@ -143,7 +143,7 @@ public:
 protected:
 	CD2DPointF	m_ptOrigin;		// current origin
 	DWRITE_GLYPH_RUN const* m_pGlyphRun;	// pointer to run
-	DWRITE_FONT_METRICS	m_fontMetrics;	// font metrics for run
+	float	m_fEmScale;		// scaling factor from font's design units to DIPs
 	float	m_fAscent;		// scaled ascent
 	float	m_fDescent;		// scaled descent
 	UINT	m_iGlyph;		// index of current glyph
