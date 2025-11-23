@@ -7,6 +7,7 @@
 
 		rev		date	comments
 		00		11nov25	initial version
+		01		23nov25	fix incorrect x-axis bounds in glyph iterator
 
 */
 
@@ -24,11 +25,10 @@ CGlyphIter::CGlyphIter(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGly
 {
 	ASSERT(pGlyphRun != NULL);
 	m_pGlyphRun = pGlyphRun;
-	DWRITE_FONT_METRICS	fm;
-	pGlyphRun->fontFace->GetMetrics(&fm);
-	float	fScale = pGlyphRun->fontEmSize / fm.designUnitsPerEm;
-	m_fAscent = fm.ascent * fScale;
-	m_fDescent = fm.descent * fScale;
+	pGlyphRun->fontFace->GetMetrics(&m_fontMetrics);
+	float	fScale = pGlyphRun->fontEmSize / m_fontMetrics.designUnitsPerEm;
+	m_fAscent = m_fontMetrics.ascent * fScale;
+	m_fDescent = m_fontMetrics.descent * fScale;
 	m_iGlyph = 0;
 	m_fOriginX = m_ptOrigin.x;
 }
@@ -40,16 +40,25 @@ bool CGlyphIter::GetNext(UINT& iGlyph, CKD2DRectF& rGlyph)
 	iGlyph = m_iGlyph;
 	if (iGlyph >= m_pGlyphRun->glyphCount)	// if end of glyphs
 		return false;
-	float	fAdvance = m_pGlyphRun->glyphAdvances[iGlyph];
-	rGlyph.left = m_ptOrigin.x;
+	UINT16	nGlyphIndex = m_pGlyphRun->glyphIndices[iGlyph];
+	float	fGlyphAdvance = m_pGlyphRun->glyphAdvances[iGlyph];
+	DWRITE_GLYPH_METRICS	gm;
+	m_pGlyphRun->fontFace->GetDesignGlyphMetrics(&nGlyphIndex, 1, &gm);
+	float	fScale = m_pGlyphRun->fontEmSize / m_fontMetrics.designUnitsPerEm;
+	float	fAdvanceWidth = gm.advanceWidth * fScale;	// different from fGlyphAdvance
+	float	fLeftBearing = gm.leftSideBearing * fScale;
+	float	fRightBearing = gm.rightSideBearing * fScale;
+	// horizontal ink extents (black box) in run direction
+	rGlyph.left = m_ptOrigin.x + fLeftBearing;
+	rGlyph.right = m_ptOrigin.x + fAdvanceWidth - fRightBearing;
 	rGlyph.top = m_ptOrigin.y - m_fAscent;
-	rGlyph.right = m_ptOrigin.x + fAdvance;
 	rGlyph.bottom = m_ptOrigin.y + m_fDescent;
-	if (m_pGlyphRun->glyphOffsets != NULL) {	// if offsets specified
-		const DWRITE_GLYPH_OFFSET&	goff = m_pGlyphRun->glyphOffsets[iGlyph];
+	if (m_pGlyphRun->glyphOffsets) {	// if offsets specified
+		const DWRITE_GLYPH_OFFSET& goff = m_pGlyphRun->glyphOffsets[iGlyph];
+		// advanceOffset is along the run direction, ascenderOffset is along Y:
 		rGlyph.OffsetRect(goff.advanceOffset, goff.ascenderOffset);
 	}
-	m_ptOrigin.x += fAdvance;
+	m_ptOrigin.x += fGlyphAdvance;
 	m_iGlyph++;
 	return true;
 }

@@ -23,6 +23,7 @@
 		13		17nov25	add explode transition
 		14		18nov25	add per-slogan customization
 		15		22nov25	add random typewriter variant
+		16		23nov25	in elevator and clock, add antialiasing margin
 
 */
 
@@ -987,7 +988,8 @@ void CSloganDraw::TransElevator(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MO
 	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
 		int	iChar = pGlyphRunDescription->textPosition + iGlyph;
 		if (!theApp.IsSpace(m_sSlogan[iChar])) {	// if non-blank character
-			float	fGlyphWidth = pGlyphRun->glyphAdvances[iGlyph];
+			rGlyph.InflateRect(AA_MARGIN, AA_MARGIN);	// add antialiasing margin
+			float	fGlyphWidth = rGlyph.Width();
 			float	fDoorWidth = DTF((fGlyphWidth + AA_MARGIN) * fPhase / 2);
 			float	fDoorLeft = rGlyph.left + fDoorWidth;
 			float	fDoorRight = rGlyph.right - fDoorWidth;
@@ -1032,6 +1034,7 @@ bool CSloganDraw::TransClock(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE 
 	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
 		int	iChar = pGlyphRunDescription->textPosition + iGlyph;
 		if (!theApp.IsSpace(m_sSlogan[iChar])) {	// if non-blank character
+			rGlyph.InflateRect(AA_MARGIN, AA_MARGIN);	// add antialiasing margin
 			CD2DPointF	ptCenter(rGlyph.CenterPoint());
 			auto mTranslate(D2D1::Matrix3x2F::Translation(ptCenter.x, ptCenter.y));
 			m_pD2DDeviceContext->PushAxisAlignedClip(rGlyph, D2D1_ANTIALIAS_MODE_ALIASED);
