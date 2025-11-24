@@ -8,6 +8,7 @@
 		revision history:
 		rev		date	comments
         00      16nov25	initial version
+		01		24nov25	add bidi level for RTL languages
 
 */
 
@@ -33,6 +34,7 @@ public:
 	int		GetGlyphCount() const;
 	int		GetGlyphTriangleCount(int iGlyph) const;
 	float	GetTravel() const;
+	void	SetRunBidiLevel(UINT nBidiLevel);
 
 // Operations
 	void	OnStartTrans(CD2DSizeF szRT);
@@ -59,6 +61,7 @@ protected:
 	int		m_iGlyphFirstTri;	// index of glyph's first triangle within array
 	int		m_iCurGlyph;		// index of current glyph for iterator
 	float	m_fTravel;	// smallest radius that positions all triangles offscreen
+	UINT	m_nRunBidiLevel;	// odd level indicates right-to-left language
 
 // Helpers
 	static float CalcTravel(const CD2DSizeF& szRT, const DPoint& ptWorld, const DPoint& dir, float triRadius);
@@ -87,4 +90,9 @@ inline int CTriangleSink::GetGlyphTriangleCount(int iGlyph) const
 inline float CTriangleSink::GetTravel() const
 {
 	return m_fTravel;
+}
+
+inline void CTriangleSink::SetRunBidiLevel(UINT nBidiLevel)
+{
+	m_nRunBidiLevel = nBidiLevel;
 }

@@ -8,6 +8,7 @@
 		revision history:
 		rev		date	comments
         00      16nov25	initial version
+		01		24nov25	add bidi level for RTL languages
 
 */
 
@@ -23,6 +24,7 @@ CTriangleSink::CTriangleSink()
 	m_iGlyphFirstTri = 0;
 	m_iCurGlyph = 0;
 	m_fTravel = 0;
+	m_nRunBidiLevel = 0;
 }
 
 void CTriangleSink::OnStartTrans(CD2DSizeF szRT)
@@ -46,6 +48,8 @@ HRESULT CTriangleSink::TessellateGlyph(CD2DPointF ptBaselineOrigin, const CKD2DR
 	m_ptGlyphCenterWorld = m_rGlyph.CenterPoint();
 	float	fBaselineOffset = rGlyph.bottom - ptBaselineOrigin.y;
 	m_ptGlyphCenterLocal = CD2DPointF(rGlyph.Width() / 2, fBaselineOffset - rGlyph.Height() / 2);
+	if (m_nRunBidiLevel & 1) // if odd bidi level, right-to-left language
+		m_ptGlyphCenterLocal.x = -m_ptGlyphCenterLocal.x;	// flip x coord around x-axis
 	int	nOldTris = m_aTriangle.GetSize();
 	HRESULT hr = pPathGeom->Tessellate(D2D1::Matrix3x2F::Identity(), this);
 	int	nNewTris = m_aTriangle.GetSize();

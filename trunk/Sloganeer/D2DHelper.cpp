@@ -8,6 +8,7 @@
 		rev		date	comments
 		00		11nov25	initial version
 		01		23nov25	fix incorrect x-axis bounds in glyph iterator
+		02		24nov25	fix glyph iterator handling of RTL languages
 
 */
 
@@ -62,9 +63,8 @@ bool CGlyphIter::GetNext(UINT& iGlyph, CKD2DRectF& rGlyph)
 	if (m_pGlyphRun->glyphOffsets) {	// if offsets specified
 		const DWRITE_GLYPH_OFFSET& goff = m_pGlyphRun->glyphOffsets[iGlyph];
 		// advanceOffset is along the run direction, ascenderOffset is along Y
-		float	fAdvOffset = goff.advanceOffset;
-		if (bRTL)	// if right-to-left
-			fAdvOffset = -fAdvOffset;	// we're in screen coords; flip offset
+		// we're in screen coords, so if right-to-left, flip advanceOffset
+		float	fAdvOffset = bRTL ? -goff.advanceOffset : goff.advanceOffset;
 		rGlyph.OffsetRect(fAdvOffset, goff.ascenderOffset);
 	}
 	if (bRTL) {	// if right-to-left

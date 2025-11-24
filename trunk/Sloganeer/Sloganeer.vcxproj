@@ -36,6 +36,7 @@
     <ClCompile Include="ProgressDlg.cpp" />
     <ClCompile Include="Slogan.cpp" />
     <ClCompile Include="SloganCSV.cpp" />
+    <ClCompile Include="SloganDrawTrans.cpp" />
     <ClCompile Include="SloganParams.cpp" />
     <ClCompile Include="PathStr.cpp" />
     <ClCompile Include="RandList.cpp" />

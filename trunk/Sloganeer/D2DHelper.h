@@ -12,6 +12,7 @@
 		03		11nov25	add glyph iterator
 		04		18nov25	add RGBA color init
 		05		23nov25	add font metrics member to glyph iterator
+		06		24nov25	add get origin method to glyph iterator
 
 */
 
@@ -137,7 +138,14 @@ inline bool CKD2DRectF::PtInRect(const D2D_POINT_2F& pt) const
 class CGlyphIter {
 public:
 	CGlyphIter(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun);
+	//
+	// Note that rGlyph is the painted area of the glyph, also known as its ink
+	// box or black box, already in world coordinates. Do NOT use rGlyph as the
+	// glyph origin for drawing; use GetOrigin() instead, and be sure to obtain 
+	// the origin *before* calling GetNext(), which updates it.
+	//
 	bool	GetNext(UINT& iGlyph, CKD2DRectF& rGlyph);
+	CD2DPointF	GetOrigin() const;
 	void	Reset();
 
 protected:
@@ -149,6 +157,11 @@ protected:
 	UINT	m_iGlyph;		// index of current glyph
 	float	m_fOriginX;		// original origin X for reset
 };
+
+inline CD2DPointF CGlyphIter::GetOrigin() const
+{
+	return m_ptOrigin;
+}
 
 inline void CGlyphIter::Reset()
 {

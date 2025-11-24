@@ -24,20 +24,18 @@
 		14		18nov25	add per-slogan customization
 		15		22nov25	add random typewriter variant
 		16		23nov25	in elevator and clock, add antialiasing margin
+		17		24nov25	in explode transition, set bidi level
+		18		24nov25	move transitions to separate cpp file
 
 */
 
 #include "stdafx.h"
 #include "Sloganeer.h"
 #include "SloganDraw.h"
-#include <algorithm>	// for swap
-#define _USE_MATH_DEFINES
-#include "math.h"
 #include "Easing.h"
 #include "PathStr.h"
 #include "SaveObj.h"
 #include "D2DOffscreen.h"
-#include "DPoint.h"
 
 #define DTF(x) static_cast<float>(x)
 
@@ -87,6 +85,9 @@ void CSloganDraw::Init()
 
 bool CSloganDraw::Create(HWND hWnd)
 {
+#if SD_CAPTURE >= SD_CAPTURE_MAKE_REF_IMAGES	// if regression testing
+	RegressionTestSetup();	// override parameters for testing
+#endif	// SD_CAPTURE
 	if (m_aSlogan.IsEmpty())	// at least one slogan required
 		return false;
 	if (!m_evtWake.Create(NULL, false, false, NULL))	// create wake event
@@ -123,226 +124,6 @@ bool CSloganDraw::FullScreen(bool bEnable)
 		return false;
 	m_bIsFullScreen ^= 1;
 	return true;
-}
-
-void CSloganDraw::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate)
-{
-	theApp.OnError(hr, pszSrcFileName, nLineNum, pszSrcFileDate);
-}
-
-#if SD_CAPTURE	// if capturing frames
-void CSloganDraw::CMyD2DCapture::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate)
-{
-	theApp.OnError(hr, pszSrcFileName, nLineNum, pszSrcFileDate);
-}
-#endif	// SD_CAPTURE
-
-bool CSloganDraw::CreateUserResources()
-{
-	CHECK(m_pD2DDeviceContext->CreateSolidColorBrush(m_clrBkgnd, &m_pBkgndBrush));
-	CHECK(m_pD2DDeviceContext->CreateSolidColorBrush(m_clrDraw, &m_pDrawBrush));
-	CHECK(m_pD2DDeviceContext->CreateSolidColorBrush(m_clrDraw, &m_pVarBrush));
-	CHECK(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(m_pDWriteFactory),
-		reinterpret_cast<IUnknown **>(&m_pDWriteFactory)));
-	CreateStrokeStyle();
-	return OnFontChange();
-}
-
-void CSloganDraw::DestroyUserResources()
-{
-	m_pBkgndBrush.Release();
-	m_pDrawBrush.Release();
-	m_pVarBrush.Release();
-	m_pTextFormat.Release();
-	m_pTextLayout.Release();
-	m_pDWriteFactory.Release();
-	m_pStrokeStyle.Release();
-	if (m_bThreadExit)	// if thread exiting
-		CoUninitialize();	// needed for WIC
-}
-
-bool CSloganDraw::OnThreadCreate()
-{
-	CHECK(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED));	// needed for WIC
-	srand(m_nRandSeed);	// initialize random number generator
-	m_rlSloganIdx.Init(m_aSlogan.GetSize());	// init slogan index shuffler
-	m_rlTransType.Init(TRANS_TYPES);	// init transition type shuffler
-	if (m_bSeqSlogans) {	// if showing slogans sequentially
-		m_iSlogan = -1;	// avoid skipping first slogan
-	}
-	LaunchMeltWorker();
-	StartSlogan();	// start the first slogan
-#if SD_CAPTURE	// if capturing frames
-	if (!SetCapture())
-		return false;
-#endif	// SD_CAPTURE
-	return true;
-}
-
-bool CSloganDraw::CreateStrokeStyle()
-{
-	CHECK(CMeltProbeWorker::CreateStrokeStyle(m_pD2DFactory, &m_pStrokeStyle));
-	return true;
-}
-
-bool CSloganDraw::ResetDrawingEffect()
-{
-	ASSERT(m_pTextLayout != NULL);
-	UINT	nTextLen = static_cast<UINT>(m_sSlogan.GetLength());
-	DWRITE_TEXT_RANGE	tr = {0, nTextLen};	// for all characters in layout
-	CHECK(m_pTextLayout->SetDrawingEffect(NULL, tr));	// remove drawing effect
-	return true;
-}
-
-void CSloganDraw::OnResize()
-{
-	OnTextChange();
-	m_nCharsTyped = 0;	// for random typewriter transition
-	if (m_iState == ST_TRANS_IN || m_iState == ST_TRANS_OUT) {
-		switch (m_iTransType) {
-		case TT_EXPLODE:
-			m_bIsTransStart = true;	// redo tessellation
-			break;
-		}
-	}
-}
-
-#if SD_CAPTURE	// if capturing frames
-bool CSloganDraw::SetCapture(bool bEnable)
-{
-	if (bEnable == m_capture.IsCreated())	// if state unchanged
-		return true;	// nothing to do
-	if (bEnable) {	// if starting capture
-		// full screen mode must be established before capture instance is created,
-		// so process pending render commands, in case full screen is one of them
-		CRenderCmd	cmd;
-		while (m_qCmd.Pop(cmd)) {	// while commands remain
-			ProcessCommand(cmd);	// process command
-		}
-		DXGI_SWAP_CHAIN_DESC	desc;
-		CHECK(m_pSwapChain->GetDesc(&desc));
-		m_nSwapChainBuffers = desc.BufferCount;	// store swap chain buffer count
-		LPCTSTR	pszCaptureFolderPath = NULL;	// default is current directory
-		if (!m_capture.Create(m_pD3DDevice, m_pSwapChain, pszCaptureFolderPath))	// create capture instance
-			return false;
-	} else {	// ending capture
-		m_capture.Destroy();
-	}
-	return true;
-}
-
-bool CSloganDraw::CaptureFrame()
-{
-	if (!m_capture.IsCreated())	// if capture instance not created
-		return false;
-	//
-	// The swap chain's buffers are initially blank. If the swap chain
-	// has N buffers, you must present N times before the swap chain's
-	// buffer zero contains meaningful data. The first N frames captured
-	// are leftovers from before drawing started, and should be skipped.
-	//
-	if (m_iFrame < m_nSwapChainBuffers)	// if initial blank frame
-		return true;	// skip blank frame; not an error
-	if (!m_capture.CaptureFrame())	// if capture frame fails
-		m_capture.Destroy();	// abort capture
-	return true;
-}
-#endif	// SD_CAPTURE
-
-#if SD_CAPTURE >= SD_CAPTURE_MAKE_REF_IMAGES	// if regression testing
-bool CSloganDraw::RegressionTest()
-{
-	enum {
-		REF_FRAMES = TRANS_TYPES * 2,	// reference frames
-		TRANS_PERMS = REF_FRAMES * TRANS_TYPES,	// transition permutations
-	};
-	// either generate reference images, or generate images for all transition
-	// permutations and check them against previously generated reference images
-	const bool	bMakeRefs = SD_CAPTURE == SD_CAPTURE_MAKE_REF_IMAGES;
-	const UINT	nOutputFrames = bMakeRefs ? REF_FRAMES : TRANS_PERMS;
-	// swap chain buffers are initially blank; CaptureFrame supresses
-	// those initial blank frames, and we must account for that here,
-	// plus one extra because OnDraw calls us before CaptureFrame
-	const UINT	nEndFrame = nOutputFrames + m_nSwapChainBuffers + 1;
-	if (m_iFrame == nEndFrame) {	// if last frame captured
-		CWnd*	pMainWnd = theApp.m_pMainWnd;
-		ASSERT(pMainWnd != NULL);	// sanity check
-		SetCapture(false);	// stop capturing immediately
-		if (bMakeRefs) {	// if making reference images
-			pMainWnd->PostMessage(WM_QUIT);	// exit app
-		} else {	// checking permutations against reference
-			static const LPCTSTR CAPTURE_FILENAME_FORMAT = _T("cap%06d.tif");
-			CString	sRefFolder(_T("C:\\Chris\\MyProjects\\Sloganeer\\testref"));
-			CIntArrayEx	aDiff;	// array of differences, as frame indices
-			for (int iFrame = 0; iFrame < TRANS_PERMS; iFrame++) {	// for each frame
-				bool	bIsOddFrame = iFrame & 1;
-				int	iRefFrame = bIsOddFrame ? iFrame % REF_FRAMES
-					: iFrame / REF_FRAMES * 2;
-				CString	sFileName;
-				sFileName.Format(CAPTURE_FILENAME_FORMAT, iRefFrame);
-				CString	sRefPath = sRefFolder + '\\' + sFileName;
-				sFileName.Format(CAPTURE_FILENAME_FORMAT, iFrame);
-				CString	sTestPath(sFileName);
-				TRY {
-					// compare files method throws MFC exceptions
-					if (!FilesEqual(sTestPath, sRefPath))	// if frames differ
-						aDiff.Add(iFrame);	// add frame index to error list
-				}
-				CATCH (CException, e) {
-					e->ReportError();
-					pMainWnd->PostMessage(WM_QUIT);	// exit app
-					return false;
-				}
-				END_CATCH
-			}
-			CString	sMsg(_T("Regression Test\n\n"));
-			UINT	nMBFlags = MB_OK;
-			int	nDiffs = aDiff.GetSize();
-			if (nDiffs) {	// if differences found
-				CString	sVal;
-				sVal.Format(_T("FAIL: %d unexpected frames\n"), nDiffs);
-				sMsg += sVal;
-				const int	nMaxDiffs = 100;	// keep dialog reasonable
-				for (int iDiff = 0; iDiff < min(nDiffs, nMaxDiffs); iDiff++) {
-					CString	sVal;
-					if (iDiff)
-						sMsg += _T(", ");	// add separator
-					sVal.Format(_T("%d"), aDiff[iDiff]);
-					sMsg += sVal;
-				}
-				if (nDiffs >= nMaxDiffs)	// if too many differences
-					sMsg += _T(" ...");	// indicate overflow
-				nMBFlags |= MB_ICONERROR;
-			} else {	// no differences
-				sMsg += _T("Pass");	// all good
-				nMBFlags |= MB_ICONINFORMATION;
-			}
-			AfxMessageBox(sMsg, nMBFlags);
-			pMainWnd->PostMessage(WM_QUIT);	// exit app
-		}
-	}
-	const bool	bIsOddFrame = m_iFrame & 1;
-	const int	iState = bIsOddFrame ? ST_TRANS_OUT : ST_TRANS_IN;
-	StartTrans(iState, 1);	// start a new transition
-	// override transition type
-	if (bMakeRefs) {	// if generating reference frames
-		m_iTransType = (m_iFrame / 2) % TRANS_TYPES;
-	} else {	// checking permutations against reference
-		m_iTransType = bIsOddFrame ? (m_iFrame / 2) % TRANS_TYPES 
-			: m_iFrame / REF_FRAMES % TRANS_TYPES;
-	}
-	m_fTransProgress = 1.0 / 3;	// override transition progress
-	m_nHoldDuration = 0;	// no hold
-	m_nPauseDuration = 0;	// no pause either
-	srand(0);	// ensure consistent behavior for transitions that use randomness
-	return true;
-}
-#endif	// SD_CAPTURE
-
-double CSloganDraw::GetFrameTime() const
-{
-	// during recording, compute time from frame index to avoid jitter
-	return m_iFrame * (1.0 / m_fRecFrameRate);
 }
 
 class CSloganOffscreen : public CD2DOffscreen {
@@ -389,789 +170,71 @@ CString	CSloganDraw::MakeImageSequenceFileName(CString sFolderPath, UINT iFrame)
 	return sImagePath;
 }
 
-void CSloganDraw::OnCustomSlogan()
+#if SD_CAPTURE	// if capturing frames
+void CSloganDraw::CMyD2DCapture::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate)
 {
-	CSlogan	prevSlogan(*this);	// copy current slogan for change detection
-	CSlogan::operator=(m_aSlogan[m_iSlogan]);	// update this slogan from slogan array
-	if (!IsSameFont(prevSlogan)) {	// if font changed
-		OnFontChange();	// update font
-	}
-	if (!IsSameColor(m_clrBkgnd, prevSlogan.m_clrBkgnd)) {	// if background color changed
-		m_pBkgndBrush->SetColor(m_clrBkgnd);	// set background color 
-	}
-	if (!IsSameColor(m_clrDraw, prevSlogan.m_clrDraw)) {	// if draw color changed
-		m_pDrawBrush->SetColor(m_clrDraw);	// set draw color 
-	}
+	theApp.OnError(hr, pszSrcFileName, nLineNum, pszSrcFileDate);
+}
+#endif	// SD_CAPTURE
+
+void CSloganDraw::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate)
+{
+	theApp.OnError(hr, pszSrcFileName, nLineNum, pszSrcFileDate);
 }
 
-void CSloganDraw::StartSlogan()
+bool CSloganDraw::CreateUserResources()
 {
+	CHECK(m_pD2DDeviceContext->CreateSolidColorBrush(m_clrBkgnd, &m_pBkgndBrush));
+	CHECK(m_pD2DDeviceContext->CreateSolidColorBrush(m_clrDraw, &m_pDrawBrush));
+	CHECK(m_pD2DDeviceContext->CreateSolidColorBrush(m_clrDraw, &m_pVarBrush));
+	CHECK(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(m_pDWriteFactory),
+		reinterpret_cast<IUnknown **>(&m_pDWriteFactory)));
+	CreateStrokeStyle();
+	return OnFontChange();
+}
+
+void CSloganDraw::DestroyUserResources()
+{
+	m_pBkgndBrush.Release();
+	m_pDrawBrush.Release();
+	m_pVarBrush.Release();
+	m_pTextFormat.Release();
+	m_pTextLayout.Release();
+	m_pDWriteFactory.Release();
+	m_pStrokeStyle.Release();
+	if (m_bThreadExit)	// if thread exiting
+		CoUninitialize();	// needed for WIC
+}
+
+bool CSloganDraw::OnThreadCreate()
+{
+	CHECK(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED));	// needed for WIC
+	srand(m_nRandSeed);	// initialize random number generator
+	m_rlSloganIdx.Init(m_aSlogan.GetSize());	// init slogan index shuffler
+	m_rlTransType.Init(TRANS_TYPES);	// init transition type shuffler
 	if (m_bSeqSlogans) {	// if showing slogans sequentially
-		m_iSlogan++;	// next slogan index
-		if (m_iSlogan >= m_aSlogan.GetSize())	// if reached end of slogans
-			m_iSlogan = 0;	// reset to first slogan
-	} else {	// randomizing slogans
-		m_iSlogan = m_rlSloganIdx.GetNext(m_iSlogan);	// get next slogan index
+		m_iSlogan = -1;	// avoid skipping first slogan
 	}
-	m_sSlogan = m_aSlogan[m_iSlogan].m_sText;	// cache current slogan
-	if (m_bCustomSlogans)	// if doing per-slogan customization
-		OnCustomSlogan();	// customize current slogan
-	OnTextChange();	// update text
-	StartTrans(ST_TRANS_IN, m_fInTransDuration);	// start incoming transition
+	LaunchMeltWorker();
+	StartSlogan();	// start the first slogan
+#if SD_CAPTURE	// if capturing frames
+	if (!SetCapture())
+		return false;
+#endif	// SD_CAPTURE
+	return true;
 }
 
-void CSloganDraw::StartTrans(int nState, float fDuration)
+void CSloganDraw::OnResize()
 {
-	ASSERT(nState == ST_TRANS_IN || nState == ST_TRANS_OUT);	// else logic error
-	if (nState == ST_TRANS_OUT)	{	// if starting outgoing transition
-		// reset any persistent state left by incoming transition
-		switch (m_iTransType) {	// previous transition type
-		case TT_TYPEWRITER:
-			ResetDrawingEffect();	// remove per-character brushes
+	OnTextChange();
+	m_nCharsTyped = 0;	// for random typewriter transition
+	if (m_iState == ST_TRANS_IN || m_iState == ST_TRANS_OUT) {
+		switch (m_iTransType) {
+		case TT_EXPLODE:
+			m_bIsTransStart = true;	// redo tessellation
 			break;
 		}
 	}
-	m_iState = nState;	// set state
-	m_fTransDuration = fDuration;
-	m_bIsTransStart = true;	// set transition start flag
-	if (m_bIsRecording) {	// if recording
-		m_fStartTime = GetFrameTime();	// compute time from frame index
-	} else {	// not recording
-		m_timerTrans.Reset();	// reset transition timer
-	}
-	int	iTransDir = nState == ST_TRANS_OUT;	// get transition direction
-	// if current slogan specifies a transition type override for this direction
-	if (IsValid(m_aTransType[iTransDir])) {
-		m_iTransType = m_aTransType[iTransDir];	// use specified transition type
-	} else {	// transition type isn't overridden
-		m_iTransType = m_rlTransType.GetNext(m_iTransType);	// get next transition type
-	}
-	m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());	// remove transform if any
-}
-
-void CSloganDraw::StartIdle(int nDuration)
-{
-	if (m_bIsRecording) {	// if recording
-		// compute time from frame index
-		m_nWakeTime = Round64(GetFrameTime() * 1000 + nDuration);
-	} else {	// not recording
-		m_nWakeTime = GetTickCount64() + nDuration;	// set wake time
-	}
-}
-
-bool CSloganDraw::ContinueIdle()
-{
-	if (m_bIsRecording) {	// if recording
-		ULONGLONG	nNow = Round64(GetFrameTime() * 1000);
-		return nNow >= m_nWakeTime;
-	}
-	ULONGLONG	nNow = GetTickCount64();
-	if (nNow < m_nWakeTime) {	// if more idle time remains
-#if SD_CAPTURE	// if capturing frames
-		return false;	// draw during idle, so idle gets captured
-#else
-		// block instead of drawing, to reduce power usage
-		DWORD	nTimeout = static_cast<DWORD>(m_nWakeTime - nNow);
-		// wait for wake signal or timeout
-		DWORD	nRet = WaitForSingleObject(m_evtWake, nTimeout);
-		if (nRet == WAIT_OBJECT_0)	// if wake signal
-			return false;	// idle is incomplete
-#endif	// SD_CAPTURE
-	}
-	return true;	// idle is over
-}
-
-bool CSloganDraw::OnFontChange()
-{
-	m_pTextFormat.Release();	// release previous text format instance
-	CHECK(m_pDWriteFactory->CreateTextFormat(	// create text format instance
-		m_sFontName,	// font name
-		NULL,	// font collection
-		static_cast<DWRITE_FONT_WEIGHT>(m_nFontWeight),	// font weight
-		DWRITE_FONT_STYLE_NORMAL,	// font style
-		DWRITE_FONT_STRETCH_NORMAL,	// font stretch
-		m_fFontSize,	// font size in points
-		L"",	// locale
-		&m_pTextFormat	// receives text format instance
-	));
-	m_pTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
-	m_pTextFormat->SetWordWrapping(m_bNoWordWrap ? 
-		DWRITE_WORD_WRAPPING_NO_WRAP : DWRITE_WORD_WRAPPING_WRAP);
-	m_pTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
-	return OnTextChange();
-}
-
-bool CSloganDraw::OnTextChange()
-{
-	m_pTextLayout.Release();	// release previous text layout instance
-	int	nTextLen = m_sSlogan.GetLength();
-	CD2DSizeF	szRT(m_pD2DDeviceContext->GetSize());	// get render target size
-	// layout box is entire frame, for full-screen text and paragraph centering
-	CHECK(m_pDWriteFactory->CreateTextLayout(	// create text layout instance
-		m_sSlogan,		// source text
-		nTextLen,		// text length in characters
-		m_pTextFormat,	// text format instance
-		szRT.width,		// layout box width in DIPs
-		szRT.height,	// layout box height in DIPs
-		&m_pTextLayout	// receives text layout instance
-	));
-	CHECK(m_pTextLayout->GetMetrics(&m_textMetrics));	// get text metrics
-	CHECK(m_pTextLayout->GetOverhangMetrics(&m_overhangMetrics));	// get overhang metrics
-	return true;
-}
-
-CD2DSizeF CSloganDraw::GetTextBounds(CKD2DRectF& rText) const
-{
-	// layout box is entire render target
-	CD2DSizeF	szRT(m_pD2DDeviceContext->GetSize());	// get render target size
-	// use text metrics for x-axis, overhang metrics for y-axis;
-	// assuming text fits within the frame, overhang metrics are
-	// NEGATIVE distances in DIPs from frame edge to text edge
-	rText = CKD2DRectF(
-		m_textMetrics.left,
-		-m_overhangMetrics.top, 
-		m_textMetrics.left + m_textMetrics.width, 
-		szRT.height + m_overhangMetrics.bottom
-	);
-	rText.InflateRect(AA_MARGIN, AA_MARGIN);	// add antialiasing margin
-	return szRT;	// return render target size
-}
-
-void CSloganDraw::DrawTextBounds()
-{
-	CKD2DRectF	rText;
-	GetTextBounds(rText);
-	m_pD2DDeviceContext->DrawRectangle(rText, m_pDrawBrush);
-}
-
-void CSloganDraw::DrawGlyphBounds(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun)
-{
-	CKD2DRectF	rGlyph;
-	UINT	iGlyph;
-	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun);
-	// bounding boxes can overlap; alternating between two colors helps distinguish them
-	static const D2D1_COLOR_F	aClr[2] = {{0, 1, 0, 1}, {1, 0, 0, 1}};	// green and red
-	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
-		m_pVarBrush->SetColor(aClr[iGlyph & 1]);	// alternate colors
-		m_pD2DDeviceContext->DrawRectangle(rGlyph, m_pVarBrush);
-	}
-	if (pGlyphRun->glyphCount) {
-		CD2DSizeF	szRT = m_pD2DDeviceContext->GetSize();
-		m_pD2DDeviceContext->DrawLine(CD2DPointF(0, ptBaselineOrigin.y),
-			CD2DPointF(szRT.width, ptBaselineOrigin.y), m_pDrawBrush);	// draw baseline too
-	}
-}
-
-double CSloganDraw::GetPhase(UINT nFlags) const
-{
-	bool	bOutgoing = IsTransOut();
-	double	fPhase;	// normalized position from 0 to 1
-	if (nFlags & GP_EASING) {	// if easing enabled
-		// if incoming transition, ease out, otherwise ease in
-		fPhase = EaseInOut(!bOutgoing, m_fTransProgress, m_fEasing);
-	} else {	// easing disabled
-		fPhase = m_fTransProgress;	// linear
-	}
-	bool	bInvert = nFlags & GP_INVERT;
-	if (bOutgoing == bInvert)	// if transition should be reversed
-		fPhase = 1 - fPhase;	// invert phase
-	return fPhase;
-}
-
-inline double CSloganDraw::GetFrameRate()
-{
-	if (m_bIsRecording) {	// if recording
-		return m_fRecFrameRate;	// use record frame rate
-	} else {	// not recording
-		DWORD	dwDisplayFreq;
-		GetDisplayFrequency(dwDisplayFreq);	// use display frequency
-		return dwDisplayFreq;
-	}
-}
-
-void CSloganDraw::TransScroll()
-{
-	CKD2DRectF	rText;
-	CD2DSizeF	szRT(GetTextBounds(rText));
-	CD2DSizeF	szText(rText.Size());
-	bool	bIncoming = !IsTransOut();
-	double	fPhase = EaseInOut(bIncoming, m_fTransProgress, m_fEasing);
-	if (bIncoming)	// if incoming transition
-		fPhase = fPhase - 1;	// reverse direction
-	if (m_iTransType == TT_SCROLL_RL || m_iTransType == TT_SCROLL_BT)	// if reversed
-		fPhase = -fPhase;	// negate phase
-	CD2DPointF	ptOrigin(0, 0);
-	switch (m_iTransType) {
-	case TT_SCROLL_LR:
-	case TT_SCROLL_RL:
-		if (fPhase < 1) {
-			ptOrigin.x = DTF(rText.right * fPhase);
-		} else {
-			ptOrigin.x = DTF((szRT.width - rText.left) * fPhase);
-		}
-		break;
-	case TT_SCROLL_TB:
-	case TT_SCROLL_BT:
-		if (fPhase < 1) {
-			ptOrigin.y = DTF(rText.bottom * fPhase);
-		} else {
-			ptOrigin.y = DTF((szRT.height - rText.top) * fPhase);
-		}
-		break;
-	default:
-		NODEFAULTCASE;	// improper call
-	}
-	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pDrawBrush); // draw text
-}
-
-void CSloganDraw::TransReveal()
-{
-	CKD2DRectF	rText;
-	GetTextBounds(rText);
-	CD2DSizeF	szText(rText.Size());
-	switch (m_iTransType) {
-	case TT_REVEAL_LR:
-		{
-			float	fOffset = DTF(szText.width * m_fTransProgress);
-			if (IsTransOut())	// if outgoing transition
-				fOffset -= szText.width;	// start unmasked
-			rText.OffsetRect(fOffset, 0);	// offset text mask horizontally
-		}
-		break;
-	case TT_REVEAL_TB:
-		{
-			float	fOffset = DTF(szText.height * m_fTransProgress);
-			if (IsTransOut())	// if outgoing transition
-				fOffset -= szText.height;	// start unmasked
-			rText.OffsetRect(0, fOffset);	// offset text mask vertically
-		}
-		break;
-	default:
-		NODEFAULTCASE;	// improper call
-	}
-	CD2DPointF	ptOrigin(0, 0);
-	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pDrawBrush);	// draw text
-	m_pD2DDeviceContext->FillRectangle(rText, m_pBkgndBrush);	// draw text mask
-}
-
-double CSloganDraw::Lerp(double a, double b, double t)
-{
-	return t * b + (1 - t) * a;
-}
-
-void CSloganDraw::TransFade()
-{
-	double	fPhase = GetPhase(GP_INVERT);
-	m_pVarBrush->SetColor(D2D1::ColorF(
-		DTF(Lerp(m_clrBkgnd.r, m_clrDraw.r, fPhase)),
-		DTF(Lerp(m_clrBkgnd.g, m_clrDraw.g, fPhase)),
-		DTF(Lerp(m_clrBkgnd.b, m_clrDraw.b, fPhase))
-	));
-	CD2DPointF	ptOrigin(0, 0);
-	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pVarBrush); // draw text
-}
-
-void CSloganDraw::TransTypewriter()
-{
-	if (m_bIsTransStart)	// if start of transition
-		m_iTransVariant = rand() & 1;	// coin toss for variant
-	if (m_iTransVariant) {	// if variant selected
-		TransRandomTypewriter();	// do variant
-		return;	// skip default behavior
-	}
-	UINT	nTextLen = static_cast<UINT>(m_sSlogan.GetLength());
-	UINT	nCharsTyped = static_cast<UINT>(Round(nTextLen * m_fTransProgress));
-	DWRITE_TEXT_RANGE	trShow = {0, nCharsTyped};
-	DWRITE_TEXT_RANGE	trHide = {nCharsTyped, nTextLen - nCharsTyped};
-	if (IsTransOut()) {	// if outgoing transition
-		std::swap(trShow, trHide);	// swap text ranges
-	}
-	// Per-character brushes override the default brush passed to DrawTextLayout,
-	// and they must be reset to restore normal behavior; see ResetDrawingEffect.
-	m_pTextLayout->SetDrawingEffect(m_pDrawBrush, trShow);	// set brush for shown characters
-	m_pTextLayout->SetDrawingEffect(m_pBkgndBrush, trHide);	// set brush for hidden characters
-	CD2DPointF	ptOrigin(0, 0);
-	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pDrawBrush);	// draw text
-}
-
-void CSloganDraw::TransRandomTypewriter()
-{
-	UINT	nTextLen = static_cast<UINT>(m_sSlogan.GetLength());
-	if (m_bIsTransStart) {	// if start of transition
-		CRandList	rlChar(nTextLen);	// initialize shuffler for entire text
-		m_aCharIdx.FastSetSize(nTextLen);	// only reallocate if text too big
-		m_aCharIdx.FastRemoveAll();	// reset item count without freeing memory
-		for (UINT iChar = 0; iChar < nTextLen; iChar++) {	// for each character
-			int	iRandChar = rlChar.GetNext();	// pick a random character
-			if (!theApp.IsSpace(m_sSlogan[iRandChar]))	// if non-space character
-				m_aCharIdx.Add(iRandChar);	// add character's index to sequence
-		}
-		m_nCharsTyped = 0;	// reset number of characters typed
-	}
-	int	nCharsAvail = m_aCharIdx.GetSize();	// number of non-space characters
-	UINT	nCharsTyped = static_cast<UINT>(Round(nCharsAvail * m_fTransProgress));
-	ID2D1Brush* aBrush[2] = {m_pBkgndBrush, m_pDrawBrush};	// pair of brushes
-	int	iBrush = IsTransOut();	// brushes are swapped for outgoing transition
-	// for each character that's due to be typed, in sequential order
-	for (UINT iChar = m_nCharsTyped; iChar < nCharsTyped; iChar++) {
-		int	iMappedChar = m_aCharIdx[iChar];	// get char's index within text
-		DWRITE_TEXT_RANGE	tr = {iMappedChar, 1};	// set range for only that char
-		m_pTextLayout->SetDrawingEffect(aBrush[!iBrush], tr);	// set brush for char
-	}
-	m_nCharsTyped = nCharsTyped;	// update count of characters typed
-	CD2DPointF	ptOrigin(0, 0);
-	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, aBrush[iBrush]);	// draw text
-}
-
-void CSloganDraw::TransScale()
-{
-	float	fPhase = DTF(GetPhase(GP_INVERT | GP_EASING));
-	CD2DSizeF	szScale;
-	switch (m_iTransType) {
-	case TT_SCALE_HORZ:
-		szScale = CD2DSizeF(fPhase, 1);	// scale horizontally
-		break;
-	case TT_SCALE_VERT:
-		szScale = CD2DSizeF(1, fPhase);	// scale vertically
-		break;
-	case TT_SCALE_BOTH:
-	case TT_SCALE_SPIN:
-		szScale = CD2DSizeF(fPhase, fPhase);	// scale both axes
-		break;
-	default:
-		NODEFAULTCASE;	// improper call
-	}
-	CD2DSizeF	szRT(m_pD2DDeviceContext->GetSize());	// get render target size
-	CD2DPointF	ptCenter(szRT.width / 2, szRT.height / 2);	// scaling center point
-	auto mScale(D2D1::Matrix3x2F::Scale(szScale, ptCenter));	// create scaling matrix
-	if (m_iTransType == TT_SCALE_SPIN) {	// if spinning too
-		auto mRotation(D2D1::Matrix3x2F::Rotation(fPhase * 360, ptCenter));	// create rotation matrix
-		mScale = mScale * mRotation;	// apply rotation matrix
-	}
-	m_pD2DDeviceContext->SetTransform(mScale);	// apply scaling matrix
-	CD2DPointF	ptOrigin(0, 0);
-	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pDrawBrush);	// draw text
-}
-
-void CSloganDraw::InitTiling(const CKD2DRectF& rText)
-{
-	// ideal tile count is one tile for each frame of transition
-	float	fIdealTileCount = DTF(GetFrameRate() * m_fTransDuration);
-	// compute tile size: divide text area by ideal tile count and take square root
-	CD2DSizeF	szText(rText.Size());
-	m_fTileSize = DTF(sqrt(szText.width * szText.height / fIdealTileCount));
-	// compute tile layout; round up to ensure text is completely covered
-	m_szTileLayout = CSize(
-		Round(ceil(szText.width / m_fTileSize)),	// number of tile columns
-		Round(ceil(szText.height / m_fTileSize))	// number of tile rows
-	);
-	// compute offsets for centering tile frame over text
-	m_ptTileOffset = CD2DPointF(
-		(m_szTileLayout.cx * m_fTileSize - szText.width) / 2,
-		(m_szTileLayout.cy * m_fTileSize - szText.height) / 2);
-	int	nTiles = m_szTileLayout.cx * m_szTileLayout.cy;	// actual tile count
-	m_aTileIdx.SetSize(nTiles);	// allocate tile index array
-	CRandList	rlTile(nTiles);	// initialize tile shuffler
-	for (int iTile = 0; iTile < nTiles; iTile++) {	// for each tile
-		m_aTileIdx[iTile] = rlTile.GetNext();	// set array element to random tile index
-	}
-}
-
-void CSloganDraw::TransTile()
-{
-	double	fPhase = GetPhase();
-	CKD2DRectF	rText;
-	GetTextBounds(rText);
-	if (m_bIsTransStart) {	// if start of transition
-		InitTiling(rText);	// initialize tiling; only once per transition
-	}
-	CD2DPointF	ptOrigin(0, 0);
-	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pDrawBrush);	// draw text
-	int	nTiles = Round(m_aTileIdx.GetSize() * fPhase);	// number of tiles to draw
-	for (int iTile = 0; iTile < nTiles; iTile++) {	// for each drawn tile
-		int	nTileIdx = m_aTileIdx[iTile];	// get tile's randomized index
-		int iRow = nTileIdx / m_szTileLayout.cx;	// compute tile row from index
-		int	iCol = nTileIdx % m_szTileLayout.cx;	// compute tile column from index
-		CD2DPointF	ptOrg(	// compute tile's origin
-			rText.left + m_fTileSize * iCol - m_ptTileOffset.x, 
-			rText.top + m_fTileSize * iRow - m_ptTileOffset.y
-		);
-		CKD2DRectF	rTile(	// compute tile's rectangle
-			ptOrg.x, ptOrg.y,
-			ptOrg.x + m_fTileSize, ptOrg.y + m_fTileSize
-		);
-		rTile.InflateRect(1, 1);	// add a pixel to ensure tiles overlap
-		m_pD2DDeviceContext->FillRectangle(rTile, m_pBkgndBrush);	// draw tile
-	}
-}
-
-bool CSloganDraw::GetLineMetrics()
-{
-	int	nLines = m_textMetrics.lineCount;
-	m_aLineMetrics.SetSize(nLines);	// allocate line metrics destination array
-	UINT	nActualLines;	// get line metrics from text layout
-	CHECK(m_pTextLayout->GetLineMetrics(m_aLineMetrics.GetData(), nLines, &nActualLines));
-	return nActualLines == nLines;
-}
-
-bool CSloganDraw::MakeCharToLineTable()
-{
-	GetLineMetrics();
-	m_aCharToLine.SetSize(m_sSlogan.GetLength());	// allocate character-to-line index array
-	int	nPos = 0;
-	int	nLines = m_textMetrics.lineCount;
-	for (int iLine = 0; iLine < nLines; iLine++) {	// for each line of text
-		int	nLineLen = m_aLineMetrics[iLine].length;	// get line length from metrics
-		for (int iChar = nPos; iChar < nPos + nLineLen; iChar++) {	// for each of line's characters
-			m_aCharToLine[iChar] = iLine;	// store line index
-		}
-		nPos += nLineLen;	// bump position by line length
-	}
-	return true;
-}
-
-bool CSloganDraw::TransConverge()
-{
-	if (!MakeCharToLineTable())
-		return false;
-	m_bIsGlyphRising = false;
-	m_iGlyphLine = 0;
-	CHECK(m_pTextLayout->Draw(0, this, 0, 0));
-	return true;
-}
-
-void CSloganDraw::TransConvergeHorz(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
-	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
-{
-	// odd lines slide left and even lines slide right, or vice versa
-	double	fPhase = GetPhase(GP_EASING);	// apply easing
-	CKD2DRectF	rText;
-	CD2DSizeF	szRT = GetTextBounds(rText);
-	float	fSlideSpan = DTF(max(szRT.width - rText.left, rText.right) * fPhase);
-	UINT	nGlyphs = pGlyphRun->glyphCount;
-	if (m_aLineMetrics.GetSize() == 1) {	// if single line
-		CD2DSizeF	szText = rText.Size();
-		CKD2DRectF	rClip(CD2DPointF(0, rText.top), CD2DSizeF(szRT.width, szText.height / 2));
-		for (int iStrip = 0; iStrip < 2; iStrip++) {	// for each of two horizontal strips
-			if (iStrip)	// if second strip
-				rClip.OffsetRect(0, szText.height / 2);
-			for (UINT iGlyph = 0; iGlyph < nGlyphs; iGlyph++) {	// for each glyph
-				float	fOffset = fSlideSpan;
-				if (iStrip)	// if second strip
-					fOffset = -fOffset * 2;	// opposite slide
-				m_aGlyphOffset[iGlyph].advanceOffset += fOffset;
-			}
-			m_pD2DDeviceContext->PushAxisAlignedClip(rClip, D2D1_ANTIALIAS_MODE_ALIASED);
-			m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
-			m_pD2DDeviceContext->PopAxisAlignedClip();
-		}
-	} else {	// multiple lines
-		for (UINT iGlyph = 0; iGlyph < nGlyphs; iGlyph++) {	// for each glyph
-			int	iChar = pGlyphRunDescription->textPosition + iGlyph;
-			int	iLine = m_aCharToLine[iChar];
-			float	fOffset = fSlideSpan;
-			if (iLine & 1)	// if odd line
-				fOffset = -fOffset;	// opposite slide
-			m_aGlyphOffset[iGlyph].advanceOffset += fOffset;
-		}
-		m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
-	}
-}
-
-void CSloganDraw::TransConvergeVert(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
-	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
-{
-	// odd characters fall and even characters rise, or vice versa
-	double	fPhase = GetPhase(GP_EASING);	// apply easing
-	CKD2DRectF	rText;
-	CD2DSizeF	szRT = GetTextBounds(rText);
-	float	fSlideSpan = DTF(max(szRT.height - rText.top, rText.bottom) * fPhase);
-	UINT	nGlyphs = pGlyphRun->glyphCount;
-	for (UINT iGlyph = 0; iGlyph < nGlyphs; iGlyph++) {	// for each glyph
-		int	iChar = pGlyphRunDescription->textPosition + iGlyph;
-		int	iLine = m_aCharToLine[iChar];
-		if (iLine != m_iGlyphLine) {	// if line index changed
-			m_bIsGlyphRising = false;	// reset alternation state
-			m_iGlyphLine = iLine;	// update cached value
-		}
-		float	fOffset = fSlideSpan;
-		if (!theApp.IsSpace(pGlyphRunDescription->string[iGlyph])) {	// exclude spaces
-			if (m_bIsGlyphRising)	// if glyph rises
-				fOffset = -fOffset;	// negate offset
-			m_bIsGlyphRising ^= 1;	// alternate
-		}
-		m_aGlyphOffset[iGlyph].ascenderOffset += fOffset;
-	}
-	m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
-}
-
-bool CSloganDraw::LaunchMeltWorker()
-{
-	CD2DPointF	ptDPI;
-	m_pD2DDeviceContext->GetDpi(&ptDPI.x, &ptDPI.y);
-	m_aMeltStroke.SetSize(m_aSlogan.GetSize());	// allocate destination stroke array
-	return m_thrMeltWorker.Create(m_aSlogan, ptDPI, m_aMeltStroke);	// launch worker thread
-}
-
-bool CSloganDraw::MeasureMeltStroke()
-{
-	CD2DPointF	ptDPI;
-	m_pD2DDeviceContext->GetDpi(&ptDPI.x, &ptDPI.y);
-	CMeltProbe	probe(m_pD2DFactory, m_pDWriteFactory, m_pStrokeStyle);
-	if (!probe.Create(m_sSlogan, m_sFontName, m_fFontSize, m_nFontWeight, ptDPI, m_fMeltMaxStroke))
-		return false;
-#if 0	// non-zero to compare text bitmap with screen text
-	CKD2DRectF	rText;
-	CD2DSizeF	szScrRT = GetTextBounds(rText);
-	CD2DSizeF	szText(rText.Size());
-	CComPtr<ID2D1Bitmap> pTempBmp;
-	CHECK(m_pD2DDeviceContext->CreateBitmapFromWicBitmap(probe.GetBitmap(), NULL, &pTempBmp));
-	CSize	szBmp(probe.GetBitmapSize());
-	CKD2DRectF	rOutBmp(
-		CD2DPointF((szScrRT.width - float(szBmp.cx)) / 2, (szScrRT.height - float(szBmp.cy)) / 2), 
-		CD2DSizeF(float(szBmp.cx), float(szBmp.cy)));
-	m_pD2DDeviceContext->DrawBitmap(pTempBmp, rOutBmp);
-	// draw reference text
-	m_pVarBrush->SetColor(D2D1::ColorF(1, 0, 0));
-	m_pD2DDeviceContext->DrawTextLayout(CD2DPointF(0, 0), m_pTextLayout, m_pVarBrush);
-#endif
-	return true;
-}
-
-bool CSloganDraw::TransMelt()
-{
-	if (m_bIsTransStart) {	// if start of transition
-		if (m_aMeltStroke[m_iSlogan]) {	// if cached melt stroke available
-			m_fMeltMaxStroke = m_aMeltStroke[m_iSlogan];	// use cached value
-		} else {	// melt stroke isn't cached
-			MeasureMeltStroke();	// find appropriate maximum outline stroke
-		}
-	}
-	// if pausing between slogans, and outgoing transition complete
-	if (m_nPauseDuration && IsTransOut() && m_fTransProgress >= 1)
-		return true;	// avoid potentially showing scraps of unerased text while paused
-	m_pD2DDeviceContext->DrawTextLayout(CD2DPointF(0, 0), m_pTextLayout, m_pDrawBrush);	// fill text
-	CHECK(m_pTextLayout->Draw(0, this, 0, 0));	// erase text outline
-	return true;
-}
-
-bool CSloganDraw::TransMelt(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
-	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
-{
-	double	fPhase = GetPhase();
-	CComPtr<ID2D1PathGeometry> pPathGeom;
-	CHECK(m_pD2DFactory->CreatePathGeometry(&pPathGeom));
-	CComPtr<ID2D1GeometrySink> pGeomSink;
-	CHECK(pPathGeom->Open(&pGeomSink));
-	const DWRITE_GLYPH_RUN& run = *pGlyphRun;
-	CComPtr<IDWriteFontFace> pFontFace = run.fontFace;
-	CHECK(pFontFace->GetGlyphRunOutline(run.fontEmSize, run.glyphIndices, run.glyphAdvances, 
-		run.glyphOffsets, run.glyphCount, run.isSideways, run.bidiLevel, pGeomSink));
-	CHECK(pGeomSink->Close());
-	auto mTranslate(D2D1::Matrix3x2F::Translation(ptBaselineOrigin.x, ptBaselineOrigin.y));
-	m_pD2DDeviceContext->SetTransform(mTranslate);
-	float	fStroke = DTF(m_fMeltMaxStroke * fPhase);
-	m_pD2DDeviceContext->DrawGeometry(pPathGeom, m_pBkgndBrush, fStroke, m_pStrokeStyle);
-	m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());	// remove transform
-	return S_OK;
-}
-
-bool CSloganDraw::TransElevator()
-{
-	CHECK(m_pTextLayout->Draw(0, this, 0, 0));
-	return true;
-}
-
-void CSloganDraw::TransElevator(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
-	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
-{
-	double	fPhase = GetPhase();
-	m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
-	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun);
-	CKD2DRectF	rGlyph;
-	UINT	iGlyph;
-	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
-		// for space testing, don't assume one-to-one mapping of glyphs to characters,
-		// as that breaks in RTL languages; safer to test for a zero width bounding box
-		if (rGlyph.Width() > m_fSpaceWidth) {	// if non-space glyph
-			rGlyph.InflateRect(AA_MARGIN, AA_MARGIN);	// add antialiasing margin
-			float	fGlyphWidth = rGlyph.Width();
-			float	fDoorWidth = DTF((fGlyphWidth + AA_MARGIN) * fPhase / 2);
-			float	fDoorLeft = rGlyph.left + fDoorWidth;
-			float	fDoorRight = rGlyph.right - fDoorWidth;
-			CD2DRectF	rDoor(rGlyph.left, rGlyph.top, fDoorLeft, rGlyph.bottom);
-			m_pD2DDeviceContext->FillRectangle(rDoor, m_pBkgndBrush);	// left door
-			rDoor.left = fDoorRight;
-			rDoor.right = rGlyph.right;
-			m_pD2DDeviceContext->FillRectangle(rDoor, m_pBkgndBrush);	// right door
-		}
-	}
-}
-
-bool CSloganDraw::TransClock()
-{
-	CHECK(m_pTextLayout->Draw(0, this, 0, 0));
-	return true;
-}
-
-bool CSloganDraw::TransClock(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
-	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
-{
-	double	fPhase = GetPhase();
-	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun);
-	CKD2DRectF	rGlyph;
-	UINT	iGlyph;
-	float	fMaxGlyphSize = 0;
-	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
-		CD2DSizeF	szGlyph(rGlyph.Size());
-		float	fGlyphSize = max(szGlyph.width, szGlyph.height);
-		if (fGlyphSize > fMaxGlyphSize)
-			fMaxGlyphSize = fGlyphSize;
-	}
-	float	fRadius = DTF(fMaxGlyphSize * M_SQRT2 / 2);
-	CComPtr<ID2D1PathGeometry> pPathGeom;
-	CHECK(m_pD2DFactory->CreatePathGeometry(&pPathGeom));
-	CComPtr<ID2D1GeometrySink> pGeomSink;
-	CHECK(pPathGeom->Open(&pGeomSink));
-	AddPieWedge(pGeomSink, CD2DPointF(0, 0), CD2DSizeF(fRadius, fRadius), 180, DTF(fPhase));
-	CHECK(pGeomSink->Close());
-	m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
-	iterGlyph.Reset();
-	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
-		if (rGlyph.Width() > m_fSpaceWidth) {	// if non-space glyph
-			rGlyph.InflateRect(AA_MARGIN, AA_MARGIN);	// add antialiasing margin
-			CD2DPointF	ptCenter(rGlyph.CenterPoint());
-			auto mTranslate(D2D1::Matrix3x2F::Translation(ptCenter.x, ptCenter.y));
-			m_pD2DDeviceContext->PushAxisAlignedClip(rGlyph, D2D1_ANTIALIAS_MODE_ALIASED);
-			m_pD2DDeviceContext->SetTransform(mTranslate);
-			m_pD2DDeviceContext->FillGeometry(pPathGeom, m_pBkgndBrush);
-			m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
-			m_pD2DDeviceContext->PopAxisAlignedClip();
-		}
-	}
-	return true;
-}
-
-bool CSloganDraw::TransSkew()
-{
-	CHECK(m_pTextLayout->Draw(0, this, 0, 0));
-	return true;
-}
-
-void CSloganDraw::TransSkew(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
-	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
-{
-	double	fPhase = !IsTransOut() ? (1 - m_fTransProgress) : -m_fTransProgress;
-	auto mSkew(D2D1::Matrix3x2F::Skew(DTF(90 * fPhase), 0, ptBaselineOrigin));
-	m_pD2DDeviceContext->SetTransform(mSkew);
-	m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
-	m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
-}
-
-bool CSloganDraw::TransExplode()
-{
-	if (m_bIsTransStart) {	// if start of transition
-		m_triSink.OnStartTrans(m_pD2DDeviceContext->GetSize());
-	}
-	m_triSink.OnDraw();
-	CHECK(m_pTextLayout->Draw(0, this, 0, 0));
-	return true;
-}
-
-bool CSloganDraw::TransExplode(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
-	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
-{
-	const DWRITE_GLYPH_RUN& run = *pGlyphRun;
-	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun);
-	CKD2DRectF	rGlyph;
-	UINT	iTemp;
-	if (m_bIsTransStart) {	// if start of transition
-		for (UINT iGlyph = 0; iGlyph < run.glyphCount; iGlyph++) {
-			iterGlyph.GetNext(iTemp, rGlyph);
-			CComPtr<ID2D1PathGeometry> pPathGeom;
-			CHECK(m_pD2DFactory->CreatePathGeometry(&pPathGeom));
-			CComPtr<ID2D1GeometrySink> pGeomSink;
-			CHECK(pPathGeom->Open(&pGeomSink));
-			CComPtr<IDWriteFontFace> pFontFace = run.fontFace;
-			CHECK(pFontFace->GetGlyphRunOutline(run.fontEmSize, 
-				run.glyphIndices + iGlyph, run.glyphAdvances + iGlyph, 
-				run.glyphOffsets + iGlyph, 1, run.isSideways, run.bidiLevel, pGeomSink));
-			CHECK(pGeomSink->Close());
-			CHECK(m_triSink.TessellateGlyph(ptBaselineOrigin, rGlyph, pPathGeom));
-		}
-		iterGlyph.Reset();
-	}
-	double	fPhase = GetPhase();
-	fPhase = EaseIn(fPhase, 1);
-	double	fRad = m_triSink.GetTravel() * fPhase;
-	for (UINT iGlyph = 0; iGlyph < run.glyphCount; iGlyph++) {
-		iterGlyph.GetNext(iTemp, rGlyph);
-		CComPtr<ID2D1PathGeometry> pTriGeom;
-		CHECK(m_pD2DFactory->CreatePathGeometry(&pTriGeom));
-		CComPtr<ID2D1GeometrySink> pTriSink;
-		CHECK(pTriGeom->Open(&pTriSink));
-		int	iStartTri, iEndTri;
-		m_triSink.GetNextGlyph(iStartTri, iEndTri);
-		for (int iTri = iStartTri; iTri < iEndTri; iTri++) {
-			const CTriangleSink::GLYPH_TRIANGLE&	gt = m_triSink.GetTriangle(iTri);
-			float	x = DTF(sin(gt.fAngle) * fRad);
-			float	y = DTF(cos(gt.fAngle) * fRad);
-			D2D1_TRIANGLE	t = gt;
-			t.point1.x += x; t.point2.x += x; t.point3.x += x;
-			t.point1.y += y; t.point2.y += y; t.point3.y += y;
-			pTriSink->BeginFigure(t.point1, D2D1_FIGURE_BEGIN_FILLED);
-			pTriSink->AddLines(&t.point2, 2);
-			pTriSink->EndFigure(D2D1_FIGURE_END_CLOSED);
-		}
-		CHECK(pTriSink->Close());
-		auto mTranslate(D2D1::Matrix3x2F::Translation(rGlyph.left, ptBaselineOrigin.y));
-		m_pD2DDeviceContext->SetTransform(mTranslate);
-		m_pD2DDeviceContext->FillGeometry(pTriGeom, m_pDrawBrush);
-		m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
-	}
-	return true;
-}
-
-HRESULT CSloganDraw::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOriginX, 
-	FLOAT fBaselineOriginY, DWRITE_MEASURING_MODE measuringMode, DWRITE_GLYPH_RUN const* pGlyphRun, 
-	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, IUnknown* pClientDrawingEffect)
-{
-	UINT	nGlyphs = pGlyphRun->glyphCount;
-	m_aGlyphOffset.SetSize(nGlyphs);	// array is member to reduce reallocation
-	if (pGlyphRun->glyphOffsets != NULL)	// if caller specified glyph offsets, copy them
-		memcpy(m_aGlyphOffset.GetData(), pGlyphRun->glyphOffsets, sizeof(DWRITE_GLYPH_OFFSET) * nGlyphs);
-	else {	// no glyph offsets, so zero our array
-		ZeroMemory(m_aGlyphOffset.GetData(), sizeof(DWRITE_GLYPH_OFFSET) * nGlyphs);
-	}
-	DWRITE_GLYPH_RUN	glyphRun = *pGlyphRun;	// copy entire glyph run struct
-	glyphRun.glyphOffsets = m_aGlyphOffset.GetData();	// override glyph run copy's offset array
-	CD2DPointF	ptBaselineOrigin(fBaselineOriginX, fBaselineOriginY);
-	switch (m_iTransType) {
-	case TT_CONVERGE_HORZ:
-		TransConvergeHorz(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
-		break;
-	case TT_CONVERGE_VERT:
-		TransConvergeVert(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
-		break;
-	case TT_MELT:
-		TransMelt(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
-		break;
-	case TT_ELEVATOR:
-		TransElevator(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
-		break;
-	case TT_CLOCK:
-		TransClock(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
-		break;
-	case TT_SKEW:
-		TransSkew(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
-		break;
-	case TT_EXPLODE:
-		TransExplode(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
-		break;
-	default:
-		NODEFAULTCASE;
-	}
-	return S_OK;
 }
 
 bool CSloganDraw::OnDraw()
@@ -1288,3 +351,417 @@ bool CSloganDraw::OnDraw()
 #endif	// SD_CAPTURE
 	return true;
 }
+
+HRESULT CSloganDraw::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOriginX, 
+	FLOAT fBaselineOriginY, DWRITE_MEASURING_MODE measuringMode, DWRITE_GLYPH_RUN const* pGlyphRun, 
+	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, IUnknown* pClientDrawingEffect)
+{
+	UINT	nGlyphs = pGlyphRun->glyphCount;
+	m_aGlyphOffset.SetSize(nGlyphs);	// array is member to reduce reallocation
+	if (nGlyphs > 0) {	// if one or more glyphs
+		if (pGlyphRun->glyphOffsets != NULL)	// if caller specified glyph offsets, copy them
+			memcpy(m_aGlyphOffset.GetData(), pGlyphRun->glyphOffsets, sizeof(DWRITE_GLYPH_OFFSET) * nGlyphs);
+		else {	// no glyph offsets, so zero our array
+			ZeroMemory(m_aGlyphOffset.GetData(), sizeof(DWRITE_GLYPH_OFFSET) * nGlyphs);
+		}
+	}
+	DWRITE_GLYPH_RUN	glyphRun = *pGlyphRun;	// copy entire glyph run struct
+	glyphRun.glyphOffsets = m_aGlyphOffset.GetData();	// override glyph run copy's offset array
+	CD2DPointF	ptBaselineOrigin(fBaselineOriginX, fBaselineOriginY);
+	switch (m_iTransType) {
+	case TT_CONVERGE_HORZ:
+		TransConvergeHorz(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
+		break;
+	case TT_CONVERGE_VERT:
+		TransConvergeVert(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
+		break;
+	case TT_MELT:
+		TransMelt(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
+		break;
+	case TT_ELEVATOR:
+		TransElevator(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
+		break;
+	case TT_CLOCK:
+		TransClock(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
+		break;
+	case TT_SKEW:
+		TransSkew(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
+		break;
+	case TT_EXPLODE:
+		TransExplode(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
+		break;
+	default:
+		NODEFAULTCASE;
+	}
+	return S_OK;
+}
+
+void CSloganDraw::StartSlogan()
+{
+	if (m_bSeqSlogans) {	// if showing slogans sequentially
+		m_iSlogan++;	// next slogan index
+		if (m_iSlogan >= m_aSlogan.GetSize())	// if reached end of slogans
+			m_iSlogan = 0;	// reset to first slogan
+	} else {	// randomizing slogans
+		m_iSlogan = m_rlSloganIdx.GetNext(m_iSlogan);	// get next slogan index
+	}
+	m_sSlogan = m_aSlogan[m_iSlogan].m_sText;	// cache current slogan
+	if (m_bCustomSlogans)	// if doing per-slogan customization
+		OnCustomSlogan();	// customize current slogan
+	OnTextChange();	// update text
+	StartTrans(ST_TRANS_IN, m_fInTransDuration);	// start incoming transition
+}
+
+void CSloganDraw::StartTrans(int nState, float fDuration)
+{
+	ASSERT(nState == ST_TRANS_IN || nState == ST_TRANS_OUT);	// else logic error
+	if (nState == ST_TRANS_OUT)	{	// if starting outgoing transition
+		// reset any persistent state left by incoming transition
+		switch (m_iTransType) {	// previous transition type
+		case TT_TYPEWRITER:
+			ResetDrawingEffect();	// remove per-character brushes
+			break;
+		}
+	}
+	m_iState = nState;	// set state
+	m_fTransDuration = fDuration;
+	m_bIsTransStart = true;	// set transition start flag
+	if (m_bIsRecording) {	// if recording
+		m_fStartTime = GetFrameTime();	// compute time from frame index
+	} else {	// not recording
+		m_timerTrans.Reset();	// reset transition timer
+	}
+	int	iTransDir = nState == ST_TRANS_OUT;	// get transition direction
+	// if current slogan specifies a transition type override for this direction
+	if (IsValid(m_aTransType[iTransDir])) {
+		m_iTransType = m_aTransType[iTransDir];	// use specified transition type
+	} else {	// transition type isn't overridden
+		m_iTransType = m_rlTransType.GetNext(m_iTransType);	// get next transition type
+	}
+	m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());	// remove transform if any
+}
+
+void CSloganDraw::StartIdle(int nDuration)
+{
+	if (m_bIsRecording) {	// if recording
+		// compute time from frame index
+		m_nWakeTime = Round64(GetFrameTime() * 1000 + nDuration);
+	} else {	// not recording
+		m_nWakeTime = GetTickCount64() + nDuration;	// set wake time
+	}
+}
+
+bool CSloganDraw::ContinueIdle()
+{
+	if (m_bIsRecording) {	// if recording
+		ULONGLONG	nNow = Round64(GetFrameTime() * 1000);
+		return nNow >= m_nWakeTime;
+	}
+	ULONGLONG	nNow = GetTickCount64();
+	if (nNow < m_nWakeTime) {	// if more idle time remains
+#if SD_CAPTURE	// if capturing frames
+		return false;	// draw during idle, so idle gets captured
+#else
+		// block instead of drawing, to reduce power usage
+		DWORD	nTimeout = static_cast<DWORD>(m_nWakeTime - nNow);
+		// wait for wake signal or timeout
+		DWORD	nRet = WaitForSingleObject(m_evtWake, nTimeout);
+		if (nRet == WAIT_OBJECT_0)	// if wake signal
+			return false;	// idle is incomplete
+#endif	// SD_CAPTURE
+	}
+	return true;	// idle is over
+}
+
+bool CSloganDraw::CreateStrokeStyle()
+{
+	CHECK(CMeltProbeWorker::CreateStrokeStyle(m_pD2DFactory, &m_pStrokeStyle));
+	return true;
+}
+
+bool CSloganDraw::ResetDrawingEffect()
+{
+	ASSERT(m_pTextLayout != NULL);
+	UINT	nTextLen = static_cast<UINT>(m_sSlogan.GetLength());
+	DWRITE_TEXT_RANGE	tr = {0, nTextLen};	// for all characters in layout
+	CHECK(m_pTextLayout->SetDrawingEffect(NULL, tr));	// remove drawing effect
+	return true;
+}
+
+void CSloganDraw::OnCustomSlogan()
+{
+	CSlogan	prevSlogan(*this);	// copy current slogan for change detection
+	CSlogan::operator=(m_aSlogan[m_iSlogan]);	// update this slogan from slogan array
+	if (!IsSameFont(prevSlogan)) {	// if font changed
+		OnFontChange();	// update font
+	}
+	if (!IsSameColor(m_clrBkgnd, prevSlogan.m_clrBkgnd)) {	// if background color changed
+		m_pBkgndBrush->SetColor(m_clrBkgnd);	// set background color 
+	}
+	if (!IsSameColor(m_clrDraw, prevSlogan.m_clrDraw)) {	// if draw color changed
+		m_pDrawBrush->SetColor(m_clrDraw);	// set draw color 
+	}
+}
+
+bool CSloganDraw::OnFontChange()
+{
+	m_pTextFormat.Release();	// release previous text format instance
+	CHECK(m_pDWriteFactory->CreateTextFormat(	// create text format instance
+		m_sFontName,	// font name
+		NULL,	// font collection
+		static_cast<DWRITE_FONT_WEIGHT>(m_nFontWeight),	// font weight
+		DWRITE_FONT_STYLE_NORMAL,	// font style
+		DWRITE_FONT_STRETCH_NORMAL,	// font stretch
+		m_fFontSize,	// font size in points
+		L"",	// locale
+		&m_pTextFormat	// receives text format instance
+	));
+	m_pTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+	m_pTextFormat->SetWordWrapping(m_bNoWordWrap ? 
+		DWRITE_WORD_WRAPPING_NO_WRAP : DWRITE_WORD_WRAPPING_WRAP);
+	m_pTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+	return OnTextChange();
+}
+
+bool CSloganDraw::OnTextChange()
+{
+	m_pTextLayout.Release();	// release previous text layout instance
+	int	nTextLen = m_sSlogan.GetLength();
+	CD2DSizeF	szRT(m_pD2DDeviceContext->GetSize());	// get render target size
+	// layout box is entire frame, for full-screen text and paragraph centering
+	CHECK(m_pDWriteFactory->CreateTextLayout(	// create text layout instance
+		m_sSlogan,		// source text
+		nTextLen,		// text length in characters
+		m_pTextFormat,	// text format instance
+		szRT.width,		// layout box width in DIPs
+		szRT.height,	// layout box height in DIPs
+		&m_pTextLayout	// receives text layout instance
+	));
+	CHECK(m_pTextLayout->GetMetrics(&m_textMetrics));	// get text metrics
+	CHECK(m_pTextLayout->GetOverhangMetrics(&m_overhangMetrics));	// get overhang metrics
+	return true;
+}
+
+CD2DSizeF CSloganDraw::GetTextBounds(CKD2DRectF& rText) const
+{
+	// layout box is entire render target
+	CD2DSizeF	szRT(m_pD2DDeviceContext->GetSize());	// get render target size
+	// use text metrics for x-axis, overhang metrics for y-axis;
+	// assuming text fits within the frame, overhang metrics are
+	// NEGATIVE distances in DIPs from frame edge to text edge
+	rText = CKD2DRectF(
+		m_textMetrics.left,
+		-m_overhangMetrics.top, 
+		m_textMetrics.left + m_textMetrics.width, 
+		szRT.height + m_overhangMetrics.bottom
+	);
+	rText.InflateRect(AA_MARGIN, AA_MARGIN);	// add antialiasing margin
+	return szRT;	// return render target size
+}
+
+void CSloganDraw::DrawTextBounds()
+{
+	CKD2DRectF	rText;
+	GetTextBounds(rText);
+	m_pD2DDeviceContext->DrawRectangle(rText, m_pDrawBrush);
+}
+
+void CSloganDraw::DrawGlyphBounds(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun)
+{
+	CKD2DRectF	rGlyph;
+	UINT	iGlyph;
+	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun);
+	// bounding boxes can overlap; alternating between two colors helps distinguish them
+	static const D2D1_COLOR_F	aClr[2] = {{0, 1, 0, 1}, {1, 0, 0, 1}};	// green and red
+	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
+		m_pVarBrush->SetColor(aClr[iGlyph & 1]);	// alternate colors
+		m_pD2DDeviceContext->DrawRectangle(rGlyph, m_pVarBrush);
+	}
+	if (pGlyphRun->glyphCount) {
+		CD2DSizeF	szRT = m_pD2DDeviceContext->GetSize();
+		m_pD2DDeviceContext->DrawLine(CD2DPointF(0, ptBaselineOrigin.y),
+			CD2DPointF(szRT.width, ptBaselineOrigin.y), m_pDrawBrush);	// draw baseline too
+	}
+}
+
+double CSloganDraw::GetPhase(UINT nFlags) const
+{
+	bool	bOutgoing = IsTransOut();
+	double	fPhase;	// normalized position from 0 to 1
+	if (nFlags & GP_EASING) {	// if easing enabled
+		// if incoming transition, ease out, otherwise ease in
+		fPhase = EaseInOut(!bOutgoing, m_fTransProgress, m_fEasing);
+	} else {	// easing disabled
+		fPhase = m_fTransProgress;	// linear
+	}
+	bool	bInvert = nFlags & GP_INVERT;
+	if (bOutgoing == bInvert)	// if transition should be reversed
+		fPhase = 1 - fPhase;	// invert phase
+	return fPhase;
+}
+
+double CSloganDraw::GetFrameRate()
+{
+	if (m_bIsRecording) {	// if recording
+		return m_fRecFrameRate;	// use record frame rate
+	} else {	// not recording
+		DWORD	dwDisplayFreq;
+		if (!GetDisplayFrequency(dwDisplayFreq))	// use display frequency
+			return 0;	// failed to obtain display frequency
+		return dwDisplayFreq;
+	}
+}
+
+double CSloganDraw::GetFrameTime() const
+{
+	// during recording, compute time from frame index to avoid jitter
+	return m_iFrame * (1.0 / m_fRecFrameRate);
+}
+
+#if SD_CAPTURE	// if capturing frames
+bool CSloganDraw::SetCapture(bool bEnable)
+{
+	if (bEnable == m_capture.IsCreated())	// if state unchanged
+		return true;	// nothing to do
+	if (bEnable) {	// if starting capture
+		// full screen mode must be established before capture instance is created,
+		// so process pending render commands, in case full screen is one of them
+		CRenderCmd	cmd;
+		while (m_qCmd.Pop(cmd)) {	// while commands remain
+			ProcessCommand(cmd);	// process command
+		}
+		DXGI_SWAP_CHAIN_DESC	desc;
+		CHECK(m_pSwapChain->GetDesc(&desc));
+		m_nSwapChainBuffers = desc.BufferCount;	// store swap chain buffer count
+		LPCTSTR	pszCaptureFolderPath = NULL;	// default is current directory
+		if (!m_capture.Create(m_pD3DDevice, m_pSwapChain, pszCaptureFolderPath))	// create capture instance
+			return false;
+	} else {	// ending capture
+		m_capture.Destroy();
+	}
+	return true;
+}
+
+bool CSloganDraw::CaptureFrame()
+{
+	if (!m_capture.IsCreated())	// if capture instance not created
+		return false;
+	//
+	// The swap chain's buffers are initially blank. If the swap chain
+	// has N buffers, you must present N times before the swap chain's
+	// buffer zero contains meaningful data. The first N frames captured
+	// are leftovers from before drawing started, and should be skipped.
+	//
+	if (m_iFrame < m_nSwapChainBuffers)	// if initial blank frame
+		return true;	// skip blank frame; not an error
+	if (!m_capture.CaptureFrame())	// if capture frame fails
+		m_capture.Destroy();	// abort capture
+	return true;
+}
+#endif	// SD_CAPTURE
+
+#if SD_CAPTURE >= SD_CAPTURE_MAKE_REF_IMAGES	// if regression testing
+void CSloganDraw::RegressionTestSetup()
+{
+	m_aSlogan.RemoveAll();	// remove existing slogans
+	CSlogan	slogan;
+	slogan.m_sText = L"Your Text\n"	// 2nd line is hello world in Arabic
+		L"\x0645\x0631\x062D\x0628\x0627 "
+		L"\x0628\x0627\x0644\x0639\x0627\x0644\x0645";
+	slogan.m_sFontName = L"Helvetica";
+	slogan.m_fFontSize = 120.0f;
+	slogan.m_nFontWeight = DWRITE_FONT_WEIGHT_BLACK;
+	slogan.m_clrBkgnd = D2D1::ColorF::Black;
+	slogan.m_clrDraw = D2D1::ColorF::White;
+	m_bCustomSlogans = true;	// enable customization
+	m_aSlogan.Add(slogan);
+}
+
+bool CSloganDraw::RegressionTest()
+{
+	enum {
+		REF_FRAMES = TRANS_TYPES * 2,	// reference frames
+		TRANS_PERMS = REF_FRAMES * TRANS_TYPES,	// transition permutations
+	};
+	// either generate reference images, or generate images for all transition
+	// permutations and check them against previously generated reference images
+	const bool	bMakeRefs = SD_CAPTURE == SD_CAPTURE_MAKE_REF_IMAGES;
+	const UINT	nOutputFrames = bMakeRefs ? REF_FRAMES : TRANS_PERMS;
+	// swap chain buffers are initially blank; CaptureFrame supresses
+	// those initial blank frames, and we must account for that here,
+	// plus one extra because OnDraw calls us before CaptureFrame
+	const UINT	nEndFrame = nOutputFrames + m_nSwapChainBuffers + 1;
+	if (m_iFrame == nEndFrame) {	// if last frame captured
+		CWnd*	pMainWnd = theApp.m_pMainWnd;
+		ASSERT(pMainWnd != NULL);	// sanity check
+		SetCapture(false);	// stop capturing immediately
+		if (bMakeRefs) {	// if making reference images
+			pMainWnd->PostMessage(WM_QUIT);	// exit app
+		} else {	// checking permutations against reference
+			static const LPCTSTR CAPTURE_FILENAME_FORMAT = _T("cap%06d.tif");
+			CString	sRefFolder(_T("C:\\Chris\\MyProjects\\Sloganeer\\testref"));
+			CIntArrayEx	aDiff;	// array of differences, as frame indices
+			for (int iFrame = 0; iFrame < TRANS_PERMS; iFrame++) {	// for each frame
+				bool	bIsOddFrame = iFrame & 1;
+				int	iRefFrame = bIsOddFrame ? iFrame % REF_FRAMES
+					: iFrame / REF_FRAMES * 2;
+				CString	sFileName;
+				sFileName.Format(CAPTURE_FILENAME_FORMAT, iRefFrame);
+				CString	sRefPath = sRefFolder + '\\' + sFileName;
+				sFileName.Format(CAPTURE_FILENAME_FORMAT, iFrame);
+				CString	sTestPath(sFileName);
+				TRY {
+					// compare files method throws MFC exceptions
+					if (!FilesEqual(sTestPath, sRefPath))	// if frames differ
+						aDiff.Add(iFrame);	// add frame index to error list
+				}
+				CATCH (CException, e) {
+					e->ReportError();
+					pMainWnd->PostMessage(WM_QUIT);	// exit app
+					return false;
+				}
+				END_CATCH
+			}
+			CString	sMsg(_T("Regression Test\n\n"));
+			UINT	nMBFlags = MB_OK;
+			int	nDiffs = aDiff.GetSize();
+			if (nDiffs) {	// if differences found
+				CString	sVal;
+				sVal.Format(_T("FAIL: %d unexpected frames\n"), nDiffs);
+				sMsg += sVal;
+				const int	nMaxDiffs = 100;	// keep dialog reasonable
+				for (int iDiff = 0; iDiff < min(nDiffs, nMaxDiffs); iDiff++) {
+					CString	sVal;
+					if (iDiff)
+						sMsg += _T(", ");	// add separator
+					sVal.Format(_T("%d"), aDiff[iDiff]);
+					sMsg += sVal;
+				}
+				if (nDiffs >= nMaxDiffs)	// if too many differences
+					sMsg += _T(" ...");	// indicate overflow
+				nMBFlags |= MB_ICONERROR;
+			} else {	// no differences
+				sMsg += _T("Pass");	// all good
+				nMBFlags |= MB_ICONINFORMATION;
+			}
+			AfxMessageBox(sMsg, nMBFlags);
+			pMainWnd->PostMessage(WM_QUIT);	// exit app
+		}
+	}
+	const bool	bIsOddFrame = m_iFrame & 1;
+	const int	iState = bIsOddFrame ? ST_TRANS_OUT : ST_TRANS_IN;
+	StartTrans(iState, 1);	// start a new transition
+	// override transition type
+	if (bMakeRefs) {	// if generating reference frames
+		m_iTransType = (m_iFrame / 2) % TRANS_TYPES;
+	} else {	// checking permutations against reference
+		m_iTransType = bIsOddFrame ? (m_iFrame / 2) % TRANS_TYPES 
+			: m_iFrame / REF_FRAMES % TRANS_TYPES;
+	}
+	m_fTransProgress = 1.0 / 3;	// override transition progress
+	m_nHoldDuration = 0;	// no hold
+	m_nPauseDuration = 0;	// no pause either
+	srand(0);	// ensure consistent behavior for transitions that use randomness
+	return true;
+}
+#endif	// SD_CAPTURE

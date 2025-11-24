@@ -87,7 +87,7 @@ protected:
 	typedef CArrayEx<DWRITE_GLYPH_OFFSET, DWRITE_GLYPH_OFFSET&> CGlyphOffsetArray;
 	typedef CArrayEx<DWRITE_LINE_METRICS, DWRITE_LINE_METRICS&> CLineMetricsArray;
 
-// Members
+// Data members
 	CComPtr<ID2D1SolidColorBrush>	m_pBkgndBrush;	// background brush interface
 	CComPtr<ID2D1SolidColorBrush>	m_pDrawBrush;	// drawing brush interface
 	CComPtr<ID2D1SolidColorBrush>	m_pVarBrush;	// variable brush interface
@@ -148,7 +148,7 @@ protected:
 	CMyD2DCapture	m_capture;	// frame capture instance
 #endif	// SD_CAPTURE
 
-// Overrides
+// CRenderTarget overrides
 	virtual void	OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate);
 	virtual	bool	CreateUserResources();
 	virtual	void	DestroyUserResources();
@@ -167,11 +167,13 @@ protected:
 // Helpers
 	void	Init();
 	bool	IsTransOut() const;
-	void	OnCustomSlogan();
 	void	StartSlogan();
 	void	StartTrans(int nState, float fDuration);
 	void	StartIdle(int nDuration);
 	bool	ContinueIdle();
+	bool	CreateStrokeStyle();
+	bool	ResetDrawingEffect();
+	void	OnCustomSlogan();
 	bool	OnFontChange();
 	bool	OnTextChange();
 	CD2DSizeF	GetTextBounds(CKD2DRectF& rText) const;
@@ -179,24 +181,36 @@ protected:
 	void	DrawGlyphBounds(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun);
 	double	GetPhase(UINT nFlags = 0) const;
 	double	GetFrameRate();
-	bool	CreateStrokeStyle();
-	bool	ResetDrawingEffect();
+	double	GetFrameTime() const;
+
+// Regression test
+	bool	SetCapture(bool bEnable = true);
+	bool	CaptureFrame();
+	void	RegressionTestSetup();
+	bool	RegressionTest();
+
+// Transitions, defined in separate .cpp file
 	void	TransScroll();
 	void	TransReveal();
+	static double	Lerp(double a, double b, double t);
+	void	TransFade();
 	void	TransTypewriter();
 	void	TransRandomTypewriter();
-	void	TransFade();
 	void	TransScale();
-	void	TransTile();
 	void	InitTiling(const CKD2DRectF& rText);
+	void	TransTile();
 	bool	TransConverge();
 	void	TransConvergeHorz(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
 	void	TransConvergeVert(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
+	bool	GetLineMetrics();
+	bool	MakeCharToLineTable();
 	bool	TransMelt();
 	bool	TransMelt(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
+	bool	LaunchMeltWorker();
+	bool	MeasureMeltStroke();
 	bool	TransElevator();
 	void	TransElevator(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
@@ -209,15 +223,6 @@ protected:
 	bool	TransExplode();
 	bool	TransExplode(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
-	bool	LaunchMeltWorker();
-	bool	MeasureMeltStroke();
-	bool	GetLineMetrics();
-	bool	MakeCharToLineTable();
-	bool	SetCapture(bool bEnable = true);
-	bool	CaptureFrame();
-	bool	RegressionTest();
-	double	GetFrameTime() const;
-	static double	Lerp(double a, double b, double t);
 };
 
 inline bool CSloganDraw::IsTransOut() const
