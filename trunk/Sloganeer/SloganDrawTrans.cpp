@@ -149,7 +149,7 @@ void CSloganDraw::TransRandomTypewriter()
 	int	iBrush = IsTransOut();	// brushes are swapped for outgoing transition
 	// for each character that's due to be typed, in sequential order
 	for (UINT iChar = m_nCharsTyped; iChar < nCharsTyped; iChar++) {
-		int	iMappedChar = m_aCharIdx[iChar];	// get char's index within text
+		UINT	iMappedChar = m_aCharIdx[iChar];	// get char's index within text
 		DWRITE_TEXT_RANGE	tr = {iMappedChar, 1};	// set range for only that char
 		m_pTextLayout->SetDrawingEffect(aBrush[!iBrush], tr);	// set brush for char
 	}
