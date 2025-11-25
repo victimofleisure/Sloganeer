@@ -31,14 +31,7 @@ CSlogan::CSlogan() :
 	m_clrBkgnd(INVALID_COLOR),
 	m_clrDraw(INVALID_COLOR)
 {
-	m_fFontSize = INVALID;
-	m_nFontWeight = INVALID;
-	m_nHoldDuration = INVALID;
-	m_nPauseDuration = INVALID;
-	m_fInTransDuration = INVALID;
-	m_fOutTransDuration = INVALID;
-	m_aTransType[TD_INCOMING] = INVALID;
-	m_aTransType[TD_OUTGOING] = INVALID;
+	InitSloganColumns();
 }
 
 CSlogan::CSlogan(bool bAppDefaults) :
@@ -46,6 +39,7 @@ CSlogan::CSlogan(bool bAppDefaults) :
 	m_clrDraw(D2D1::ColorF::White)
 {
 	UNREFERENCED_PARAMETER(bAppDefaults);	// argument is for ctor discrimination only
+	InitSloganColumns();
 	m_sFontName = L"Arial";
 	m_fFontSize = 150.0f;
 	m_nFontWeight = DWRITE_FONT_WEIGHT_BLACK;
@@ -53,6 +47,17 @@ CSlogan::CSlogan(bool bAppDefaults) :
 	m_nPauseDuration = 0;
 	m_fInTransDuration = 2.0f;
 	m_fOutTransDuration = 2.0f;
+}
+
+void CSlogan::InitSloganColumns()
+{
+	m_nCustomColMask = 0;
+	m_fFontSize = INVALID;
+	m_nFontWeight = INVALID;
+	m_nHoldDuration = INVALID;
+	m_nPauseDuration = INVALID;
+	m_fInTransDuration = INVALID;
+	m_fOutTransDuration = INVALID;
 	m_aTransType[TD_INCOMING] = INVALID;
 	m_aTransType[TD_OUTGOING] = INVALID;
 }
@@ -88,14 +93,6 @@ int CSlogan::FindTransTypeCode(LPCTSTR pszCode)
 			return iType;	// return transition type index
 	}
 	return -1;	// code not found
-}
-
-void CSlogan::Customize(const CSlogan& slogan)
-{
-	// for each member, override if it contains a valid value
-	#define SLOGANDEF(name, member) if (IsValid(slogan.m_##member)) \
-		m_##member = slogan.m_##member;
-	#include "ParamDef.h"	// generate code
 }
 
 template<class CharT, class Traits>	// use template to handle TCHAR

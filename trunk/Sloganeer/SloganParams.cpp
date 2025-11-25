@@ -12,6 +12,7 @@
 		02		14nov25	add recording
 		03		15nov25	add color names
 		04		18nov25	add CSV support
+        05      25nov25	add color palette and cycling
 
 */
 
@@ -19,6 +20,9 @@
 #include "Sloganeer.h"
 #include "SloganParams.h"
 #include "StdioFileEx.h"
+#include "ParamParser.h"
+
+#define DTF(x) static_cast<float>(x)
 
 const LPCTSTR CSloganParams::m_aColorName[] = {
 	#define COLORNAMEDEF(name) _T(#name),
@@ -94,4 +98,47 @@ COLORREF CSloganParams::FindColor(LPCTSTR pszName)
 	if (iColor >= 0)	// if color name found
 		return m_aColorVal[iColor];	// return color value
 	return UINT_MAX;	// return error
+}
+
+CSloganParams::CPalette::CPalette()
+{
+	m_fCycleFreq = 1;
+}
+
+void CSloganParams::CPalette::Read(LPCTSTR pszPath)
+{
+	FastRemoveAll();	// in case of reuse
+	CStdioFileEx	fPalette(pszPath, CFile::modeRead);
+	CString	sLine;
+	D2D1::ColorF	color(0);
+	while (fPalette.ReadString(sLine)) {	// for each line
+		if (!sLine.IsEmpty()) {	// if line not empty
+			// convert string to a color; error throws std::exception
+			CParamParser::ScanColor(sLine, color);
+			Add(color);	// add color to array
+		}
+	}
+}
+
+void CSloganParams::CPalette::CycleColor(double fElapsedTime, D2D1::ColorF& color) const
+{
+	int	nColors = GetSize();
+	if (nColors <= 0)	// if empty palette
+		return;	// nothing to do
+	double	fPhase = fElapsedTime * m_fCycleFreq;
+	fPhase -= floor(fPhase);
+	fPhase *= nColors;
+	int	iColor0 = Trunc(fPhase);
+	if (iColor0 >= nColors)	// if color index out of range
+		iColor0 = 0;	// wrap around
+	int	iColor1 = iColor0 + 1;
+	if (iColor1 >= nColors)	// if color index out of range
+		iColor1 = 0;	// wrap around
+	const D2D1_COLOR_F&	clr0 = GetAt(iColor0);
+	const D2D1_COLOR_F&	clr1 = GetAt(iColor1);
+	fPhase -= floor(fPhase);
+	color = D2D1::ColorF(
+		DTF(Lerp(clr0.r, clr1.r, fPhase)),
+		DTF(Lerp(clr0.g, clr1.g, fPhase)),
+		DTF(Lerp(clr0.b, clr1.b, fPhase)));
 }

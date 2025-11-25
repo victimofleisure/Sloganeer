@@ -8,6 +8,7 @@
 		revision history:
 		rev		date	comments
         00      18nov25	initial version
+		01		25nov25	improve error reporting
 
 */
 
@@ -37,16 +38,20 @@ CSloganCSV::CSloganCSV(const CSlogan& sloganDefaults, CSloganArray& aSlogan)
 {
 	CSlogan::operator=(sloganDefaults);	// copy slogan defaults to base class
 	m_iLine = 0;
-	m_iCol = 0;
+	m_iSelCol = 0;
 }
 
-void CSloganCSV::OnError(int nErrID, LPCTSTR pszParam)
+void CSloganCSV::OnError(int nErrID, LPCTSTR pszParam, LPCTSTR pszErrInfo)
 {
+	ASSERT(nErrID > 0);
+	ASSERT(pszParam != NULL);
 	CString	sErrMsg;
 	AfxFormatString1(sErrMsg, nErrID, pszParam);	// format error message
+	if (pszErrInfo != NULL)
+		sErrMsg += '\n' + CString(pszErrInfo);
 	CString	sErrLoc;
 	// error location is one-based line and one-based column
-	sErrLoc.Format(IDS_CSV_ERR_LOCATION, m_iLine + 1, m_iCol + 1);
+	sErrLoc.Format(IDS_CSV_ERR_LOCATION, m_iLine + 1, m_iSelCol + 1);
 	AfxMessageBox(sErrMsg + '\n' + sErrLoc);	// report error and its location
 	m_bError = true;	// set error state
 }
@@ -59,8 +64,9 @@ void CSloganCSV::SetDefaultColumnLayout()
 	}
 }
 
-bool CSloganCSV::CheckForHeaderRow(CString sLine)
+bool CSloganCSV::CheckForHeaderRow(CString sLine, bool& bHasHeaderRow)
 {
+	bHasHeaderRow = false;	// assume no header row
 	ASSERT(!m_iLine);	// first row only, else logic error
 	// set default column layout in case there's no header row
 	SetDefaultColumnLayout();
@@ -75,7 +81,7 @@ bool CSloganCSV::CheckForHeaderRow(CString sLine)
 		sToken.TrimLeft();	// remove leading whitespace
 		// if token is empty or starts with a digit
 		if (sToken.IsEmpty() || isdigit(sToken[0]))
-			return false;	// no header row, fail
+			return true;	// no header row, success
 		int	iCol = FindColumnName(sToken);	// look up column name
 		if (iCol >= 0) {	// if column name found
 			// text column is too ambiguous to be proof of header row
@@ -91,19 +97,20 @@ bool CSloganCSV::CheckForHeaderRow(CString sLine)
 		iHdrCol++;	// bump header column index
 	}
 	if (!bColNamesFound)	// if no column names were found
-		return false;	// no header row, fail
+		return true;	// no header row, success
 	// header row detected; validate column selection
 	int	nSelCols = aSelCol.GetSize();
 	for (int iSelCol = 0; iSelCol < nSelCols; iSelCol++) {	// for each selected column
 		if (aSelCol[iSelCol] < 0) {	// if selected column is invalid
-			m_iCol = iUnkCol;	// set column index for error reporting
+			m_iSelCol = iUnkCol;	// set column index for error reporting
 			// OnError sets error state to indicate a serious error
 			OnError(IDS_ERR_BAD_COLUMN_NAME, sUnkCol);	// report error
 			return false;	// invalid header row, fail
 		}
 	}
+	bHasHeaderRow = true;	// header row successfully parsed
 	m_aSelCol.Swap(aSelCol);	// move column selection to member
-	return true;	// header row successfully parsed
+	return true;	// success
 }
 
 bool CSloganCSV::ParseTransType(int iCol, CString sToken, int& iTransType)
@@ -160,8 +167,8 @@ bool CSloganCSV::ParseLine(CString sLine)
 	int	iTransDir;
 	int	nSelCols = m_aSelCol.GetSize();
 	for (int iSelCol = 0; iSelCol < nSelCols; iSelCol++) {	// for each selected column
+		m_iSelCol = iSelCol;	// stash selected column index for error reporting
 		int	iCol = m_aSelCol[iSelCol];
-		m_iCol = iCol;	// stash column index for error reporting
 		try {
 			CString	sToken;
 			if (!csv.GetString(sToken))	// if no more tokens
@@ -193,8 +200,9 @@ bool CSloganCSV::ParseLine(CString sLine)
 				if (m_bError)	// if parsing failed
 					return false;	// abort parsing
 			}
-		} catch (std::exception) {	// std conversion functions throw exception
-			OnError(IDS_ERR_PARAM_INVALID, m_aColumnName[iCol]);	// report error
+			m_nCustomColMask |= 1 << iCol;	// mark column as customized
+		} catch (const std::exception& e) {	// std conversion functions throw exception
+			OnError(IDS_ERR_PARAM_INVALID, m_aColumnName[iCol], CString(e.what()));	// report error
 			return false;	// abort parsing
 		}
 	}
@@ -211,9 +219,12 @@ bool CSloganCSV::Read(LPCTSTR pszPath)
 	CSlogan	sloganDefaults(*this);	// copy slogan defaults
 	while (fIn.ReadString(sLine)) {	// for each line
 		if (!m_iLine) {	// if first line
-			if (CheckForHeaderRow(sLine)) {	// check for header row
-				if (m_bError)	// if header row parsing failed
-					return false;	// file is useless, abort
+			// check for header row
+			bool	bHeaderRow;
+			if (!CheckForHeaderRow(sLine, bHeaderRow)) {
+				return false;	// parsing failed, abort
+			}
+			if (bHeaderRow) {	// if file has header row
 				m_iLine++;	// bump line index
 				continue;	// skip to next line
 			}

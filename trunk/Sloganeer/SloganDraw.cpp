@@ -26,6 +26,7 @@
 		16		23nov25	in elevator and clock, add antialiasing margin
 		17		24nov25	in explode transition, set bidi level
 		18		24nov25	move transitions to separate cpp file
+		19		25nov25	add color palettes and cycling
 
 */
 
@@ -77,10 +78,9 @@ void CSloganDraw::Init()
 	m_iGlyphLine = 0;
 	m_iFrame = 0;
 	m_nSwapChainBuffers = 0;
-	m_fStartTime = 0;
+	m_fStateStartTime = 0;
 	m_fMeltMaxStroke = 0;
 	m_nCharsTyped = 0;
-	m_iTransVariant = 0;
 }
 
 bool CSloganDraw::Create(HWND hWnd)
@@ -216,6 +216,7 @@ bool CSloganDraw::OnThreadCreate()
 		m_iSlogan = -1;	// avoid skipping first slogan
 	}
 	LaunchMeltWorker();
+	m_fThreadStartTime = m_timerTrans.Time();
 	StartSlogan();	// start the first slogan
 #if SD_CAPTURE	// if capturing frames
 	if (!SetCapture())
@@ -239,10 +240,18 @@ void CSloganDraw::OnResize()
 
 bool CSloganDraw::OnDraw()
 {
+	// if background color has a palette and isn't customized
+	if (!m_palBkgnd.IsEmpty() && !IsCustomized(COL_bgclr)) {
+		UpdateColor(m_palBkgnd, m_clrBkgnd, m_pBkgndBrush);	// update background color and brush
+	}
+	// if draw color has a palette and isn't customized
+	if (!m_palDraw.IsEmpty() && !IsCustomized(COL_drawclr)) {
+		UpdateColor(m_palDraw, m_clrDraw, m_pDrawBrush);	// update draw color and brush
+	}
 	m_pD2DDeviceContext->Clear(m_clrBkgnd);	// clear frame to background color
 	double	fTransElapsed;	// elapsed time since transition started
 	if (m_bIsRecording) {	// if recording
-		fTransElapsed = GetFrameTime() - m_fStartTime;	// compute time from frame index
+		fTransElapsed = GetFrameTime() - m_fStateStartTime;	// compute time from frame index
 	} else {	// not recording
 		fTransElapsed = m_timerTrans.Elapsed();	// get elapsed time from transition timer
 	}
@@ -272,6 +281,9 @@ bool CSloganDraw::OnDraw()
 	case TT_TYPEWRITER:
 		TransTypewriter();
 		break;
+	case TT_RAND_TYPE:
+		TransRandomTypewriter();
+		break;
 	case TT_FADE:
 		TransFade();
 		break;
@@ -281,8 +293,8 @@ bool CSloganDraw::OnDraw()
 	case TT_SCALE_SPIN:
 		TransScale();
 		break;
-	case TT_TILE:
-		TransTile();
+	case TT_RAND_TILE:
+		TransRandTile();
 		break;
 	case TT_CONVERGE_HORZ:
 	case TT_CONVERGE_VERT:
@@ -416,9 +428,11 @@ void CSloganDraw::StartTrans(int nState, float fDuration)
 {
 	ASSERT(nState == ST_TRANS_IN || nState == ST_TRANS_OUT);	// else logic error
 	if (nState == ST_TRANS_OUT)	{	// if starting outgoing transition
-		// reset any persistent state left by incoming transition
+		// existing layout instance is reused, so any layout changes made
+		// by incoming transition, such as drawing effects, must be reset
 		switch (m_iTransType) {	// previous transition type
 		case TT_TYPEWRITER:
+		case TT_RAND_TYPE:
 			ResetDrawingEffect();	// remove per-character brushes
 			break;
 		}
@@ -427,7 +441,7 @@ void CSloganDraw::StartTrans(int nState, float fDuration)
 	m_fTransDuration = fDuration;
 	m_bIsTransStart = true;	// set transition start flag
 	if (m_bIsRecording) {	// if recording
-		m_fStartTime = GetFrameTime();	// compute time from frame index
+		m_fStateStartTime = GetFrameTime();	// compute time from frame index
 	} else {	// not recording
 		m_timerTrans.Reset();	// reset transition timer
 	}
@@ -461,7 +475,10 @@ bool CSloganDraw::ContinueIdle()
 	if (nNow < m_nWakeTime) {	// if more idle time remains
 #if SD_CAPTURE	// if capturing frames
 		return false;	// draw during idle, so idle gets captured
-#else
+#else	// not capturing frames
+		// if either palette is non-empty, assume color cycling
+		if (!m_palBkgnd.IsEmpty() || !m_palDraw.IsEmpty())
+			return false;	// color cycle during idle
 		// block instead of drawing, to reduce power usage
 		DWORD	nTimeout = static_cast<DWORD>(m_nWakeTime - nNow);
 		// wait for wake signal or timeout
@@ -486,6 +503,18 @@ bool CSloganDraw::ResetDrawingEffect()
 	DWRITE_TEXT_RANGE	tr = {0, nTextLen};	// for all characters in layout
 	CHECK(m_pTextLayout->SetDrawingEffect(NULL, tr));	// remove drawing effect
 	return true;
+}
+
+void CSloganDraw::UpdateColor(CPalette& palette, D2D1::ColorF& color, ID2D1SolidColorBrush* pBrush)
+{
+	double	fElapsedTime;
+	if (m_bIsRecording) {	// if recording
+		fElapsedTime = GetFrameTime();	// compute time from frame index
+	} else {	// not recording
+		fElapsedTime = m_timerTrans.Time() - m_fThreadStartTime;	// get time from timer
+	}
+	palette.CycleColor(fElapsedTime, color);	// cycle color based on elapsed time
+	pBrush->SetColor(color);	// update brush color
 }
 
 void CSloganDraw::OnCustomSlogan()
@@ -663,13 +692,15 @@ bool CSloganDraw::CaptureFrame()
 #if SD_CAPTURE >= SD_CAPTURE_MAKE_REF_IMAGES	// if regression testing
 void CSloganDraw::RegressionTestSetup()
 {
+	m_palBkgnd.RemoveAll();	// remove background palette
+	m_palDraw.RemoveAll();	// remove draw palette
 	m_aSlogan.RemoveAll();	// remove existing slogans
 	CSlogan	slogan;
 	slogan.m_sText = L"Your Text\n"	// 2nd line is hello world in Arabic
 		L"\x0645\x0631\x062D\x0628\x0627 "
 		L"\x0628\x0627\x0644\x0639\x0627\x0644\x0645";
-	slogan.m_sFontName = L"Helvetica";
-	slogan.m_fFontSize = 120.0f;
+	slogan.m_sFontName = L"Times New Roman";
+	slogan.m_fFontSize = 150.0f;
 	slogan.m_nFontWeight = DWRITE_FONT_WEIGHT_BLACK;
 	slogan.m_clrBkgnd = D2D1::ColorF::Black;
 	slogan.m_clrDraw = D2D1::ColorF::White;

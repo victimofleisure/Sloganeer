@@ -22,6 +22,7 @@
 		12		17nov25	add explode transition
 		13		18nov25	add per-slogan customization
 		14		22nov25	add random typewriter variant
+		15		25nov25	add color palettes and cycling
 
 */
 
@@ -121,11 +122,12 @@ protected:
 	bool	m_bIsGlyphRising;	// true if glyph is rising; for vertical converge
 	int		m_iGlyphLine;		// index of line text renderer is currently on
 	CIntArrayEx	m_aCharToLine;	// for each character of slogan, index of its line
+	double	m_fThreadStartTime;	// when thread was launched, in seconds since boot
 
 	// recording and capture
 	UINT	m_iFrame;			// frame counter
 	UINT	m_nSwapChainBuffers;	// number of swap chain buffers
-	double	m_fStartTime;		// start time of current state in seconds
+	double	m_fStateStartTime;	// start time of current state in seconds
 
 	// melt transition
 	float	m_fMeltMaxStroke;	// maximum outline stroke for melt effect, in DIPs
@@ -138,7 +140,6 @@ protected:
 	// random typewriter transition
 	CIntArrayEx	m_aCharIdx;		// array of character indices within current slogan
 	UINT	m_nCharsTyped;		// count of characters that have been typed so far
-	int		m_iTransVariant;	// index of transition variant; zero for default
 
 #if SD_CAPTURE	// if capturing frames
 	class CMyD2DCapture : public CD2DCapture {
@@ -173,6 +174,7 @@ protected:
 	bool	ContinueIdle();
 	bool	CreateStrokeStyle();
 	bool	ResetDrawingEffect();
+	void	UpdateColor(CPalette& palette, D2D1::ColorF& color, ID2D1SolidColorBrush* pBrush);
 	void	OnCustomSlogan();
 	bool	OnFontChange();
 	bool	OnTextChange();
@@ -192,13 +194,12 @@ protected:
 // Transitions, defined in separate .cpp file
 	void	TransScroll();
 	void	TransReveal();
-	static double	Lerp(double a, double b, double t);
 	void	TransFade();
 	void	TransTypewriter();
 	void	TransRandomTypewriter();
 	void	TransScale();
 	void	InitTiling(const CKD2DRectF& rText);
-	void	TransTile();
+	void	TransRandTile();
 	bool	TransConverge();
 	void	TransConvergeHorz(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);

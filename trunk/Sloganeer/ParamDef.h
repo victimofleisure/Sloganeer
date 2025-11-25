@@ -13,6 +13,7 @@
         03      12nov25	add easing
 		04		14nov25	add recording
         05      18nov25	add slogan members
+        06      25nov25	add color palette and cycling
 
 */
 
@@ -28,8 +29,12 @@ PARAMDEF(holddur)		// hold duration in seconds
 PARAMDEF(outdur)		// outgoing transition duration in seconds
 PARAMDEF(pausedur)		// pause duration in seconds
 PARAMDEF(seqtext)		// display slogans in sequential order instead of randomizing them
-PARAMDEF(bgclr)			// background color in hexadecimal
-PARAMDEF(drawclr)		// drawing color in hexadecimal
+PARAMDEF(bgclr)			// background color
+PARAMDEF(bgpal)			// background color palette file path
+PARAMDEF(bgfrq)			// background color cycling frequency in Hertz
+PARAMDEF(drawclr)		// drawing color
+PARAMDEF(drawpal)		// drawing color palette file path
+PARAMDEF(drawfrq)		// drawing color cycling frequency in Hertz
 PARAMDEF(nowrap)		// disables automatic word wrapping
 PARAMDEF(easing)		// percentage of motion to ease
 PARAMDEF(seed)			// starting point for random number generation
@@ -50,7 +55,8 @@ HELPEXAMPLEDEF(fontname)
 HELPEXAMPLEDEF(fontwt)
 HELPEXAMPLEDEF(transdur)
 HELPEXAMPLEDEF(bgclr)
-HELPEXAMPLEDEF(drawclr)
+HELPEXAMPLEDEF(bgclr2)
+HELPEXAMPLEDEF(bgclr3)
 					
 #undef HELPEXAMPLEDEF
 #endif
@@ -83,13 +89,14 @@ TRANSTYPEDEF(	SLD,	SCROLL_TB)		// scroll from top to bottom
 TRANSTYPEDEF(	SLU,	SCROLL_BT)		// scroll from bottom to top
 TRANSTYPEDEF(	RVH,	REVEAL_LR)		// reveal or cover from left to right
 TRANSTYPEDEF(	RVV,	REVEAL_TB)		// reveal or cover from top to bottom
-TRANSTYPEDEF(	TWR,	TYPEWRITER)		// reveal or cover one letter at a time
+TRANSTYPEDEF(	TWR,	TYPEWRITER)		// sequentially reveal or cover one letter at a time
+TRANSTYPEDEF(	RTW,	RAND_TYPE)		// randomly reveal or cover one letter at a time
 TRANSTYPEDEF(	FAD,	FADE)			// fade to or from background color
 TRANSTYPEDEF(	SCH,	SCALE_HORZ)		// scale horizontally
 TRANSTYPEDEF(	SCV,	SCALE_VERT)		// scale vertically
 TRANSTYPEDEF(	SCB,	SCALE_BOTH)		// scale both axes
 TRANSTYPEDEF(	SCS,	SCALE_SPIN)		// scale both axes and rotate
-TRANSTYPEDEF(	RTL,	TILE)			// reveal or cover with tiles
+TRANSTYPEDEF(	RTL,	RAND_TILE)		// reveal or cover with random tiles
 TRANSTYPEDEF(	CVH,	CONVERGE_HORZ)	// converge horizontally
 TRANSTYPEDEF(	CVV,	CONVERGE_VERT)	// converge vertically
 TRANSTYPEDEF(	MLT,	MELT)			// outline with increasing stroke width

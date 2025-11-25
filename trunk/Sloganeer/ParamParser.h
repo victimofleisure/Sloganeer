@@ -11,6 +11,7 @@
         01      12nov25	add easing
 		02		14nov25	add recording
 		03		15nov25	add color names
+        04      25nov25	support decimal colors
 
 */
 
@@ -27,6 +28,8 @@ public:
 // Operations
 	bool	ParseCommandLine();
 	static	CString	GetHelpString();
+	static	void	ScanColor(LPCTSTR pszParam, D2D1::ColorF& color);
+	static	bool	ScanDecimalColor(LPCTSTR pszParam, D2D1::ColorF& color);
 
 // Overrides
 	virtual void ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast);
@@ -59,13 +62,12 @@ protected:
 	CString	m_sHelpMarkdownPath;	// path for help markdown output file
 
 // Overrideables
-	virtual void OnError(int nErrID, LPCTSTR pszParam);
+	virtual void OnError(int nErrID, LPCTSTR pszParam, LPCTSTR pszErrInfo = NULL);
 
 // Helpers
 	template<typename T> void Convert(LPCTSTR pszParam, T& val);
 	template<typename T> void Scan(LPCTSTR pszParam, T& val);
 	template<typename T> bool Scan(LPCTSTR pszParam, T& val, T minVal, T maxVal);
-	static	bool	Scan(LPCTSTR pszParam, D2D1::ColorF& color);
 	static	void	BreakIntoLines(CString sText, CStringArrayEx& arrLine, int nMaxLine = 80);
 	static	CString	UnpackHelp(CString& sParam, int nParamHelpResID, bool bArgumentUpperCase = true);
 	static	CString	UnpackHelp(LPCTSTR pszParam, int nParamHelpResID, bool bArgumentUpperCase = true);

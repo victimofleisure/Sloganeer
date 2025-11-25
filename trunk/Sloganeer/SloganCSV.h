@@ -8,6 +8,7 @@
 		revision history:
 		rev		date	comments
         00      18nov25	initial version
+		01		25nov25	improve error reporting
 
 */
 
@@ -38,14 +39,14 @@ protected:
 	CSloganArray&	m_aSlogan;	// reference to slogan array
 	CIntArrayEx	m_aSelCol;	// array of selected column indices
 	int		m_iLine;	// index of line being parsed
-	int		m_iCol;		// index of column being parsed
+	int		m_iSelCol;	// index of selected column being parsed
 
 // Overrides
-	virtual void OnError(int nErrID, LPCTSTR pszParam);
+	virtual void OnError(int nErrID, LPCTSTR pszParam, LPCTSTR pszErrInfo = NULL);
 
 // Helpers
 	void	SetDefaultColumnLayout();
-	bool	CheckForHeaderRow(CString sLine);
+	bool	CheckForHeaderRow(CString sLine, bool& bHasHeaderRow);
 	bool	ParseLine(CString sLine);
 	bool	ParseTransType(int iCol, CString sToken, int& iTransType);
 	static bool	EscapeChars(CString& sText);

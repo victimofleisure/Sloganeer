@@ -8,6 +8,7 @@
 		revision history:
 		rev		date	comments
         00      24nov25	initial version
+		01		25nov25	decouple typewriter transitions
 
 */
 
@@ -89,11 +90,6 @@ void CSloganDraw::TransReveal()
 	m_pD2DDeviceContext->FillRectangle(rText, m_pBkgndBrush);	// draw text mask
 }
 
-double CSloganDraw::Lerp(double a, double b, double t)
-{
-	return t * b + (1 - t) * a;
-}
-
 void CSloganDraw::TransFade()
 {
 	double	fPhase = GetPhase(GP_INVERT);
@@ -108,12 +104,6 @@ void CSloganDraw::TransFade()
 
 void CSloganDraw::TransTypewriter()
 {
-	if (m_bIsTransStart)	// if start of transition
-		m_iTransVariant = rand() & 1;	// coin toss for variant
-	if (m_iTransVariant) {	// if variant selected
-		TransRandomTypewriter();	// do variant
-		return;	// skip default behavior
-	}
 	UINT	nTextLen = static_cast<UINT>(m_sSlogan.GetLength());
 	UINT	nCharsTyped = static_cast<UINT>(Round(nTextLen * m_fTransProgress));
 	DWRITE_TEXT_RANGE	trShow = {0, nCharsTyped};
@@ -212,7 +202,7 @@ void CSloganDraw::InitTiling(const CKD2DRectF& rText)
 	}
 }
 
-void CSloganDraw::TransTile()
+void CSloganDraw::TransRandTile()
 {
 	double	fPhase = GetPhase();
 	CKD2DRectF	rText;

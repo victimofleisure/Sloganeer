@@ -12,6 +12,7 @@
 		02		14nov25	add recording
 		03		15nov25	add color names
 		04		18nov25	add CSV support
+        05      25nov25	add color palette and cycling
 
 */
 
@@ -57,10 +58,14 @@ CParamParser::~CParamParser()
 {
 }
 
-void CParamParser::OnError(int nErrID, LPCTSTR pszParam)
+void CParamParser::OnError(int nErrID, LPCTSTR pszParam, LPCTSTR pszErrInfo)
 {
+	ASSERT(nErrID > 0);
+	ASSERT(pszParam != NULL);
 	CString	sErrMsg;
 	AfxFormatString1(sErrMsg, nErrID, pszParam);
+	if (pszErrInfo != NULL)
+		sErrMsg += '\n' + CString(pszErrInfo);
 	AfxMessageBox(sErrMsg);
 	m_bError = true;
 }
@@ -76,6 +81,7 @@ CONVERSION_FUNC_DEF(int, stoi);
 CONVERSION_FUNC_DEF(UINT, stoi);
 CONVERSION_FUNC_DEF(LONG, stoi);
 CONVERSION_FUNC_DEF(float, stof);
+CONVERSION_FUNC_DEF(double, stof);
 
 template<typename T> void CParamParser::Scan(LPCTSTR pszParam, T& val)
 {
@@ -111,20 +117,54 @@ template<> bool CParamParser::Scan(LPCTSTR pszParam, CSize& val, CSize minVal, C
 	return true;
 }
 
-
-bool CParamParser::Scan(LPCTSTR pszParam, D2D1::ColorF& color)
+void CParamParser::ScanColor(LPCTSTR pszParam, D2D1::ColorF& color)
 {
 	UINT32	clr = CSloganParams::FindColor(pszParam);	// find color name
 	if (clr != UINT_MAX) {	// if color name found
 		color = clr;
 	} else {	// not a color name
-		clr = std::stoul(pszParam, 0, 16);	// hexadecimal to unsigned long
-		if (_tcslen(pszParam) >= 8) {	// if eight-digit color
-			color = RGBAColorF(clr);	// assume RGBA, needs special handling
-		} else {	// regular six-digit color
-			color = D2D1::ColorF(clr);	// assume RGB
+		// conversion functions may throw std::exception
+		if (!ScanDecimalColor(pszParam, color)) {	// if not a decimal color
+			// assume hexadecimal color
+			clr = std::stoul(pszParam, 0, 16);	// hexadecimal to unsigned long
+			if (_tcslen(pszParam) >= 8) {	// if eight-digit color
+				color = RGBAColorF(clr);	// assume RGBA, requires special handling
+			} else {	// regular six-digit color
+				color = D2D1::ColorF(clr);	// assume RGB, default handling works
+			}
 		}
 	}
+}
+
+bool CParamParser::ScanDecimalColor(LPCTSTR pszParam, D2D1::ColorF& color)
+{
+	// supports three or four decimal values each ranging from 0 - 255, separated
+	// by commas and/or spaces; RGBA channel order, fractional values are allowed
+	static const LPCTSTR pszDelimiters = _T(", ");
+	CString	sParam(pszParam);
+	int	iStart = 0;	// for tokenize
+	const int nChannels = 4;	// RGBA color has four channels
+	float	aChanVal[nChannels] = {0, 0, 0, 255};	// default to opaque alpha
+	for (int iChan = 0; iChan < nChannels; iChan++) {	// for each color channel
+		CString	sToken(sParam.Tokenize(pszDelimiters, iStart));	// get next token
+		if (sToken.IsEmpty() || !isdigit(sToken[0])) {	// if token is empty or non-numeric
+			if (!iChan)	// if unable to parse first channel
+				return false;	// let caller try other formats
+			if (iChan < nChannels - 1)	// if required channel is missing
+				throw std::runtime_error("invalid color value");
+			break;	// optional alpha channel is missing; stop parsing
+		}
+		float fClr = std::stof(sToken.GetString());	// may throw exception
+		if (fClr < 0 || fClr > 255)	// if channel value out of range
+			throw std::runtime_error("color value out of range");
+		aChanVal[iChan] = fClr;
+	}
+	// color components parsed; normalize them and pass color to caller
+	color = D2D1::ColorF(
+		aChanVal[0] / 255,	// red
+		aChanVal[1] / 255,	// green
+		aChanVal[2] / 255,	// blue
+		aChanVal[3] / 255);	// alpha
 	return true;
 }
 
@@ -198,10 +238,22 @@ void CParamParser::ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast)
 					m_nPauseDuration = Round(fParam * 1000);	// convert to milliseconds
 					break;
 				case FLAG_bgclr:
-					Scan(pszParam, m_clrBkgnd);
+					ScanColor(pszParam, m_clrBkgnd);
+					break;
+				case FLAG_bgpal:
+					m_palBkgnd.Read(pszParam);
+					break;
+				case FLAG_bgfrq:
+					Scan(pszParam, m_palBkgnd.m_fCycleFreq);
 					break;
 				case FLAG_drawclr:
-					Scan(pszParam, m_clrDraw);
+					ScanColor(pszParam, m_clrDraw);
+					break;
+				case FLAG_drawpal:
+					m_palDraw.Read(pszParam);
+					break;
+				case FLAG_drawfrq:
+					Scan(pszParam, m_palDraw.m_fCycleFreq);
 					break;
 				case FLAG_seed:
 					Scan(pszParam, m_nRandSeed);
@@ -229,8 +281,8 @@ void CParamParser::ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast)
 				default:
 					NODEFAULTCASE;	// logic error
 				}
-			} catch (std::exception) {
-				OnError(IDS_ERR_PARAM_INVALID, m_aFlag[m_iFlag]);
+			} catch (const std::exception& e) {
+				OnError(IDS_ERR_PARAM_INVALID, m_aFlag[m_iFlag], CString(e.what()));
 			}
 			m_iFlag = -1;	// mark parameter consumed
 		} else {	// parameter not expected

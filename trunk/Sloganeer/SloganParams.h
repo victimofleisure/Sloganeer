@@ -12,6 +12,7 @@
 		02		14nov25	add recording
 		03		15nov25	add color names
 		04		18nov25	add CSV support
+        05      25nov25	add color palette and cycling
 
 */
 
@@ -23,6 +24,20 @@ class CSloganParams : public CSlogan {
 public:
 // Construction
 	CSloganParams();
+
+// Types
+	class CPalette : public CArrayEx<D2D1_COLOR_F, D2D1_COLOR_F&> {
+	public:
+	// Construction
+		CPalette();
+
+	// Operations
+		void	Read(LPCTSTR pszPath);
+		void	CycleColor(double fElapsedTime, D2D1::ColorF& color) const;
+
+	// Public data
+		double	m_fCycleFreq;	// color cycling frequency in Hertz
+	};
 
 // Public data
 	CSloganArray	m_aSlogan;	// array of slogans to display
@@ -36,6 +51,8 @@ public:
 	CSize	m_szRecFrameSize;	// recording frame size in pixels
 	float	m_fRecFrameRate;	// recording frame rate
 	float	m_fRecDuration;		// recording duration in seconds
+	CPalette	m_palBkgnd;		// background color palette
+	CPalette	m_palDraw;		// drawing color palette
 
 // Attributes
 	void	SetSlogans(const LPCTSTR *aSlogan, int nSlogans);

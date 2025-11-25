@@ -8,6 +8,7 @@
 		revision history:
 		rev		date	comments
         00      18nov25	initial version
+        01      25nov25	add customized column mask
 
 */
 
@@ -41,6 +42,7 @@ public:
 	static const D2D1::ColorF INVALID_COLOR;
 
 // Public data
+	UINT	m_nCustomColMask;	// bitmask indicating which columns are customized
 	CString	m_sText;			// text to display
 	CString	m_sFontName;		// font name
 	float	m_fFontSize;		// font size, in points
@@ -54,6 +56,7 @@ public:
 	int		m_aTransType[TRANS_DIRS];	// transition type for each direction
 
 // Attributes
+	bool	IsCustomized(int iCol) const;
 	template<typename T> static bool IsValid(const T& val) { return val >= 0; }
 	static bool IsValid(const CString& val) { return !val.IsEmpty(); }
 	static bool IsValid(const D2D1::ColorF& val) { return val.r >= 0; }
@@ -66,12 +69,19 @@ public:
 	CString	Format() const;
 
 // Operations
-	void	Customize(const CSlogan& slogan);
+	void	InitSloganColumns();
+	static double	Lerp(double a, double b, double t);
 
 protected:
 	static const LPCTSTR m_aColumnName[COLUMNS];	// column names
 	static const LPCTSTR m_aTransTypeCode[TRANS_TYPES];	// transition type codes
 };
+
+inline bool CSlogan::IsCustomized(int iCol) const
+{
+	ASSERT(iCol >= 0 && iCol < COLUMNS);
+	return (m_nCustomColMask & (1 << iCol)) != 0;
+}
 
 inline const LPCTSTR CSlogan::GetColumnName(int iCol)
 {
@@ -85,6 +95,11 @@ inline const LPCTSTR CSlogan::GetTransTypeCode(int iTransType)
 	// validate transition type index
 	ASSERT(iTransType >= 0 && iTransType < TRANS_TYPES);
 	return m_aTransTypeCode[iTransType];
+}
+
+inline double CSlogan::Lerp(double a, double b, double t)
+{
+	return t * b + (1 - t) * a;
 }
 
 class CSloganArray : public CArrayEx<CSlogan, CSlogan&> {
