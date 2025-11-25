@@ -2,7 +2,7 @@
 
 These TIFF files serve as Sloganeer's regression-test baselines.
 
-They were generated using 120-point Times New Roman Black (weight 900).
+They were generated using 150-point Times New Roman Black (weight 900).
 
 The test slogan has two lines: an English phrase ("Your Text"), and the
 Arabic phrase for "Hello World." These phrases were chosen specifically
