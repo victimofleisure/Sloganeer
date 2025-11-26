@@ -102,7 +102,7 @@ COLORREF CSloganParams::FindColor(LPCTSTR pszName)
 
 CSloganParams::CPalette::CPalette()
 {
-	m_fCycleFreq = 1;
+	m_fCycleFreq = 1;	// so cycling is visibly on if user forgets to specify frequency
 }
 
 void CSloganParams::CPalette::Read(LPCTSTR pszPath)
@@ -122,23 +122,30 @@ void CSloganParams::CPalette::Read(LPCTSTR pszPath)
 
 void CSloganParams::CPalette::CycleColor(double fElapsedTime, D2D1::ColorF& color) const
 {
+	// map elapsed time and cycle frequency onto a circular palette,
+	// interpolating between adjacent entries
+	ASSERT(m_fCycleFreq >= 0);	// negative frequency is unsupported
 	int	nColors = GetSize();
 	if (nColors <= 0)	// if empty palette
 		return;	// nothing to do
-	double	fPhase = fElapsedTime * m_fCycleFreq;
-	fPhase -= floor(fPhase);
-	fPhase *= nColors;
-	int	iColor0 = Trunc(fPhase);
+	// phase within the cycle, in [0,1]
+	double	fCyclePhase = fElapsedTime * m_fCycleFreq;
+	fCyclePhase -= floor(fCyclePhase);
+	// position along palette ring, in [0, nColors]
+	double	fPalPos = fCyclePhase * nColors;
+	int	iColor0 = Trunc(fPalPos);
 	if (iColor0 >= nColors)	// if color index out of range
 		iColor0 = 0;	// wrap around
 	int	iColor1 = iColor0 + 1;
 	if (iColor1 >= nColors)	// if color index out of range
 		iColor1 = 0;	// wrap around
+	// local phase between these two colors, in [0,1]
+	double	fBlend = fPalPos - floor(fPalPos);
 	const D2D1_COLOR_F&	clr0 = GetAt(iColor0);
 	const D2D1_COLOR_F&	clr1 = GetAt(iColor1);
-	fPhase -= floor(fPhase);
 	color = D2D1::ColorF(
-		DTF(Lerp(clr0.r, clr1.r, fPhase)),
-		DTF(Lerp(clr0.g, clr1.g, fPhase)),
-		DTF(Lerp(clr0.b, clr1.b, fPhase)));
+		DTF(Lerp(clr0.r, clr1.r, fBlend)),
+		DTF(Lerp(clr0.g, clr1.g, fBlend)),
+		DTF(Lerp(clr0.b, clr1.b, fBlend)),
+		DTF(Lerp(clr0.a, clr1.a, fBlend)));
 }

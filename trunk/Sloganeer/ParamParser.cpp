@@ -147,7 +147,7 @@ bool CParamParser::ScanDecimalColor(LPCTSTR pszParam, D2D1::ColorF& color)
 	float	aChanVal[nChannels] = {0, 0, 0, 255};	// default to opaque alpha
 	for (int iChan = 0; iChan < nChannels; iChan++) {	// for each color channel
 		CString	sToken(sParam.Tokenize(pszDelimiters, iStart));	// get next token
-		if (sToken.IsEmpty() || !isdigit(sToken[0])) {	// if token is empty or non-numeric
+		if (sToken.IsEmpty() || !_istdigit(sToken[0])) {	// if token is empty or non-numeric
 			if (!iChan)	// if unable to parse first channel
 				return false;	// let caller try other formats
 			if (iChan < nChannels - 1)	// if required channel is missing
