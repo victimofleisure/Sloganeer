@@ -75,27 +75,28 @@ The slogans file must be in either ANSI or UTF-8 format. To use non-ANSI charact
 ### Transitions
 
 |#|Code|Name|Description|
-|-|----|----|-----------|
-|1.|SLL|Scroll LR|Scroll from left to right|
-|2.|SLR|Scroll RL|Scroll from right to left|
-|3.|SLD|Scroll TB|Scroll from top to bottom|
-|4.|SLU|Scroll BT|Scroll from bottom to top|
-|5.|RVH|Reveal LR|Reveal or cover from left to right|
-|6.|RVV|Reveal TB|Reveal or cover from top to bottom|
-|7.|TWR|Typewriter|Reveal or cover one letter at a time|
-|8.|FAD|Fade|Fade to or from background color|
-|9.|SCH|Scale Horz|Scale horizontally|
-|10.|SCV|Scale Vert|Scale vertically|
-|11.|SCB|Scale Both|Scale both axes|
-|12.|SCS|Scale Spin|Scale both axes and rotate|
-|13.|RTL|Tile|Reveal or cover with tiles|
-|14.|CVH|Converge H|Converge horizontally|
-|15.|CVV|Converge V|Converge vertically|
-|16.|MLT|Melt|Melt or grow by erasing outline|
-|17.|ELV|Elevator|Per-character horizontal reveal|
-|18.|CLK|Clock|Per-character radial reveal|
-|19.|SKW|Skew|Tip over or return to upright|
-|20.|XPL|Explode|Explode each letter into fragments|
+|-|-|-|-|
+|1|SLL|Scroll LR|Scroll from left to right|
+|2|SLR|Scroll RL|Scroll from right to left|
+|3|SLD|Scroll TB|Scroll from top to bottom|
+|4|SLU|Scroll BT|Scroll from bottom to top|
+|5|RVH|Reveal LR|Reveal or cover from left to right|
+|6|RVV|Reveal TB|Reveal or cover from top to bottom|
+|7|TWR|Typewriter|Sequentially reveal or cover one letter at a time|
+|8|RTW|Rand Type|Randomly reveal or cover one letter at a time|
+|9|FAD|Fade|Fade to or from background color|
+|10|SCH|Scale Horz|Scale horizontally|
+|11|SCV|Scale Vert|Scale vertically|
+|12|SCB|Scale Both|Scale both axes|
+|13|SCS|Scale Spin|Scale both axes and rotate|
+|14|RTL|Rand Tile|Reveal or cover with random tiles|
+|15|CVH|Converge H|Converge horizontally|
+|16|CVV|Converge V|Converge vertically|
+|17|MLT|Melt|Melt or grow by erasing outline|
+|18|ELV|Elevator|Per-character horizontal reveal|
+|19|CLK|Clock|Per-character radial reveal|
+|20|SKW|Skew|Tip over or return to upright|
+|21|XPL|Explode|Explode each letter into fragments|
 
 ### Defaults
 
