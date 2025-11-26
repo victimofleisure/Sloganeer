@@ -76,7 +76,7 @@ The slogans file must be in either ANSI or UTF-8 format. To use non-ANSI charact
 
 Sloganeer supports an alternate file format that lets you customize the properties of each slogan, including its font, colors, timing and transition types. It’s a well-known format called comma-separated values, also known as CSV. The CSV file can be ANSI or UTF-8, but UTF-8 is strongly recommended for languages other than English.
 
-CSV format supports the columns listed below. Most of these columns have the same name and meaning as a command line option, so they’re only described briefly here; refer to the [command line](#command-line) reference for additional information.
+CSV format supports the columns listed below. Most of these columns have the same name and meaning as a command line option, so they’re only described briefly here; refer to the [command line](#command-line) reference for additional information. Empty or omitted columns revert to their default values.
 
 |Column|Description|
 |-|-|
@@ -113,7 +113,7 @@ No header row, specifying a subset of columns (text, fontname, drawclr):
 My Slogan,Verdana,,,,Red
 ```
 
-Displays the text “My Slogan” in Verdana, drawn red. The commas are necessary in order to skip fontsize, fontwt, and bgclr. Empty or omitted columns retain their default values. The commas could be avoided by using a header row:
+Displays the text “My Slogan” in Verdana, drawn red. The commas are necessary in order to skip fontsize, fontwt, and bgclr. The commas could be avoided by using a header row:
 
 ```
 text,fontname,drawclr
