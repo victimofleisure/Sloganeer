@@ -178,7 +178,7 @@ Randomized slogan order, white text on black background, 150 point Arial Black (
 
 ### Shortcuts
 
-To enter or exit full screen mode, use the app's system menu or the shortcut key F11.
+To enter or exit full screen mode, use the app’s system menu or the shortcut key F11.
 
 ### Installation
 
@@ -186,5 +186,5 @@ There is no installer. Unzip the distribution file and run the executable. The a
 
 ### Development
 
-* There's a [development blog](https://sloganeers.blogspot.com/). See you there!
+* There’s a [development blog](https://sloganeers.blogspot.com/). See you there!
 * The issues list is [here](SloganeerToDo.md).
