@@ -25,7 +25,7 @@ Simple example: `Sloganeer myslogans.txt -fontname Calibri -fontsize 120`
 |&#8209;seqtext|Display slogans sequentially instead of shuffling them.|
 |&#8209;bgclr&nbsp;COLOR|Background color as a hexadecimal value, comma-separated decimal values, or an HTML color name.|
 |&#8209;bgpal&nbsp;PATH|Path to a background color palette: a text file with one color per line, each consisting of a hexadecimal value, comma-separated decimal values, or an HTML color name.|
-|&#8209;bgfrq&nbsp;FREQ|Background color cycling frequency in Hertz; only effective if a drawing color palette is specified.|
+|&#8209;bgfrq&nbsp;FREQ|Background color cycling frequency in Hertz; only effective if a background color palette is specified.|
 |&#8209;drawclr&nbsp;COLOR|Drawing color as a hexadecimal value, comma-separated decimal values, or an HTML color name.|
 |&#8209;drawpal&nbsp;PATH|Path to a drawing color palette: a text file with one color per line, each consisting of a hexadecimal value, comma-separated decimal values, or an HTML color name.|
 |&#8209;drawfrq&nbsp;FREQ|Drawing color cycling frequency in Hertz; only effective if a drawing color palette is specified.|
