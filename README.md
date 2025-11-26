@@ -76,7 +76,7 @@ The slogans file must be in either ANSI or UTF-8 format. To use non-ANSI charact
 
 Sloganeer supports an alternate file format that lets you customize the properties of each slogan, including its font, colors, timing and transition types. It’s a well-known format called comma-separated values, also known as CSV. The CSV file can be ANSI or UTF-8, but UTF-8 is strongly recommended for languages other than English.
 
-CSV format supports the columns listed below. Most of these columns have the same name and meaning as a command line option, so they’re only described briefly here; refer to the [command line](#command-line) reference for additional information. Empty or omitted columns revert to their default values.
+CSV format supports the columns listed below. Most of these columns have the same name and meaning as a command line option, so they’re only described briefly here; refer to the [command line](#command-line) reference for additional information.
 
 |Column|Description|
 |-|-|
@@ -92,6 +92,8 @@ CSV format supports the columns listed below. Most of these columns have the sam
 |pausedur|pause duration in seconds|
 |intrans|incoming transition type|
 |outtrans|outgoing transition type|
+
+If a column is omitted, the value is obtained from the corresponding command line option, or if none exists, from an application default.
 
 Note that if you only specify the transdur column, it applies to both incoming and outgoing transitions. To make the outgoing transition a different duration from the incoming transition, you must also specify the outdur column.
 
