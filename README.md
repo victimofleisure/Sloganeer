@@ -97,7 +97,7 @@ Note that if you only specify the transdur column, it applies to both incoming a
 
 A transition type can be specified as a zero-based index or as a mnemonic transition code. The codes are preferable as they’re easier to remember and indices may change. The codes are given in the table of supported [transitions](#transitions) elsewhere in this document. Transition codes are case-insensitive.
 
-The CSV can optionally contain a header row, indicating which columns are specified. This lets you specify a subset of the columns without typing lots of commas, and also lets you specify the columns in any order. Some examples follow.
+The CSV can optionally start with a header row, indicating which columns are specified. This lets you specify a subset of the columns without typing lots of commas, and also lets you specify the columns in any order. Some examples follow.
 
 No header row, all columns specified:
 
