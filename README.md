@@ -23,12 +23,16 @@ Simple example: `Sloganeer myslogans.txt -fontname Calibri -fontsize 120`
 |&#8209;outdur&nbsp;SECS|Outgoing transition duration in seconds. Only needed if outgoing transitions should have a different duration than incoming transitions.|
 |&#8209;pausedur&nbsp;SECS|Duration of pause between slogans, in seconds.|
 |&#8209;seqtext|Display slogans sequentially instead of shuffling them.|
-|&#8209;bgclr&nbsp;COLOR|Background color as a hexadecimal value or an HTML color name.|
-|&#8209;drawclr&nbsp;COLOR|Drawing color as a hexadecimal value or an HTML color name.|
+|&#8209;bgclr&nbsp;COLOR|Background color as a hexadecimal value, comma-separated decimal values, or an HTML color name.|
+|&#8209;bgpal&nbsp;PATH|Path to a background color palette: a text file with one color per line, each consisting of a hexadecimal value, comma-separated decimal values, or an HTML color name.|
+|&#8209;bgfrq&nbsp;FREQ|Background color cycling frequency in Hertz; only effective if a drawing color palette is specified.|
+|&#8209;drawclr&nbsp;COLOR|Drawing color as a hexadecimal value, comma-separated decimal values, or an HTML color name.|
+|&#8209;drawpal&nbsp;PATH|Path to a drawing color palette: a text file with one color per line, each consisting of a hexadecimal value, comma-separated decimal values, or an HTML color name.|
+|&#8209;drawfrq&nbsp;FREQ|Drawing color cycling frequency in Hertz; only effective if a drawing color palette is specified.|
 |&#8209;nowrap|Disables automatic word wrapping.|
 |&#8209;easing&nbsp;PCT|The percentage of motion to ease. Only applies to transition types that support easing.|
 |&#8209;seed|Starting point for random number generation; integer only. If not specified, seed is current time so that each run is different.|
-|&#8209;record&nbsp;PATH|Destination folder for recording an image sequence.|
+|&#8209;record&nbsp;PATH|Destination folder path for recording an image sequence.|
 |&#8209;recsize&nbsp;SIZE|Recording frame width and height in pixels, separated by a lowercase 'x' as in 640x480.|
 |&#8209;recrate&nbsp;FPS|Recording frame rate in frames per second.|
 |&#8209;recdur&nbsp;SECS|Recording duration in seconds.|
@@ -43,8 +47,9 @@ Simple example: `Sloganeer myslogans.txt -fontname Calibri -fontsize 120`
 |&#8209;fontname&nbsp;Georgia|Set the font name to Georgia.|
 |&#8209;fontwt&nbsp;400|Set the font weight to 400.|
 |&#8209;transdur&nbsp;2.5|Set the transition duration to 2.5 seconds.|
-|&#8209;bgclr&nbsp;A9A9A9|Set the background color to dark gray.|
-|&#8209;drawclr&nbsp;green|Set the drawing color to green.|
+|&#8209;bgclr&nbsp;FF0000|Set the background color to red.|
+|&#8209;bgclr&nbsp;255,0,0|Set the background color to red.|
+|&#8209;bgclr&nbsp;red|Set the background color to red.|
 
 Each slogan cycles through the following four states:
 
