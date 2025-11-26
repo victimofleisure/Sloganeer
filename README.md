@@ -138,7 +138,7 @@ The slogan text also supports a few common escape sequences:
 |-|-|
 |\\n |newline|
 |\\t |tab|
-|\\\\ |backspace|
+|\\\\ |backslash|
 
 For example, this slogan forces a line break between “My Slogan” and “has two lines”:
 
