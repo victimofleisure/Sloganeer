@@ -1,6 +1,6 @@
 # Sloganeer
 
-## Lightweight signage app that displays text with animated transitions.
+## Artisinal signage app that displays text with animated transitions.
 
 # Command line
 
