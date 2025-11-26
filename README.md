@@ -72,6 +72,80 @@ The slogans file is a plain text file containing the slogans to be displayed. Ea
 
 The slogans file must be in either ANSI or UTF-8 format. To use non-ANSI characters, UTF-8 format is strongly recommended. UTF-8 supports nearly all languages including Chinese, Japanese, Arabic, and Hindi.
 
+### CSV slogans file
+
+Sloganeer supports an alternate file format that lets you customize the properties of each slogan, including its font, colors, timing and transition types. It’s a well-known format called comma-separated values, also known as CSV. The CSV file can be ANSI or UTF-8, but UTF-8 is strongly recommended for languages other than English.
+
+CSV format supports the columns listed below. Most of these columns have the same name and meaning as a command line option, so they’re only described briefly here; refer to the [command line](#command-line) reference for additional information.
+
+|Column|Description|
+|-|-|
+|text|slogan text|
+|fontname|font name|
+|fontsize|font size in points|
+|fontwt|font weight, from 1 - 999|
+|bgclr|background color|
+|drawclr|drawing color|
+|transdur|transition duration in seconds|
+|holddur|hold duration in seconds|
+|outdur|outgoing transition duration in seconds|
+|pausedur|pause duration in seconds|
+|intrans|incoming transition type|
+|outtrans|outgoing transition type|
+
+Note that if you only specify the transdur column, it applies to both incoming and outgoing transitions. To make the outgoing transition a different duration from the incoming transition, you must also specify the outdur column.
+
+A transition type can be specified as a zero-based index or as a mnemonic transition code. The codes are preferable as they’re easier to remember and indices may change. The codes are given in the table of supported [transitions](#transitions) elsewhere in this document. Transition codes are case-insensitive.
+
+The CSV can optionally contain a header row, indicating which columns are specified. This lets you specify a subset of the columns without typing lots of commas, and also lets you specify the columns in any order. Some examples follow.
+
+No header row, all columns specified:
+
+```
+My Slogan,Verdana,100,400,Green,Red,2,4,3,1,mlt,clk
+```
+
+Displays the text “My Slogan” in 100-point Verdana, normal weight, drawn red on a green background. The timing is 2 seconds incoming, 4 seconds hold, 3 seconds outgoing, and 1 second pause. The transition types are Melt incoming, and Clock outgoing.
+
+No header row, specifying a subset of columns (text, fontname, drawclr):
+
+```
+My Slogan,Verdana,,,,Red
+```
+
+Displays the text “My Slogan” in Verdana, drawn red. The commas are necessary in order to skip fontsize, fontwt, and bgclr. Empty or omitted columns retain their default values. The commas could be avoided by using a header row:
+
+```
+text,fontname,drawclr
+My Slogan,Verdana,Red
+```
+
+If your slogan text contains commas, you must enclose the entire slogan in double quotes:
+
+```
+"My slogan, has a comma"
+```
+
+And if your slogan also contains double quotes, you must double them:
+
+```
+"My ""slogan"", has a comma"
+```
+
+The slogan text also supports a few common escape sequences:
+
+|Seq|Meaning|
+|-|-|
+|\\n |newline|
+|\\t |tab|
+|\\\\ |backspace|
+
+For example, this slogan forces a line break between “My Slogan” and “has two lines”:
+
+```
+My slogan\nhas two lines
+```
+
 ### Transitions
 
 |#|Code|Name|Description|
