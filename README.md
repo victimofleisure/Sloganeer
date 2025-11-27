@@ -174,6 +174,14 @@ My slogan\nhas two lines
 |20|SKW|Skew|Tip over or return to upright|
 |21|XPL|Explode|Explode each letter into fragments|
 
+### Colors
+
+Colors can be specified in three ways.
+
+1. Hexadecimal color value, consisting of up to eight characters, each of which is [0-9] or [A-F]. The color channels are expected to be in RGB or RGBA order. If six or less characters are specified, RGB is assumed and the alpha channel defaults to opaque. The value is case-insensitive. Do not prefix the value with a pound sign. Example (for Crimson): `DC143C`
+2. Decimal color value, consisting of either three or four decimal numbers, each of which is [0-255], separated by commas and/or spaces. The color channels are expected to be in RGB or RGBA order. If three numbers are specified, RGB is assumed and the alpha channel defaults to opaque. Example (for Crimson): `220, 20, 60`
+3. HTML color name. The name is must be one of the 140 defined [color names](https://www.w3schools.com/tags/ref_colornames.asp). Color names are case-insensitive. Example (for Crimson): `Crimson`
+
 ### Defaults
 
 Randomized slogan order, white text on black background, 150 point Arial Black (weight 900). Each transition takes two seconds, with one second of hold time, and no pause between slogans. Easing is 15% for transitions that support it. Recording defaults to 1920x1080, 60 FPS, one minute.
