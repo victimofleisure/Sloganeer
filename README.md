@@ -176,7 +176,7 @@ My slogan\nhas two lines
 
 ### Colors
 
-Colors can be specified in three ways. This applies to the [command line](#command-line), [CSV format](#csv-slogans-file), and color palettes.
+Colors can be specified in three ways. This applies to the [command line](#command-line), [CSV format](#csv-slogans-file), and palette files.
 
 1. Hexadecimal color value, consisting of up to eight characters, each of which is [0-9] or [A-F]. The color channels are expected to be in RGB or RGBA order. If six or less characters are specified, RGB is assumed and the alpha channel defaults to opaque. The value is case-insensitive. Do not prefix the value with a pound sign. Example: `DC143C`
 
