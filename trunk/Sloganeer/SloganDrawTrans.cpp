@@ -9,6 +9,7 @@
 		rev		date	comments
         00      24nov25	initial version
 		01		25nov25	decouple typewriter transitions
+        02      27nov25	add submarine transition
 
 */
 
@@ -507,7 +508,7 @@ bool CSloganDraw::TransExplode(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MOD
 	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
 {
 	const DWRITE_GLYPH_RUN& run = *pGlyphRun;
-	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun);
+	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun, true);	// tight vertical bounds
 	CKD2DRectF	rGlyph;
 	UINT	iTemp;
 	if (m_bIsTransStart) {	// if start of transition
@@ -524,7 +525,8 @@ bool CSloganDraw::TransExplode(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MOD
 				run.glyphIndices + iGlyph, run.glyphAdvances + iGlyph, 
 				run.glyphOffsets + iGlyph, 1, run.isSideways, run.bidiLevel & 1, pGeomSink));
 			CHECK(pGeomSink->Close());	// close geometry sink
-			CHECK(m_triSink.TessellateGlyph(ptBaselineOrigin, rGlyph, pPathGeom));	// tessellate glyph
+			CD2DPointF	ptLayoutOrigin(fOriginX, ptBaselineOrigin.y);	// layout left edge and baseline
+			CHECK(m_triSink.TessellateGlyph(ptLayoutOrigin, rGlyph, pPathGeom));	// tessellate glyph
 		}
 		iterGlyph.Reset();	// reset glyph iterator, as we reuse it below
 	}
@@ -560,4 +562,23 @@ bool CSloganDraw::TransExplode(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MOD
 		m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
 	}
 	return true;
+}
+
+bool CSloganDraw::TransSubmarine()
+{
+	CHECK(m_pTextLayout->Draw(0, this, 0, 0));	// call text renderer
+	return true;
+}
+
+void CSloganDraw::TransSubmarine(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
+{
+	double	fPhase = GetPhase(GP_EASING);
+	CKD2DRectF	rRun;
+	GetRunBounds(rRun, ptBaselineOrigin, pGlyphRun, true);	// tight vertical bounds
+	rRun.InflateRect(AA_MARGIN, AA_MARGIN);
+	ptBaselineOrigin.y += DTF(rRun.Height() * fPhase);
+	m_pD2DDeviceContext->PushAxisAlignedClip(rRun, D2D1_ANTIALIAS_MODE_ALIASED);
+	m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
+	m_pD2DDeviceContext->PopAxisAlignedClip();
 }

@@ -23,6 +23,7 @@
 		13		18nov25	add per-slogan customization
 		14		22nov25	add random typewriter variant
 		15		25nov25	add color palettes and cycling
+        16      27nov25	add submarine transition
 
 */
 
@@ -180,7 +181,10 @@ protected:
 	bool	OnTextChange();
 	CD2DSizeF	GetTextBounds(CKD2DRectF& rText) const;
 	void	DrawTextBounds();
-	void	DrawGlyphBounds(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun);
+	void	DrawGlyphBounds(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun, 
+		bool bTightVertBounds = false);
+	void	GetRunBounds(CKD2DRectF& rRun, CD2DPointF ptBaselineOrigin, 
+		DWRITE_GLYPH_RUN const* pGlyphRun, bool bTightVertBounds = false) const;
 	double	GetPhase(UINT nFlags = 0) const;
 	double	GetFrameRate();
 	double	GetFrameTime() const;
@@ -223,6 +227,9 @@ protected:
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
 	bool	TransExplode();
 	bool	TransExplode(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
+	bool	TransSubmarine();
+	void	TransSubmarine(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
 };
 

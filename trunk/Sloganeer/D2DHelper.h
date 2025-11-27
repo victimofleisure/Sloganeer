@@ -13,6 +13,7 @@
 		04		18nov25	add RGBA color init
 		05		23nov25	add font metrics member to glyph iterator
 		06		24nov25	add get origin method to glyph iterator
+		07		27nov25	add tight vertical bounds flag to glyph iterator
 
 */
 
@@ -36,12 +37,15 @@ public:
 	CD2DPointF	TopLeft() const;
 	CD2DPointF	BottomRight() const;
 	CD2DPointF	CenterPoint() const;
+	bool	IsNormal() const;
 
 // Operations
 	void	OffsetRect(FLOAT dx, FLOAT dy);
 	void	InflateRect(FLOAT dx, FLOAT dy);
 	void	SetRectEmpty();
 	bool	PtInRect(const D2D_POINT_2F& pt) const;
+	void	Normalize();
+	void	Union(const CKD2DRectF& r);
 };
 
 inline CKD2DRectF::CKD2DRectF(const CRect& rect) : CD2DRectF(rect)
@@ -106,6 +110,11 @@ inline CD2DPointF CKD2DRectF::CenterPoint() const
 	return CD2DPointF(left + Width() / 2, top + Height() / 2);
 }
 
+inline bool CKD2DRectF::IsNormal() const
+{
+	return left <= right && top <= bottom;
+}
+
 inline void CKD2DRectF::OffsetRect(FLOAT dx, FLOAT dy)
 { 
 	left += dx;
@@ -135,9 +144,25 @@ inline bool CKD2DRectF::PtInRect(const D2D_POINT_2F& pt) const
 	return pt.x >= left && pt.y >= top && pt.x < right && pt.y < bottom;
 }
 
+inline void CKD2DRectF::Normalize()
+{
+	if (left > right)
+		Swap(left, right);
+	if (top > bottom)
+		Swap(top, bottom);
+}
+
+inline void CKD2DRectF::Union(const CKD2DRectF& r)
+{
+	left = min(left, r.left);
+	top = min(top, r.top);
+	right = max(right, r.right);
+	bottom = max(bottom, r.bottom);
+}
+
 class CGlyphIter {
 public:
-	CGlyphIter(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun);
+	CGlyphIter(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun, bool bTightVertBounds = false);
 	//
 	// Note that rGlyph is the painted area of the glyph, also known as its ink
 	// box or black box, already in world coordinates. Do NOT use rGlyph as the
@@ -156,6 +181,7 @@ protected:
 	float	m_fDescent;		// scaled descent
 	UINT	m_iGlyph;		// index of current glyph
 	float	m_fOriginX;		// original origin X for reset
+	bool	m_bTightVertBounds;	// if true, compute tight vertical bounds, else use ascent
 };
 
 inline CD2DPointF CGlyphIter::GetOrigin() const

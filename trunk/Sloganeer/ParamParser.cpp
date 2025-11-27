@@ -13,6 +13,7 @@
 		03		15nov25	add color names
 		04		18nov25	add CSV support
         05      25nov25	add color palette and cycling
+		06		27nov25	fix decimal color false positive
 
 */
 
@@ -142,6 +143,10 @@ bool CParamParser::ScanDecimalColor(LPCTSTR pszParam, D2D1::ColorF& color)
 	// by commas and/or spaces; RGBA channel order, fractional values are allowed
 	static const LPCTSTR pszDelimiters = _T(", ");
 	CString	sParam(pszParam);
+	sParam.TrimLeft();	// remove leading and trailing white space
+	sParam.TrimRight();
+	if (sParam.FindOneOf(pszDelimiters) < 0)	// if no delimiters found
+		return false;	// let caller try other formats
 	int	iStart = 0;	// for tokenize
 	const int nChannels = 4;	// RGBA color has four channels
 	float	aChanVal[nChannels] = {0, 0, 0, 255};	// default to opaque alpha

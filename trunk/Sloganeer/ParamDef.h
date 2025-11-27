@@ -14,6 +14,7 @@
 		04		14nov25	add recording
         05      18nov25	add slogan members
         06      25nov25	add color palette and cycling
+        07      27nov25	add submarine transition
 
 */
 
@@ -104,6 +105,7 @@ TRANSTYPEDEF(	ELV,	ELEVATOR)		// per-character horizontal reveal
 TRANSTYPEDEF(	CLK,	CLOCK)			// per-character radial reveal
 TRANSTYPEDEF(	SKW,	SKEW)			// tip over or return to upright
 TRANSTYPEDEF(	XPL,	EXPLODE)		// explode each letter into fragments
+TRANSTYPEDEF(	SUB,	SUBMARINE)		// ascend into or descend from clip rectangle
 					
 #undef TRANSTYPEDEF
 #endif

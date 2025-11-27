@@ -9,6 +9,7 @@
 		00		11nov25	initial version
 		01		23nov25	fix incorrect x-axis bounds in glyph iterator
 		02		24nov25	fix glyph iterator handling of RTL languages
+		03		27nov25	add tight vertical bounds flag to glyph iterator
 
 */
 
@@ -21,7 +22,7 @@
 
 #define DTF(x) static_cast<float>(x)
 
-CGlyphIter::CGlyphIter(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun)
+CGlyphIter::CGlyphIter(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun, bool bTightVertBounds)
 	: m_ptOrigin(ptBaselineOrigin)
 {
 	ASSERT(pGlyphRun != NULL);
@@ -33,6 +34,7 @@ CGlyphIter::CGlyphIter(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGly
 	m_fDescent = fontMetrics.descent * m_fEmScale;
 	m_iGlyph = 0;
 	m_fOriginX = m_ptOrigin.x;
+	m_bTightVertBounds = bTightVertBounds;
 }
 
 bool CGlyphIter::GetNext(UINT& iGlyph, CKD2DRectF& rGlyph)
@@ -58,8 +60,17 @@ bool CGlyphIter::GetNext(UINT& iGlyph, CKD2DRectF& rGlyph)
 		rGlyph.left = m_ptOrigin.x + fLeftBearing;
 		rGlyph.right = m_ptOrigin.x + fAdvanceWidth - fRightBearing;
 	}
-	rGlyph.top = m_ptOrigin.y - m_fAscent;
-	rGlyph.bottom = m_ptOrigin.y + m_fDescent;
+	if (m_bTightVertBounds) {	// if tight vertical bound requested
+		float fTopBearing = gm.topSideBearing * m_fEmScale;
+		float fAdvanceHeight = gm.advanceHeight * m_fEmScale;
+		float fBottomBearing = gm.bottomSideBearing * m_fEmScale;
+		float fVertOriginY = gm.verticalOriginY * m_fEmScale;
+		rGlyph.top = m_ptOrigin.y - fVertOriginY + fTopBearing;
+		rGlyph.bottom = m_ptOrigin.y - fVertOriginY + fAdvanceHeight - fBottomBearing;
+	} else {
+		rGlyph.top = m_ptOrigin.y - m_fAscent;
+		rGlyph.bottom = m_ptOrigin.y + m_fDescent;
+	}
 	if (m_pGlyphRun->glyphOffsets) {	// if offsets specified
 		const DWRITE_GLYPH_OFFSET& goff = m_pGlyphRun->glyphOffsets[iGlyph];
 		// advanceOffset is along the run direction, ascenderOffset is along Y

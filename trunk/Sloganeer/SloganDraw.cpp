@@ -27,6 +27,7 @@
 		17		24nov25	in explode transition, set bidi level
 		18		24nov25	move transitions to separate cpp file
 		19		25nov25	add color palettes and cycling
+        20      27nov25	add submarine transition
 
 */
 
@@ -315,6 +316,9 @@ bool CSloganDraw::OnDraw()
 	case TT_EXPLODE:
 		TransExplode();
 		break;
+	case TT_SUBMARINE:
+		TransSubmarine();
+		break;
 	default:
 		NODEFAULTCASE;	// logic error
 	}
@@ -401,6 +405,9 @@ HRESULT CSloganDraw::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOr
 		break;
 	case TT_EXPLODE:
 		TransExplode(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
+		break;
+	case TT_SUBMARINE:
+		TransSubmarine(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
 		break;
 	default:
 		NODEFAULTCASE;
@@ -595,11 +602,12 @@ void CSloganDraw::DrawTextBounds()
 	m_pD2DDeviceContext->DrawRectangle(rText, m_pDrawBrush);
 }
 
-void CSloganDraw::DrawGlyphBounds(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun)
+void CSloganDraw::DrawGlyphBounds(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun,
+	bool bTightVertBounds)
 {
 	CKD2DRectF	rGlyph;
 	UINT	iGlyph;
-	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun);
+	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun, bTightVertBounds);
 	// bounding boxes can overlap; alternating between two colors helps distinguish them
 	static const D2D1_COLOR_F	aClr[2] = {{0, 1, 0, 1}, {1, 0, 0, 1}};	// green and red
 	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
@@ -610,6 +618,19 @@ void CSloganDraw::DrawGlyphBounds(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN 
 		CD2DSizeF	szRT = m_pD2DDeviceContext->GetSize();
 		m_pD2DDeviceContext->DrawLine(CD2DPointF(0, ptBaselineOrigin.y),
 			CD2DPointF(szRT.width, ptBaselineOrigin.y), m_pDrawBrush);	// draw baseline too
+	}
+}
+
+void CSloganDraw::GetRunBounds(CKD2DRectF& rRun, CD2DPointF ptBaselineOrigin, 
+	DWRITE_GLYPH_RUN const* pGlyphRun, bool bTightVertBounds) const
+{
+	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun, bTightVertBounds);
+	CKD2DRectF	rGlyph;
+	UINT	iGlyph;
+	if (iterGlyph.GetNext(iGlyph, rRun)) {	// set destination to first glyph's rectangle
+		while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each remaining glyph
+			rRun.Union(rGlyph);	// union destination with this glyph's rectangle
+		}
 	}
 }
 

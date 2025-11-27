@@ -9,6 +9,7 @@
 		rev		date	comments
         00      16nov25	initial version
 		01		24nov25	add bidi level for RTL languages
+		02		27nov25	radiate from center of glyph's ink box
 
 */
 
@@ -41,15 +42,47 @@ void CTriangleSink::OnDraw()
 	m_iCurGlyph = 0;
 }
 
+// The triangles returned by ID2D1PathGeometry::Tessellate are in layout box
+// relative coordinates. The X coordinate is relative to either the left side
+// of the layout box (for LTR languages, X increasing to the right), or its
+// right side (for RTL languages, X increasing to the left). The Y coordinate
+// is relative to the baseline. Note that points above the baseline will have 
+// negative Y values.
+//
+// The rGlyph argument, in contrast, is the glyph ink box in world coordinates:
+// the smallest bounding rectangle that the glyph fits within. This rectangle
+// is obtained from the glyph iterator's GetNext method. Note that for a tight
+// fit in the Y axis, the CGlyphIter constructor's bTightVertBounds flag must
+// be set to true. This is necessary so that the triangles radiate from the
+// center of the glyph's ink box, and NOT from the center of its layout box.
+// This can be tested using a period, drawn in a serif font that has circular
+// periods. The period should disassemble into a ring of triangles precisely
+// centered on the middle of the period.
+//
+// The ptBaselineOrigin argument anchors the layout box in world coordinates.
+// It lets us translate the triangles output by the tessellator from layout box
+// relative coordinates back into world coordinates. Its X coordinate is either
+// the left edge of the layout box (for LTR languages) or its right edge (for
+// RTL languages), and its Y coordinate is the baseline of the layout box. The
+// X coordinate is obtained from the glyph iterator's GetOrigin accessor. Note
+// that GetOrigin must be called BEFORE GetNext, because GetNext advances the
+// X coordinate. When the path geometry is rendered, the same ptBaselineOrigin
+// should also be used as the translation matrix.
+// 
 HRESULT CTriangleSink::TessellateGlyph(CD2DPointF ptBaselineOrigin, const CKD2DRectF& rGlyph, const ID2D1PathGeometry *pPathGeom)
 {
-	m_ptBaselineOrigin = ptBaselineOrigin;
 	m_rGlyph = rGlyph;
 	m_ptGlyphCenterWorld = m_rGlyph.CenterPoint();
-	float	fBaselineOffset = rGlyph.bottom - ptBaselineOrigin.y;
-	m_ptGlyphCenterLocal = CD2DPointF(rGlyph.Width() / 2, fBaselineOffset - rGlyph.Height() / 2);
-	if (m_nRunBidiLevel & 1) // if odd bidi level, right-to-left language
-		m_ptGlyphCenterLocal.x = -m_ptGlyphCenterLocal.x;	// flip x coord around x-axis
+	float	fOriginX;
+	// compute glyph center in layout box relative coordinates, the same space
+    // Tessellate uses for triangle points; X handling differs for LTR vs RTL
+	if (m_nRunBidiLevel & 1) { // if odd bidi level, right-to-left language
+		fOriginX = rGlyph.right - ptBaselineOrigin.x - rGlyph.Width() / 2;
+	} else {	// left-to-right language
+		fOriginX = rGlyph.left - ptBaselineOrigin.x + rGlyph.Width() / 2; 
+	}
+	float fOriginY = rGlyph.bottom - ptBaselineOrigin.y - rGlyph.Height() / 2;
+	m_ptGlyphCenterLocal = CD2DPointF(fOriginX, fOriginY);
 	int	nOldTris = m_aTriangle.GetSize();
 	HRESULT hr = pPathGeom->Tessellate(D2D1::Matrix3x2F::Identity(), this);
 	int	nNewTris = m_aTriangle.GetSize();
@@ -87,7 +120,7 @@ void CTriangleSink::AddTriangles(const D2D1_TRIANGLE* triangles, UINT32 triangle
 		DPoint	p2(t.point2);
 		DPoint	p3(t.point3);
 		DPoint	ptCentroid((p1 + p2 + p3) / 3);
-		DPoint	d(ptCentroid - m_ptGlyphCenterLocal);
+		DPoint	d(ptCentroid - m_ptGlyphCenterLocal);	// convert back to world coords
 		int	iGlyphTri = m_aTriangle.GetSize();
 		m_aTriangle.FastSetSize(iGlyphTri + 1);	// grow array if needed
 		GLYPH_TRIANGLE&	gt = m_aTriangle[iGlyphTri];

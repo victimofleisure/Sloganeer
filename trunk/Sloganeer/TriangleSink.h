@@ -9,6 +9,7 @@
 		rev		date	comments
         00      16nov25	initial version
 		01		24nov25	add bidi level for RTL languages
+		02		27nov25	remove baseline origin point member
 
 */
 
@@ -52,7 +53,6 @@ public:
 protected:
 // Data members
 	CArrayEx<GLYPH_TRIANGLE, GLYPH_TRIANGLE&> m_aTriangle;	// array of glyph triangles
-	CD2DPointF	m_ptBaselineOrigin;	// baseline origin in world coordinates
 	CKD2DRectF	m_rGlyph;			// glyph bounds in world coordinates
 	CD2DPointF	m_ptGlyphCenterWorld;	// center of glyph in world coordinates
 	CD2DPointF	m_ptGlyphCenterLocal;	// center of glyph in local coordinates
