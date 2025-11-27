@@ -176,13 +176,15 @@ My slogan\nhas two lines
 
 ### Colors
 
-Colors can be specified in three ways.
+Colors can be specified in three ways. The following applies to the [command line](#command-line), [CSV format](#csv-slogans-file), and color palettes.
 
 1. Hexadecimal color value, consisting of up to eight characters, each of which is [0-9] or [A-F]. The color channels are expected to be in RGB or RGBA order. If six or less characters are specified, RGB is assumed and the alpha channel defaults to opaque. The value is case-insensitive. Do not prefix the value with a pound sign. Example (for Crimson): `DC143C`
 
 2. Decimal color value, consisting of three or four decimal numbers, each of which is [0-255], separated by commas and/or spaces. For colors specified via command line, commas are easier, as to use spaces in a command line parameter, you must enclose the parameter in double quotes. For CSV files, spaces are easier, as to use commas in a CSV value, you must enclose the value in double quotes. The color channels are expected to be in RGB or RGBA order. If three numbers are specified, RGB is assumed and the alpha channel defaults to opaque. Fractional values are accepted. Example (for Crimson): `220,20,60`
 
 3. HTML color name. The name is must be one of the 140 defined [color names](https://www.w3schools.com/tags/ref_colornames.asp). Color names are case-insensitive. Example (for Crimson): `Crimson`
+
+A palette file is a plain text file containing one color value per line. The color values must be in one of the three formats explained above.
 
 ### Defaults
 
