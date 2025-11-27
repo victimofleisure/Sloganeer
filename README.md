@@ -173,6 +173,7 @@ My slogan\nhas two lines
 |19|CLK|Clock|Per-character radial reveal|
 |20|SKW|Skew|Tip over or return to upright|
 |21|XPL|Explode|Explode each letter into fragments|
+|22|SUB|Submarine|Rise from or sink into horizon|
 
 ### Colors
 

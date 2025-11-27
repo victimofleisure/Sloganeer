@@ -105,7 +105,7 @@ TRANSTYPEDEF(	ELV,	ELEVATOR)		// per-character horizontal reveal
 TRANSTYPEDEF(	CLK,	CLOCK)			// per-character radial reveal
 TRANSTYPEDEF(	SKW,	SKEW)			// tip over or return to upright
 TRANSTYPEDEF(	XPL,	EXPLODE)		// explode each letter into fragments
-TRANSTYPEDEF(	SUB,	SUBMARINE)		// ascend into or descend from clip rectangle
+TRANSTYPEDEF(	SUB,	SUBMARINE)		// rise from or sink into horizon
 					
 #undef TRANSTYPEDEF
 #endif
