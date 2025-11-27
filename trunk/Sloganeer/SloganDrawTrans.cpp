@@ -578,7 +578,7 @@ void CSloganDraw::TransSubmarine(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_M
 	GetRunBounds(rRun, ptBaselineOrigin, pGlyphRun, true);	// tight vertical bounds
 	rRun.InflateRect(AA_MARGIN, AA_MARGIN);
 	ptBaselineOrigin.y += DTF(rRun.Height() * fPhase);
-	m_pD2DDeviceContext->PushAxisAlignedClip(rRun, D2D1_ANTIALIAS_MODE_ALIASED);
+	m_pD2DDeviceContext->PushAxisAlignedClip(rRun, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
 	m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
 	m_pD2DDeviceContext->PopAxisAlignedClip();
 }
