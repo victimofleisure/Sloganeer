@@ -178,7 +178,7 @@ My slogan\nhas two lines
 
 Colors can be specified in three ways. This applies to the [command line](#command-line), [CSV format](#csv-slogans-file), and palette files.
 
-1. Hexadecimal color value, consisting of up to eight characters, each of which is [0-9] or [A-F]. The color channels are expected to be in RGB or RGBA order. If six or less characters are specified, RGB is assumed and the alpha channel defaults to opaque. The value is case-insensitive. Do not prefix the value with a pound sign. Example: `DC143C`
+1. Hexadecimal color value, consisting of up to eight characters, each of which is [0-9], [A-F] or [a-f]. The color channels are expected to be in RGB or RGBA order. If six or less characters are specified, RGB is assumed and the alpha channel defaults to opaque. The value is case-insensitive. Do not prefix the value with a pound sign. Example: `DC143C`
 
 2. Decimal color value, consisting of three or four decimal numbers, each of which is [0-255], separated by commas and/or spaces. For colors specified via command line, commas are easier, as to use spaces in a command line parameter, you must enclose the parameter in double quotes. For CSV files, spaces are easier, as to use commas in a CSV value, you must enclose the value in double quotes. The color channels are expected to be in RGB or RGBA order. If three numbers are specified, RGB is assumed and the alpha channel defaults to opaque. Fractional values are accepted. Example: `220,20,60`
 
