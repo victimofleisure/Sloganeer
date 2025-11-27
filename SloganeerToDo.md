@@ -21,7 +21,9 @@
 | 18 | 11/17/25 | 11/23/25 | done | Glyph iterator handles RTL languages incorrectly, affecting elevator, clock, and explode                             | 1.0.00.032 |      |
 | 23 | 11/17/25 | 11/24/25 | done | explode transition radiates to left side only for RTL languages                                                      | 1.0.00.033 |      |
 | 21 | 11/18/25 | 11/26/25 | done | Color cycling though a palette of colors via linear interpolation                                                    | 1.0.00.034 |      |
+| 25 | 11/26/25 | 11/27/25 | done | Add submarine transition                                                                                             | 1.0.00.035 |      |
+| 26 | 11/27/25 | 11/27/25 | done | Fix explode transition so triangles radiate from center of glyph's ink box                                           | 1.0.00.035 |      |
+| 27 | 11/27/25 | 11/27/25 | done | Fix decimal color conversion false positives                                                                         | 1.0.00.035 |      |
 | 7  | 11/13/25 |          | todo | Transparent background color breaks transitions that overpaint with background color; use DrawImage and command list |            |      |
 | 14 | 11/13/25 |          | todo | Research smoke / fog / blur transition                                                                               |            |      |
 | 24 | 11/26/25 |          | todo | Hollow transition; like melt, but outline in draw color, using original glyphs as clipping mask                      |            |      |
-| 25 | 11/26/25 |          | todo | Sunrise / sunset transition; use original text bounds as clipping rect and scroll text up or down                    |            |      |
