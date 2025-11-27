@@ -2,7 +2,7 @@
 
 ## Artisanal signage app that displays text with animated transitions.
 
-# Command line
+### Command line
 
 Simple example: `Sloganeer myslogans.txt -fontname Calibri -fontsize 120`
 
