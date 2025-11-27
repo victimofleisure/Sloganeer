@@ -143,8 +143,7 @@ bool CParamParser::ScanDecimalColor(LPCTSTR pszParam, D2D1::ColorF& color)
 	// by commas and/or spaces; RGBA channel order, fractional values are allowed
 	static const LPCTSTR pszDelimiters = _T(", ");
 	CString	sParam(pszParam);
-	sParam.TrimLeft();	// remove leading and trailing white space
-	sParam.TrimRight();
+	sParam.Trim();	// remove leading and trailing white space
 	if (sParam.FindOneOf(pszDelimiters) < 0)	// if no delimiters found
 		return false;	// let caller try other formats
 	int	iStart = 0;	// for tokenize

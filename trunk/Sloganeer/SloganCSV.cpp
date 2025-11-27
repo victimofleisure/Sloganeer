@@ -78,7 +78,7 @@ bool CSloganCSV::CheckForHeaderRow(CString sLine, bool& bHasHeaderRow)
 	CParseCSV	csv(sLine);	// create parser for CSV line
 	CString	sToken;
 	while (csv.GetString(sToken)) {	// for each token
-		sToken.TrimLeft();	// remove leading whitespace
+		sToken.Trim();	// remove leading and trailing whitespace
 		// if token is empty or starts with a digit
 		if (sToken.IsEmpty() || isdigit(sToken[0]))
 			return true;	// no header row, success
@@ -115,6 +115,7 @@ bool CSloganCSV::CheckForHeaderRow(CString sLine, bool& bHasHeaderRow)
 
 bool CSloganCSV::ParseTransType(int iCol, CString sToken, int& iTransType)
 {
+	sToken.Trim();	// remove leading and trailing whitespace
 	int	iType = FindTransTypeCode(sToken);	// try code lookup first
 	if (iType < 0) {	// if transition type code not found
 		// assume token is a numeric transition index
@@ -192,6 +193,7 @@ bool CSloganCSV::ParseLine(CString sLine)
 					return false;	// abort parsing
 				break;
 			default:
+				sToken.Trim();	// remove leading and trailing whitespace
 				// assume remaining columns are also command line flags, and
 				// reuse parameter parser for them, avoiding code duplication
 				m_bError = false;	// reset error flag
