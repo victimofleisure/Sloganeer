@@ -182,7 +182,7 @@ Colors can be specified in three ways. This applies to the [command line](#comma
 
 2. **Decimal color value** consisting of three or four decimal numbers, each of which is [0-255], separated by commas and/or spaces. On the command line, commas are easier, as a parameter containing spaces must be enclosed in double quotes. In a CSV file, spaces are easier, as a CSV value containing commas must be enclosed in double quotes. The color channels are expected to be in RGB or RGBA order. If three numbers are specified, RGB is assumed and the alpha channel defaults to opaque. Fractional values are accepted. Example: `220,20,60`
 
-3. **Color name** consisting of one of the 140 defined [HTML extended color names](https://en.wikipedia.org/wiki/Web_colors#Extended_colors). Color names are case-insensitive. Example: `Crimson`
+3. **Color name** consisting of one of the 140 defined [HTML extended color names](https://en.wikipedia.org/wiki/Web_colors#Extended_colors). Color names are case-insensitive and do not contain spaces. Example: `Crimson`
 
 A palette file is a plain text file containing one color value per line. The color values must be in one of the three formats explained above.
 
