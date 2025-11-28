@@ -24,6 +24,7 @@
 		14		22nov25	add random typewriter variant
 		15		25nov25	add color palettes and cycling
         16      27nov25	add submarine transition
+		17		28nov25	add symmetrical easing
 
 */
 
@@ -77,8 +78,9 @@ protected:
 		STATES
 	};
 	enum {	// GetPhase flags
-		GP_INVERT	= 0x01,		// invert phase
-		GP_EASING	= 0x02,		// apply easing
+		GP_INVERT		= 0x01,		// invert phase
+		GP_EASING		= 0x02,		// apply easing
+		GP_EASE_BOTH	= 0x04,		// symmetrical easing, in and out
 	};
 	enum {
 		AA_MARGIN = 1,	// extra margin to account for antialiasing

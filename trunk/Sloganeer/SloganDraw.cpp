@@ -28,6 +28,7 @@
 		18		24nov25	move transitions to separate cpp file
 		19		25nov25	add color palettes and cycling
         20      27nov25	add submarine transition
+		21		28nov25	add symmetrical easing
 
 */
 
@@ -639,8 +640,13 @@ double CSloganDraw::GetPhase(UINT nFlags) const
 	bool	bOutgoing = IsTransOut();
 	double	fPhase;	// normalized position from 0 to 1
 	if (nFlags & GP_EASING) {	// if easing enabled
-		// if incoming transition, ease out, otherwise ease in
-		fPhase = EaseInOut(!bOutgoing, m_fTransProgress, m_fEasing);
+		if (nFlags & GP_EASE_BOTH) {	// if easing both in and out
+			// symmetrical easing
+			fPhase = EaseInAndOut(m_fTransProgress, m_fEasing);
+		} else {
+			// if incoming transition, ease out, otherwise ease in
+			fPhase = EaseInOrOut(!bOutgoing, m_fTransProgress, m_fEasing);
+		}
 	} else {	// easing disabled
 		fPhase = m_fTransProgress;	// linear
 	}
@@ -713,9 +719,8 @@ bool CSloganDraw::CaptureFrame()
 #if SD_CAPTURE >= SD_CAPTURE_MAKE_REF_IMAGES	// if regression testing
 void CSloganDraw::RegressionTestSetup()
 {
-	m_palBkgnd.RemoveAll();	// remove background palette
-	m_palDraw.RemoveAll();	// remove draw palette
-	m_aSlogan.RemoveAll();	// remove existing slogans
+	CSloganParams	params;
+	CSloganParams::operator=(params);	// set default parameters
 	CSlogan	slogan;
 	slogan.m_sText = L"Your Text\n"	// 2nd line is hello world in Arabic
 		L"\x0645\x0631\x062D\x0628\x0627 "

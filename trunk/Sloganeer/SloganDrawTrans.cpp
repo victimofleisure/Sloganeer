@@ -10,6 +10,7 @@
         00      24nov25	initial version
 		01		25nov25	decouple typewriter transitions
         02      27nov25	add submarine transition
+		03		28nov25	add symmetrical easing
 
 */
 
@@ -32,7 +33,7 @@ void CSloganDraw::TransScroll()
 	CD2DSizeF	szRT(GetTextBounds(rText));
 	CD2DSizeF	szText(rText.Size());
 	bool	bIncoming = !IsTransOut();
-	double	fPhase = EaseInOut(bIncoming, m_fTransProgress, m_fEasing);
+	double	fPhase = EaseInOrOut(bIncoming, m_fTransProgress, m_fEasing);
 	if (bIncoming)	// if incoming transition
 		fPhase = fPhase - 1;	// reverse direction
 	if (m_iTransType == TT_SCROLL_RL || m_iTransType == TT_SCROLL_BT)	// if reversed
@@ -573,7 +574,7 @@ bool CSloganDraw::TransSubmarine()
 void CSloganDraw::TransSubmarine(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
 {
-	double	fPhase = GetPhase(GP_EASING);
+	double	fPhase = GetPhase(GP_EASING | GP_EASE_BOTH);	// symmetrical easing
 	CKD2DRectF	rRun;
 	GetRunBounds(rRun, ptBaselineOrigin, pGlyphRun, true);	// tight vertical bounds
 	rRun.InflateRect(AA_MARGIN, AA_MARGIN);

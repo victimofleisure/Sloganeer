@@ -8,6 +8,7 @@
 		revision history:
 		rev		date	comments
         00      05nov25	initial version
+		01		28nov25	add symmetrical easing
 
 */
 
@@ -19,7 +20,14 @@
 double EaseIn(double s, double F);
 double EaseOut(double s, double F);
 
-inline double EaseInOut(bool bIsOut, double s, double F)
+// Ease in or out depending on a boolean, simplifying calling code
+inline double EaseInOrOut(bool bIsOut, double s, double F)
 {
 	return bIsOut ? EaseOut(s, F) : EaseIn(s, F);
+}
+
+// Construct a symmetric ease-in-out from EaseIn and EaseOut
+inline double EaseInAndOut(double s, double F)
+{
+	return s < 0.5 ? EaseIn(s * 2, F) / 2 : (EaseOut(s * 2 - 1, F) + 1) / 2;
 }
