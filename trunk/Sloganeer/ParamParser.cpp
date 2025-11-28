@@ -26,6 +26,7 @@
 #include "AboutDlg.h"
 #include "D2DHelper.h"
 #include "SloganCSV.h"
+#include <stdexcept>
 
 const LPCTSTR CParamParser::m_aFlag[FLAGS] = {
 	#define PARAMDEF(name) _T(#name),
