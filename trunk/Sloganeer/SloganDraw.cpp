@@ -29,6 +29,7 @@
 		19		25nov25	add color palettes and cycling
         20      27nov25	add submarine transition
 		21		28nov25	add symmetrical easing
+		22		29nov25	fix text bounds; use overhang metrics only
 
 */
 
@@ -583,13 +584,12 @@ CD2DSizeF CSloganDraw::GetTextBounds(CKD2DRectF& rText) const
 {
 	// layout box is entire render target
 	CD2DSizeF	szRT(m_pD2DDeviceContext->GetSize());	// get render target size
-	// use text metrics for x-axis, overhang metrics for y-axis;
 	// assuming text fits within the frame, overhang metrics are
 	// NEGATIVE distances in DIPs from frame edge to text edge
 	rText = CKD2DRectF(
-		m_textMetrics.left,
+		-m_overhangMetrics.left,
 		-m_overhangMetrics.top, 
-		m_textMetrics.left + m_textMetrics.width, 
+		szRT.width + m_overhangMetrics.right,
 		szRT.height + m_overhangMetrics.bottom
 	);
 	rText.InflateRect(AA_MARGIN, AA_MARGIN);	// add antialiasing margin
