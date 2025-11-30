@@ -79,6 +79,7 @@ void CSloganDraw::Init()
 	m_szTileLayout = CSize(0, 0);
 	m_ptTileOffset = CD2DPointF(0, 0);
 	m_bIsGlyphRising = false;
+	m_bIsFirstGlyphRun = false;
 	m_bTransparentBkgnd = false;
 	m_iGlyphLine = 0;
 	m_iFrame = 0;
@@ -86,6 +87,7 @@ void CSloganDraw::Init()
 	m_fStateStartTime = 0;
 	m_fMeltMaxStroke = 0;
 	m_nCharsTyped = 0;
+	m_fClockRadius = 0;
 }
 
 bool CSloganDraw::Create(HWND hWnd)
@@ -208,6 +210,7 @@ void CSloganDraw::DestroyUserResources()
 	m_pDWriteFactory.Release();
 	m_pStrokeStyle.Release();
 	m_pEraserBitmap.Release();
+	m_pPathGeom.Release();
 	if (m_bThreadExit)	// if thread exiting
 		CoUninitialize();	// needed for WIC
 }
@@ -473,6 +476,7 @@ void CSloganDraw::StartTrans(int nState, float fDuration)
 		m_iTransType = m_rlTransType.GetNext(m_iTransType);	// get next transition type
 	}
 	m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());	// remove transform if any
+	m_pEraserBitmap.Release();	// recreate eraser bitmap if needed
 }
 
 void CSloganDraw::StartIdle(int nDuration)

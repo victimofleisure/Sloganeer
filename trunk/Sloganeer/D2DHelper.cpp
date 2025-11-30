@@ -10,6 +10,7 @@
 		01		23nov25	fix incorrect x-axis bounds in glyph iterator
 		02		24nov25	fix glyph iterator handling of RTL languages
 		03		27nov25	add tight vertical bounds flag to glyph iterator
+		04		30nov25	add calculate maximum glyph bounds
 
 */
 
@@ -85,6 +86,21 @@ bool CGlyphIter::GetNext(UINT& iGlyph, CKD2DRectF& rGlyph)
 	}
 	m_iGlyph++;	// next glyph
 	return true;
+}
+
+CD2DSizeF CGlyphIter::CalcMaxGlyphBounds()
+{
+	CD2DSizeF	szMax(0, 0);
+	CKD2DRectF	rGlyph;
+	UINT	iGlyph;
+	while (GetNext(iGlyph, rGlyph)) {	// for each glyph
+		CD2DSizeF	szGlyph(rGlyph.Size());
+		if (szGlyph.width > szMax.width)	// if wider
+			szMax.width = szGlyph.width;	// update width
+		if (szGlyph.height > szMax.height)	// if taller
+			szMax.height = szGlyph.height;	// update height
+	}
+	return szMax;
 }
 
 void AddEllipse(ID2D1GeometrySink *pSink, D2D1_POINT_2F ptOrigin, D2D1_SIZE_F szRadius)

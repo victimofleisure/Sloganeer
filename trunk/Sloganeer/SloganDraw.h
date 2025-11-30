@@ -125,6 +125,7 @@ protected:
 	CGlyphOffsetArray	m_aGlyphOffset;	// array of glyph offsets, for text renderer
 	CLineMetricsArray	m_aLineMetrics;	// array of line metrics, for text renderer
 	bool	m_bIsGlyphRising;	// true if glyph is rising; for vertical converge
+	bool	m_bIsFirstGlyphRun;	// true if first run of a text renderer callback
 	bool	m_bTransparentBkgnd;	// true if background is fully transparent
 	int		m_iGlyphLine;		// index of line text renderer is currently on
 	CIntArrayEx	m_aCharToLine;	// for each character of slogan, index of its line
@@ -146,6 +147,10 @@ protected:
 	// random typewriter transition
 	CIntArrayEx	m_aCharIdx;		// array of character indices within current slogan
 	UINT	m_nCharsTyped;		// count of characters that have been typed so far
+
+	// clock transition
+	float	m_fClockRadius;		// radius of clock mask in DIPs
+	CComPtr<ID2D1PathGeometry> m_pPathGeom;		// path geometry for clock
 
 #if SD_CAPTURE	// if capturing frames
 	class CMyD2DCapture : public CD2DCapture {

@@ -208,6 +208,7 @@ public:
 	float	GetAscent() const;
 	float	GetDescent() const;
 	void	Reset();
+	CD2DSizeF	CalcMaxGlyphBounds();
 
 protected:
 	CD2DPointF	m_ptOrigin;		// current origin

@@ -416,16 +416,13 @@ bool CSloganDraw::MeasureMeltStroke()
 
 bool CSloganDraw::TransElevator()
 {
-	BENCH_START//@@@
 	CHECK(m_pTextLayout->Draw(0, this, 0, 0));
-	BENCH_STOP
 	return true;
 }
 
 void CSloganDraw::TransElevator(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
 {
-	double	fPhase = GetPhase();
 	m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
 	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun);
 	// if transparent background and eraser doesn't exist
@@ -436,6 +433,7 @@ void CSloganDraw::TransElevator(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MO
 		// eraser bitmap is much wider than necessary, but it's safe and easy
 		CreateEraser(CD2DSizeF(rText.Width(), fFontHeight));	// create eraser
 	}
+	double	fPhase = GetPhase();
 	CKD2DRectF	rGlyph;
 	UINT	iGlyph;
 	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
@@ -467,6 +465,7 @@ void CSloganDraw::TransElevator(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MO
 
 bool CSloganDraw::TransClock()
 {
+	m_bIsFirstGlyphRun = true;	// for once-per-frame work in text renderer callback
 	CHECK(m_pTextLayout->Draw(0, this, 0, 0));
 	return true;
 }
@@ -474,35 +473,54 @@ bool CSloganDraw::TransClock()
 bool CSloganDraw::TransClock(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
 {
-	double	fPhase = GetPhase();
+	m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
 	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun);
+	if (m_bIsFirstGlyphRun) {	// if first glyph run for this frame
+		m_bIsFirstGlyphRun = false;	// reset first glyph run flag
+		// calculate bounds of largest glyph in this run
+		CD2DSizeF	szMaxGlyph(iterGlyph.CalcMaxGlyphBounds());
+		iterGlyph.Reset();	// reset glyph iterator, as we reuse it below
+		float	fMaxGlyphSize = max(szMaxGlyph.width, szMaxGlyph.height);
+		float	fRadius = DTF(fMaxGlyphSize * M_SQRT2 / 2);
+		m_pPathGeom.Release();
+		CHECK(m_pD2DFactory->CreatePathGeometry(&m_pPathGeom));
+		CComPtr<ID2D1GeometrySink> pGeomSink;
+		CHECK(m_pPathGeom->Open(&pGeomSink));
+		double	fPhase = GetPhase();
+		AddPieWedge(pGeomSink, CD2DPointF(0, 0), CD2DSizeF(fRadius, fRadius), 180, DTF(fPhase));
+		CHECK(pGeomSink->Close());
+		if (m_bTransparentBkgnd) {	// if transparent background
+			if (m_pEraserBitmap == NULL) {	// if eraser doesn't exist
+				CreateEraser(CD2DSizeF(fRadius * 2, fRadius * 2));	// create eraser
+			}
+			CComPtr<ID2D1Image>	pOldTarget;	// smart pointer is required due to reference counting
+			m_pD2DDeviceContext->GetTarget(&pOldTarget);	// increments target's reference count
+			m_pD2DDeviceContext->SetTarget(m_pEraserBitmap);
+			m_pD2DDeviceContext->Clear(0);	// clear background to zero in all channels
+			m_pVarBrush->SetColor(D2D1::ColorF(0, 0, 0, 1));	// draw in full intensity alpha
+			auto mTranslate(D2D1::Matrix3x2F::Translation(fRadius, fRadius));	// account for local coords
+			m_pD2DDeviceContext->SetTransform(mTranslate);
+			m_pD2DDeviceContext->FillGeometry(m_pPathGeom, m_pVarBrush);	// draw pie as alpha mask
+			m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
+			m_pD2DDeviceContext->SetTarget(pOldTarget);
+		}
+		m_fClockRadius = fRadius;	// save radius in member var
+	}
 	CKD2DRectF	rGlyph;
 	UINT	iGlyph;
-	float	fMaxGlyphSize = 0;
-	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
-		CD2DSizeF	szGlyph(rGlyph.Size());
-		float	fGlyphSize = max(szGlyph.width, szGlyph.height);
-		if (fGlyphSize > fMaxGlyphSize)
-			fMaxGlyphSize = fGlyphSize;
-	}
-	float	fRadius = DTF(fMaxGlyphSize * M_SQRT2 / 2);
-	CComPtr<ID2D1PathGeometry> pPathGeom;
-	CHECK(m_pD2DFactory->CreatePathGeometry(&pPathGeom));
-	CComPtr<ID2D1GeometrySink> pGeomSink;
-	CHECK(pPathGeom->Open(&pGeomSink));
-	AddPieWedge(pGeomSink, CD2DPointF(0, 0), CD2DSizeF(fRadius, fRadius), 180, DTF(fPhase));
-	CHECK(pGeomSink->Close());
-	m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
-	iterGlyph.Reset();	// reset glyph iterator, as we reuse it below
 	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
 		if (rGlyph.Width() > m_fSpaceWidth) {	// if non-space glyph
 			rGlyph.InflateRect(AA_MARGIN, AA_MARGIN);	// add antialiasing margin
 			CD2DPointF	ptCenter(rGlyph.CenterPoint());
-			auto mTranslate(D2D1::Matrix3x2F::Translation(ptCenter.x, ptCenter.y));
 			m_pD2DDeviceContext->PushAxisAlignedClip(rGlyph, D2D1_ANTIALIAS_MODE_ALIASED);
-			m_pD2DDeviceContext->SetTransform(mTranslate);
-			m_pD2DDeviceContext->FillGeometry(pPathGeom, m_pBkgndBrush);
-			m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
+			if (m_bTransparentBkgnd) {	// if transparent background
+				EraseBackground(CD2DPointF(ptCenter.x - m_fClockRadius, ptCenter.y - m_fClockRadius));
+			} else {	// overdraw text with background color
+				auto mTranslate(D2D1::Matrix3x2F::Translation(ptCenter.x, ptCenter.y));
+				m_pD2DDeviceContext->SetTransform(mTranslate);
+				m_pD2DDeviceContext->FillGeometry(m_pPathGeom, m_pBkgndBrush);
+				m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
+			}
 			m_pD2DDeviceContext->PopAxisAlignedClip();
 		}
 	}
