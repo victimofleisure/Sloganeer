@@ -11,6 +11,8 @@
 		01		25nov25	decouple typewriter transitions
         02      27nov25	add submarine transition
 		03		28nov25	add symmetrical easing
+		04		29nov25	refactor reveal to use clipping
+		05		30nov25	add eraser to handle transparent background
 
 */
 
@@ -67,29 +69,31 @@ void CSloganDraw::TransReveal()
 	CKD2DRectF	rText;
 	GetTextBounds(rText);
 	CD2DSizeF	szText(rText.Size());
+	float	fOffset;
 	switch (m_iTransType) {
 	case TT_REVEAL_LR:
-		{
-			float	fOffset = DTF(szText.width * m_fTransProgress);
-			if (IsTransOut())	// if outgoing transition
-				fOffset -= szText.width;	// start unmasked
-			rText.OffsetRect(fOffset, 0);	// offset text mask horizontally
+		fOffset = DTF(rText.left + szText.width * m_fTransProgress);
+		if (IsTransOut()) {	// if outgoing transition
+			rText.left = fOffset;	// offset left edge
+		} else {	// incoming transition
+			rText.right = fOffset;	// offset right edge
 		}
 		break;
 	case TT_REVEAL_TB:
-		{
-			float	fOffset = DTF(szText.height * m_fTransProgress);
-			if (IsTransOut())	// if outgoing transition
-				fOffset -= szText.height;	// start unmasked
-			rText.OffsetRect(0, fOffset);	// offset text mask vertically
+		fOffset = DTF(rText.top + szText.height * m_fTransProgress);
+		if (IsTransOut()) {	// if outgoing transition
+			rText.top = fOffset;	// offset top edge
+		} else {	// incoming transition
+			rText.bottom = fOffset;	// offset bottom edge
 		}
 		break;
 	default:
 		NODEFAULTCASE;	// improper call
 	}
 	CD2DPointF	ptOrigin(0, 0);
+	m_pD2DDeviceContext->PushAxisAlignedClip(rText, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
 	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pDrawBrush);	// draw text
-	m_pD2DDeviceContext->FillRectangle(rText, m_pBkgndBrush);	// draw text mask
+	m_pD2DDeviceContext->PopAxisAlignedClip();
 }
 
 void CSloganDraw::TransFade()
@@ -202,6 +206,9 @@ void CSloganDraw::InitTiling(const CKD2DRectF& rText)
 	for (int iTile = 0; iTile < nTiles; iTile++) {	// for each tile
 		m_aTileIdx[iTile] = rlTile.GetNext();	// set array element to random tile index
 	}
+	if (m_bTransparentBkgnd) {	// if transparent background
+		CreateEraser(CD2DSizeF(m_fTileSize, m_fTileSize));	// create eraser
+	}
 }
 
 void CSloganDraw::TransRandTile()
@@ -228,7 +235,11 @@ void CSloganDraw::TransRandTile()
 			ptOrg.x + m_fTileSize, ptOrg.y + m_fTileSize
 		);
 		rTile.InflateRect(1, 1);	// add a pixel to ensure tiles overlap
-		m_pD2DDeviceContext->FillRectangle(rTile, m_pBkgndBrush);	// draw tile
+		if (m_bTransparentBkgnd) {	// if transparent background
+			EraseBackground(rTile.TopLeft());	// erase tile
+		} else {	// draw with background color
+			m_pD2DDeviceContext->FillRectangle(rTile, m_pBkgndBrush);	// draw tile
+		}
 	}
 }
 
@@ -405,7 +416,9 @@ bool CSloganDraw::MeasureMeltStroke()
 
 bool CSloganDraw::TransElevator()
 {
+	BENCH_START//@@@
 	CHECK(m_pTextLayout->Draw(0, this, 0, 0));
+	BENCH_STOP
 	return true;
 }
 
@@ -415,6 +428,14 @@ void CSloganDraw::TransElevator(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MO
 	double	fPhase = GetPhase();
 	m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
 	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun);
+	// if transparent background and eraser doesn't exist
+	if (m_bTransparentBkgnd && m_pEraserBitmap == NULL) {
+		CKD2DRectF	rText;
+		GetTextBounds(rText);
+		float	fFontHeight = iterGlyph.GetAscent() + iterGlyph.GetDescent();
+		// eraser bitmap is much wider than necessary, but it's safe and easy
+		CreateEraser(CD2DSizeF(rText.Width(), fFontHeight));	// create eraser
+	}
 	CKD2DRectF	rGlyph;
 	UINT	iGlyph;
 	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
@@ -426,11 +447,20 @@ void CSloganDraw::TransElevator(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MO
 			float	fDoorWidth = DTF((fGlyphWidth + AA_MARGIN) * fPhase / 2);
 			float	fDoorLeft = rGlyph.left + fDoorWidth;
 			float	fDoorRight = rGlyph.right - fDoorWidth;
-			CD2DRectF	rDoor(rGlyph.left, rGlyph.top, fDoorLeft, rGlyph.bottom);
-			m_pD2DDeviceContext->FillRectangle(rDoor, m_pBkgndBrush);	// left door
-			rDoor.left = fDoorRight;
-			rDoor.right = rGlyph.right;
-			m_pD2DDeviceContext->FillRectangle(rDoor, m_pBkgndBrush);	// right door
+			CKD2DRectF	rDoor(rGlyph.left, rGlyph.top, fDoorLeft, rGlyph.bottom);
+			if (m_bTransparentBkgnd) {	// if transparent background
+				// use eraser bitmap to make doors transparent
+				CKD2DRectF	rImage(CD2DPointF(0, 0), rDoor.Size());
+				EraseBackground(rDoor.TopLeft(), &rImage);	// left door
+				rDoor.left = fDoorRight;
+				rDoor.right = rGlyph.right;
+				EraseBackground(rDoor.TopLeft(), &rImage);	// right door
+			} else {	// overdraw text with background color
+				m_pD2DDeviceContext->FillRectangle(rDoor, m_pBkgndBrush);	// left door
+				rDoor.left = fDoorRight;
+				rDoor.right = rGlyph.right;
+				m_pD2DDeviceContext->FillRectangle(rDoor, m_pBkgndBrush);	// right door
+			}
 		}
 	}
 }

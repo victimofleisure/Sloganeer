@@ -30,6 +30,7 @@
         20      27nov25	add submarine transition
 		21		28nov25	add symmetrical easing
 		22		29nov25	fix text bounds; use overhang metrics only
+		23		30nov25	add eraser bitmap
 
 */
 
@@ -78,6 +79,7 @@ void CSloganDraw::Init()
 	m_szTileLayout = CSize(0, 0);
 	m_ptTileOffset = CD2DPointF(0, 0);
 	m_bIsGlyphRising = false;
+	m_bTransparentBkgnd = false;
 	m_iGlyphLine = 0;
 	m_iFrame = 0;
 	m_nSwapChainBuffers = 0;
@@ -205,6 +207,7 @@ void CSloganDraw::DestroyUserResources()
 	m_pTextLayout.Release();
 	m_pDWriteFactory.Release();
 	m_pStrokeStyle.Release();
+	m_pEraserBitmap.Release();
 	if (m_bThreadExit)	// if thread exiting
 		CoUninitialize();	// needed for WIC
 }
@@ -231,13 +234,20 @@ bool CSloganDraw::OnThreadCreate()
 void CSloganDraw::OnResize()
 {
 	OnTextChange();
-	m_nCharsTyped = 0;	// for random typewriter transition
+	// if we're transitioning
 	if (m_iState == ST_TRANS_IN || m_iState == ST_TRANS_OUT) {
+		// any transition type that initializes itself at 
+		// start of transition may require handling here
 		switch (m_iTransType) {
 		case TT_EXPLODE:
-			m_bIsTransStart = true;	// redo tessellation
+		case TT_RAND_TILE:
+			m_bIsTransStart = true;	// redo initialization
+			break;
+		case TT_RAND_TYPE:
+			m_nCharsTyped = 0;	// reset chars typed count
 			break;
 		}
+		m_pEraserBitmap.Release();	// recreate eraser bitmap if needed
 	}
 }
 
@@ -430,6 +440,7 @@ void CSloganDraw::StartSlogan()
 	if (m_bCustomSlogans)	// if doing per-slogan customization
 		OnCustomSlogan();	// customize current slogan
 	OnTextChange();	// update text
+	m_bTransparentBkgnd = m_clrBkgnd.a == 0.0f;	// true if alpha is zero
 	StartTrans(ST_TRANS_IN, m_fInTransDuration);	// start incoming transition
 }
 
@@ -672,6 +683,37 @@ double CSloganDraw::GetFrameTime() const
 {
 	// during recording, compute time from frame index to avoid jitter
 	return m_iFrame * (1.0 / m_fRecFrameRate);
+}
+
+bool CSloganDraw::CreateEraser(CD2DSizeF& szMask)
+{
+	// this method only supports a fully transparent background, with alpha of zero;
+	// partial transparency will cause the mask to be visible against the background
+	ASSERT(szMask.width && szMask.height);	// mask must have non-zero size
+	m_pEraserBitmap.Release();	// just in case
+	D2D1_SIZE_F	szDpi = GetDpi(m_pD2DDeviceContext);	// only call GetDpi once
+	D2D1_BITMAP_PROPERTIES1 props =
+		D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET,
+		D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED),
+		szDpi.width, szDpi.height);	// specify target DPI when creating bitmap
+	CD2DSizeU	szTextPixels(DipsToPixels(m_pD2DDeviceContext, szMask, szDpi));
+	CHECK(m_pD2DDeviceContext->CreateBitmap(szTextPixels, NULL, 0, props, &m_pEraserBitmap));
+	CComPtr<ID2D1Image>	pOldTarget;	// smart pointer is required due to reference counting
+	m_pD2DDeviceContext->GetTarget(&pOldTarget);	// increments target's reference count
+	m_pD2DDeviceContext->SetTarget(m_pEraserBitmap);	// set target to eraser bitmap
+	m_pD2DDeviceContext->Clear(D2D1::ColorF(0, 0, 0, 1.0f));	// full-strength erase
+	m_pD2DDeviceContext->SetTarget(pOldTarget);	// restore previous target
+	return true;
+}
+
+void CSloganDraw::EraseBackground(D2D1_POINT_2F ptTargetOffset, D2D1_RECT_F *pImageRect)
+{
+	ASSERT(m_pEraserBitmap != NULL);	// sanity check
+	// offset is in world DIPs, rect is in DIPs relative to bitmap's top left
+	// corner; if rect is smaller than bitmap, bitmap is cropped, not resized
+	m_pD2DDeviceContext->DrawImage(m_pEraserBitmap, &ptTargetOffset, pImageRect, 
+		D2D1_INTERPOLATION_MODE_NEAREST_NEIGHBOR,	// avoid antialiasing
+		D2D1_COMPOSITE_MODE_DESTINATION_OUT);	// bitmap acts as an eraser
 }
 
 #if SD_CAPTURE	// if capturing frames

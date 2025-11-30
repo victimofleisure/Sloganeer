@@ -25,6 +25,7 @@
 		15		25nov25	add color palettes and cycling
         16      27nov25	add submarine transition
 		17		28nov25	add symmetrical easing
+		18		30nov25	add eraser bitmap
 
 */
 
@@ -99,6 +100,7 @@ protected:
 	CComPtr<IDWriteTextFormat>	m_pTextFormat;	// text format interface
 	CComPtr<IDWriteTextLayout>	m_pTextLayout;	// text layout interface
 	CComPtr<ID2D1StrokeStyle1>	m_pStrokeStyle;	// stroke style for melt effect
+	CComPtr<ID2D1Bitmap1> m_pEraserBitmap;	// for erasing to transparent background
 	DWRITE_TEXT_METRICS	m_textMetrics;	// text metrics
 	DWRITE_OVERHANG_METRICS	m_overhangMetrics;	// overhang metrics
 	WEvent	m_evtWake;			// during hold, signals wake from idle
@@ -123,6 +125,7 @@ protected:
 	CGlyphOffsetArray	m_aGlyphOffset;	// array of glyph offsets, for text renderer
 	CLineMetricsArray	m_aLineMetrics;	// array of line metrics, for text renderer
 	bool	m_bIsGlyphRising;	// true if glyph is rising; for vertical converge
+	bool	m_bTransparentBkgnd;	// true if background is fully transparent
 	int		m_iGlyphLine;		// index of line text renderer is currently on
 	CIntArrayEx	m_aCharToLine;	// for each character of slogan, index of its line
 	double	m_fThreadStartTime;	// when thread was launched, in seconds since boot
@@ -190,6 +193,8 @@ protected:
 	double	GetPhase(UINT nFlags = 0) const;
 	double	GetFrameRate();
 	double	GetFrameTime() const;
+	bool	CreateEraser(CD2DSizeF& szMask);
+	void	EraseBackground(D2D1_POINT_2F ptTargetOffset, D2D1_RECT_F *pImageRect = NULL);
 
 // Regression test
 	bool	SetCapture(bool bEnable = true);

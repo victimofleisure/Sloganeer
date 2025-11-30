@@ -14,12 +14,46 @@
 		05		23nov25	add font metrics member to glyph iterator
 		06		24nov25	add get origin method to glyph iterator
 		07		27nov25	add tight vertical bounds flag to glyph iterator
+		08		29nov25	add dips to pixels conversion methods
+		09		30nov25	add ascent and descent attributes to glyph iterator
 
 */
 
 #pragma once
 
 #include "afxrendertarget.h"
+
+inline D2D1_SIZE_F GetDpi(ID2D1RenderTarget* pRT)
+{
+	D2D1_SIZE_F	szDpi = {96.0f, 96.0f};
+	if (pRT)
+		pRT->GetDpi(&szDpi.width, &szDpi.height);
+	return szDpi;
+}
+
+inline D2D1_SIZE_U DipsToPixels(ID2D1RenderTarget* pRT, D2D1_SIZE_F szDIPs, D2D1_SIZE_F szDpi)
+{
+	UINT	nX = static_cast<UINT>(ceilf(szDIPs.width * szDpi.width / 96.0f));
+	UINT	nY = static_cast<UINT>(ceilf(szDIPs.height * szDpi.height / 96.0f));
+	return D2D1::SizeU(nX, nY);
+}
+
+inline D2D1_SIZE_F PixelsToDips(ID2D1RenderTarget* pRT, D2D1_SIZE_U szPixels, D2D1_SIZE_F szDpi)
+{
+	float	fX = szPixels.width * 96.0f / szDpi.width;
+	float	fY = szPixels.height * 96.0f / szDpi.height;
+	return D2D1::SizeF(fX, fY);
+}
+
+inline D2D1_SIZE_U DipsToPixels(ID2D1RenderTarget* pRT, D2D1_SIZE_F szDIPs)
+{
+	return DipsToPixels(pRT, szDIPs, GetDpi(pRT));
+}
+
+inline D2D1_SIZE_F PixelsToDips(ID2D1RenderTarget* pRT, D2D1_SIZE_U szPixels)
+{
+	return PixelsToDips(pRT, szPixels, GetDpi(pRT));
+}
 
 class CKD2DRectF : public CD2DRectF {
 public:
@@ -171,6 +205,8 @@ public:
 	//
 	bool	GetNext(UINT& iGlyph, CKD2DRectF& rGlyph);
 	CD2DPointF	GetOrigin() const;
+	float	GetAscent() const;
+	float	GetDescent() const;
 	void	Reset();
 
 protected:
@@ -193,6 +229,16 @@ inline void CGlyphIter::Reset()
 {
 	m_iGlyph = 0;
 	m_ptOrigin.x = m_fOriginX;
+}
+
+inline float CGlyphIter::GetAscent() const
+{
+	return m_fAscent;
+}
+
+inline float CGlyphIter::GetDescent() const
+{
+	return m_fDescent;
 }
 
 void	AddEllipse(ID2D1GeometrySink *pSink, D2D1_POINT_2F ptOrigin, D2D1_SIZE_F szRadius);
