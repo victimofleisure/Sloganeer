@@ -31,6 +31,7 @@
 		21		28nov25	add symmetrical easing
 		22		29nov25	fix text bounds; use overhang metrics only
 		23		30nov25	add eraser bitmap
+		24		01dec25	add transparent background special cases
 
 */
 
@@ -475,7 +476,7 @@ void CSloganDraw::StartTrans(int nState, float fDuration)
 	} else {	// transition type isn't overridden
 		m_iTransType = m_rlTransType.GetNext(m_iTransType);	// get next transition type
 	}
-	m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());	// remove transform if any
+	ResetTransform(m_pD2DDeviceContext);	// remove transform if any
 	m_pEraserBitmap.Release();	// recreate eraser bitmap if needed
 }
 
@@ -689,7 +690,7 @@ double CSloganDraw::GetFrameTime() const
 	return m_iFrame * (1.0 / m_fRecFrameRate);
 }
 
-bool CSloganDraw::CreateEraser(CD2DSizeF& szMask)
+bool CSloganDraw::CreateEraser(CD2DSizeF& szMask, FLOAT fAlpha)
 {
 	// this method only supports a fully transparent background, with alpha of zero;
 	// partial transparency will cause the mask to be visible against the background
@@ -705,7 +706,7 @@ bool CSloganDraw::CreateEraser(CD2DSizeF& szMask)
 	CComPtr<ID2D1Image>	pOldTarget;	// smart pointer is required due to reference counting
 	m_pD2DDeviceContext->GetTarget(&pOldTarget);	// increments target's reference count
 	m_pD2DDeviceContext->SetTarget(m_pEraserBitmap);	// set target to eraser bitmap
-	m_pD2DDeviceContext->Clear(D2D1::ColorF(0, 0, 0, 1.0f));	// full-strength erase
+	m_pD2DDeviceContext->Clear(D2D1::ColorF(0, 0, 0, fAlpha));	// erase at requested strength
 	m_pD2DDeviceContext->SetTarget(pOldTarget);	// restore previous target
 	return true;
 }

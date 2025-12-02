@@ -13,6 +13,7 @@
 		03		28nov25	add symmetrical easing
 		04		29nov25	refactor reveal to use clipping
 		05		30nov25	add eraser to handle transparent background
+		06		01dec25	add transparent background special cases
 
 */
 
@@ -24,6 +25,7 @@
 #include <algorithm>	// for swap
 #define _USE_MATH_DEFINES
 #include "math.h"
+#include "DPoint.h"
 
 #define DTF(x) static_cast<float>(x)
 
@@ -99,11 +101,19 @@ void CSloganDraw::TransReveal()
 void CSloganDraw::TransFade()
 {
 	double	fPhase = GetPhase(GP_INVERT);
-	m_pVarBrush->SetColor(D2D1::ColorF(
-		DTF(Lerp(m_clrBkgnd.r, m_clrDraw.r, fPhase)),
-		DTF(Lerp(m_clrBkgnd.g, m_clrDraw.g, fPhase)),
-		DTF(Lerp(m_clrBkgnd.b, m_clrDraw.b, fPhase))
-	));
+	D2D1::ColorF	clr(0);
+	if (m_bTransparentBkgnd) {	// if transparent background
+		// use draw color RGB values with phase as alpha
+		clr = D2D1::ColorF(
+			m_clrDraw.r, m_clrDraw.g, m_clrDraw.b, DTF(fPhase));
+	} else {	// linear interpolation with background color
+		clr = D2D1::ColorF(
+			DTF(Lerp(m_clrBkgnd.r, m_clrDraw.r, fPhase)),
+			DTF(Lerp(m_clrBkgnd.g, m_clrDraw.g, fPhase)),
+			DTF(Lerp(m_clrBkgnd.b, m_clrDraw.b, fPhase))
+		);
+	}
+	m_pVarBrush->SetColor(clr);
 	CD2DPointF	ptOrigin(0, 0);
 	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pVarBrush); // draw text
 }
@@ -373,11 +383,31 @@ bool CSloganDraw::TransMelt(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE m
 	CHECK(pFontFace->GetGlyphRunOutline(run.fontEmSize, run.glyphIndices, run.glyphAdvances, 
 		run.glyphOffsets, run.glyphCount, run.isSideways, run.bidiLevel, pGeomSink));
 	CHECK(pGeomSink->Close());
-	auto mTranslate(D2D1::Matrix3x2F::Translation(ptBaselineOrigin.x, ptBaselineOrigin.y));
-	m_pD2DDeviceContext->SetTransform(mTranslate);
 	float	fStroke = DTF(m_fMeltMaxStroke * fPhase);
-	m_pD2DDeviceContext->DrawGeometry(pPathGeom, m_pBkgndBrush, fStroke, m_pStrokeStyle);
-	m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());	// remove transform
+	if (m_bTransparentBkgnd) {	// if transparent background
+		CKD2DRectF	rRun;	// bounds of all of run's glyphs, in world coords
+		GetRunBounds(rRun, ptBaselineOrigin, pGlyphRun);
+		rRun.InflateRect(AA_MARGIN, AA_MARGIN);	// account for DrawImage antialiasing to avoid unerased sliver
+		CreateEraser(rRun.Size(), 0);	// create eraser bitmap and clear it to zero alpha
+		CComPtr<ID2D1Image>	pOldTarget;	// smart pointer is required due to reference counting
+		m_pD2DDeviceContext->GetTarget(&pOldTarget);	// increments target's reference count
+		m_pD2DDeviceContext->SetTarget(m_pEraserBitmap);	// set target to eraser bitmap
+		m_pVarBrush->SetColor(D2D1::ColorF(0, 0, 0, 1));	// draw with full-strength erasure
+		// convert baseline origin from world coords to eraser bitmap local coords
+		D2D1_POINT_2F	ptOffset = DPoint(ptBaselineOrigin) - rRun.TopLeft();
+		auto mTranslate(D2D1::Matrix3x2F::Translation(ptOffset.x, ptOffset.y));
+		m_pD2DDeviceContext->SetTransform(mTranslate);
+		// draw glyph outlines in eraser bitmap; outlines are full alpha, rest is zero alpha
+		m_pD2DDeviceContext->DrawGeometry(pPathGeom, m_pVarBrush, fStroke, m_pStrokeStyle);
+		m_pD2DDeviceContext->SetTarget(pOldTarget);	// restore previous target
+		ResetTransform(m_pD2DDeviceContext);	// remove transform
+		EraseBackground(rRun.TopLeft());	// erase glyph outlines via destination out blending
+	} else {	// draw outline with background color
+		auto mTranslate(D2D1::Matrix3x2F::Translation(ptBaselineOrigin.x, ptBaselineOrigin.y));
+		m_pD2DDeviceContext->SetTransform(mTranslate);
+		m_pD2DDeviceContext->DrawGeometry(pPathGeom, m_pBkgndBrush, fStroke, m_pStrokeStyle);
+		ResetTransform(m_pD2DDeviceContext);	// remove transform
+	}
 	return S_OK;
 }
 
@@ -501,7 +531,7 @@ bool CSloganDraw::TransClock(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE 
 			auto mTranslate(D2D1::Matrix3x2F::Translation(fRadius, fRadius));	// account for local coords
 			m_pD2DDeviceContext->SetTransform(mTranslate);
 			m_pD2DDeviceContext->FillGeometry(m_pPathGeom, m_pVarBrush);	// draw pie as alpha mask
-			m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
+			ResetTransform(m_pD2DDeviceContext);	// remove transform
 			m_pD2DDeviceContext->SetTarget(pOldTarget);
 		}
 		m_fClockRadius = fRadius;	// save radius in member var
@@ -519,7 +549,7 @@ bool CSloganDraw::TransClock(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE 
 				auto mTranslate(D2D1::Matrix3x2F::Translation(ptCenter.x, ptCenter.y));
 				m_pD2DDeviceContext->SetTransform(mTranslate);
 				m_pD2DDeviceContext->FillGeometry(m_pPathGeom, m_pBkgndBrush);
-				m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
+				ResetTransform(m_pD2DDeviceContext);	// remove transform
 			}
 			m_pD2DDeviceContext->PopAxisAlignedClip();
 		}
@@ -540,7 +570,7 @@ void CSloganDraw::TransSkew(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE m
 	auto mSkew(D2D1::Matrix3x2F::Skew(DTF(90 * fPhase), 0, ptBaselineOrigin));
 	m_pD2DDeviceContext->SetTransform(mSkew);
 	m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
-	m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
+	ResetTransform(m_pD2DDeviceContext);	// remove transform
 }
 
 bool CSloganDraw::TransExplode()
@@ -608,7 +638,7 @@ bool CSloganDraw::TransExplode(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MOD
 		auto mTranslate(D2D1::Matrix3x2F::Translation(fOriginX, ptBaselineOrigin.y));
 		m_pD2DDeviceContext->SetTransform(mTranslate);	// translate to left edge and baseline
 		m_pD2DDeviceContext->FillGeometry(pTriGeom, m_pDrawBrush);	// fill geometry
-		m_pD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
+		ResetTransform(m_pD2DDeviceContext);	// remove transform
 	}
 	return true;
 }

@@ -26,6 +26,7 @@
         16      27nov25	add submarine transition
 		17		28nov25	add symmetrical easing
 		18		30nov25	add eraser bitmap
+		19		01dec25	add transparent background special cases
 
 */
 
@@ -198,7 +199,7 @@ protected:
 	double	GetPhase(UINT nFlags = 0) const;
 	double	GetFrameRate();
 	double	GetFrameTime() const;
-	bool	CreateEraser(CD2DSizeF& szMask);
+	bool	CreateEraser(CD2DSizeF& szMask, FLOAT fAlpha = 1.0f);
 	void	EraseBackground(D2D1_POINT_2F ptTargetOffset, D2D1_RECT_F *pImageRect = NULL);
 
 // Regression test

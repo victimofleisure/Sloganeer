@@ -16,12 +16,13 @@
 		07		27nov25	add tight vertical bounds flag to glyph iterator
 		08		29nov25	add dips to pixels conversion methods
 		09		30nov25	add ascent and descent attributes to glyph iterator
+		10		01dec25	add reset transform
 
 */
 
 #pragma once
 
-#include "afxrendertarget.h"
+#include "d2d1_1.h"
 
 inline D2D1_SIZE_F GetDpi(ID2D1RenderTarget* pRT)
 {
@@ -261,4 +262,9 @@ inline D2D1::ColorF RGBAColorF(UINT32 rgba)
 		static_cast<FLOAT>((rgba & maskG) >> shiftG) / 255.f,
 		static_cast<FLOAT>((rgba & maskB) >> shiftB) / 255.f,
 		static_cast<FLOAT>((rgba & maskA) >> shiftA) / 255.f);
+}
+
+inline void ResetTransform(ID2D1DeviceContext* pDC)
+{
+	pDC->SetTransform(D2D1::Matrix3x2F::Identity());
 }
