@@ -8,13 +8,14 @@ Simple example: `Sloganeer myslogans.txt -fontname Calibri -fontsize 120`
 
 **Numeric parameters accept fractional values unless specified otherwise.**
 
-### Usage: Sloganeer SLOGANS_PATH [options]
+### Usage: Sloganeer [SLOGANS_PATH] [options]
 
 |Option|Description|
 |---|---|
 |SLOGANS_PATH|The path of an ANSI or UTF-8 text file containing the slogans to display, one slogan per line; if the path contains spaces, enclose it in double quotes.|
 |&#8209;help|Show help; -h is also accepted.|
 |&#8209;fullscr|Start the application in full screen mode.|
+|&#8209;text&nbsp;STRING|Slogan text; if the string contains spaces, enclose it in double quotes. Supports common backslash escape sequences. For multiple slogans, specify this flag repeatedly.|
 |&#8209;fontsize&nbsp;SIZE|Font size in points.|
 |&#8209;fontname&nbsp;NAME|Font name; if the font name contains spaces, enclose it in double quotes.|
 |&#8209;fontwt&nbsp;WEIGHT|Font weight from 1 to 999; integer only.|
@@ -32,6 +33,7 @@ Simple example: `Sloganeer myslogans.txt -fontname Calibri -fontsize 120`
 |&#8209;nowrap|Disables automatic word wrapping.|
 |&#8209;easing&nbsp;PCT|The percentage of motion to ease. Only applies to transition types that support easing.|
 |&#8209;seed|Starting point for random number generation; integer only. If not specified, seed is current time so that each run is different.|
+|&#8209;transtyp&nbsp;TYPE|Override the transition type to a single type, specified via its index or code; useful for testing.|
 |&#8209;record&nbsp;PATH|Destination folder path for recording an image sequence.|
 |&#8209;recsize&nbsp;SIZE|Recording frame width and height in pixels, separated by a lowercase 'x' as in 640x480.|
 |&#8209;recrate&nbsp;FPS|Recording frame rate in frames per second.|
