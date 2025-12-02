@@ -113,55 +113,6 @@ bool CSloganCSV::CheckForHeaderRow(CString sLine, bool& bHasHeaderRow)
 	return true;	// success
 }
 
-bool CSloganCSV::ParseTransType(int iCol, CString sToken, int& iTransType)
-{
-	sToken.Trim();	// remove leading and trailing whitespace
-	int	iType = FindTransTypeCode(sToken);	// try code lookup first
-	if (iType < 0) {	// if transition type code not found
-		// assume token is a numeric transition index
-		Convert(sToken, iType);	// try decimal conversion; may throw
-		if (iType < 0 || iType >= TRANS_TYPES) {	// if type out of range
-			OnError(IDS_ERR_PARAM_RANGE, m_aColumnName[iCol]);	// report error
-			return false;	// fail
-		}
-	}
-	iTransType = iType;	// pass transition type index to caller
-	return true;	// transition type successfully parsed
-}
-
-bool CSloganCSV::EscapeChars(CString& sText)
-{
-	static const TCHAR cEsc = '\\';	// escape character
-	CString	sEdit(sText);	// copy text argument to edit buffer
-	int	iPos = 0;
-	// while escape character is found in edit buffer
-	while ((iPos = sEdit.Find(cEsc, iPos)) >= 0) {
-		sEdit.Delete(iPos);	// delete escape char
-		if (iPos < sEdit.GetLength()) {	// if not end of string
-			TCHAR	cIn = sEdit[iPos];	// copy escape argument
-			TCHAR	cOut = 0;
-			sEdit.Delete(iPos);	// delete escape argument
-			switch (cIn) {	// switch on escape argument
-			case 'n':
-				cOut = '\n';	// newline
-				break;
-			case 't':
-				cOut = '\t';	// tab
-				break;
-			case cEsc:
-				cOut = cEsc;	// escape
-				break;
-			default:
-				return false;	// unknown escape sequence
-			}
-			sEdit.Insert(iPos, cOut);	// insert replacement char
-			iPos++;	// bump char position
-		}
-	}
-	sText = sEdit;	// pass edited string to caller
-	return true;
-}
-
 bool CSloganCSV::ParseLine(CString sLine)
 {
 	CParseCSV	csv(sLine);	// create parser for CSV line
@@ -178,8 +129,8 @@ bool CSloganCSV::ParseLine(CString sLine)
 				continue;	// skip this member
 			switch (iCol) {	// switch on column index
 			case COL_text:
-				if (!EscapeChars(sToken)) {
-					OnError(IDS_CSV_ERR_BAD_ESCAPE_SEQ, sToken);
+				if (!EscapeChars(sToken)) {	// handle escape sequences
+					OnError(IDS_ERR_BAD_ESCAPE_SEQ, sToken);
 					return false;
 				}
 				m_sText = sToken;	// set slogan text
@@ -189,8 +140,10 @@ bool CSloganCSV::ParseLine(CString sLine)
 				// deduce transition direction from column index
 				iTransDir = (iCol == COL_outtrans);
 				// parse token to an incoming or outgoing transition type
-				if (!ParseTransType(iCol, sToken, m_aTransType[iTransDir]))
+				if (!ParseTransType(sToken, m_aTransType[iTransDir])) {
+					OnError(IDS_ERR_PARAM_RANGE, m_aColumnName[iCol]);	// report error
 					return false;	// abort parsing
+				}
 				break;
 			default:
 				sToken.Trim();	// remove leading and trailing whitespace

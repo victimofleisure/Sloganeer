@@ -129,3 +129,36 @@ void CSloganArray::DumpSlogans() const
 		_tprintf(_T("[%s]\n"), slogan.Format().GetString());
 	}
 }
+
+bool CSlogan::EscapeChars(CString& sText)
+{
+	static const TCHAR cEsc = '\\';	// escape character
+	CString	sEdit(sText);	// copy text argument to edit buffer
+	int	iPos = 0;
+	// while escape character is found in edit buffer
+	while ((iPos = sEdit.Find(cEsc, iPos)) >= 0) {
+		sEdit.Delete(iPos);	// delete escape char
+		if (iPos < sEdit.GetLength()) {	// if not end of string
+			TCHAR	cIn = sEdit[iPos];	// copy escape argument
+			TCHAR	cOut = 0;
+			sEdit.Delete(iPos);	// delete escape argument
+			switch (cIn) {	// switch on escape argument
+			case 'n':
+				cOut = '\n';	// newline
+				break;
+			case 't':
+				cOut = '\t';	// tab
+				break;
+			case cEsc:
+				cOut = cEsc;	// escape
+				break;
+			default:
+				return false;	// unknown escape sequence
+			}
+			sEdit.Insert(iPos, cOut);	// insert replacement char
+			iPos++;	// bump char position
+		}
+	}
+	sText = sEdit;	// pass edited string to caller
+	return true;
+}

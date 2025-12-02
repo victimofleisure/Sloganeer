@@ -71,6 +71,7 @@ public:
 // Operations
 	void	InitSloganColumns();
 	static double	Lerp(double a, double b, double t);
+	static bool	EscapeChars(CString& sText);
 
 protected:
 	static const LPCTSTR m_aColumnName[COLUMNS];	// column names

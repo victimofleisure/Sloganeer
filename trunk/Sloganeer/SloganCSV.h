@@ -48,6 +48,4 @@ protected:
 	void	SetDefaultColumnLayout();
 	bool	CheckForHeaderRow(CString sLine, bool& bHasHeaderRow);
 	bool	ParseLine(CString sLine);
-	bool	ParseTransType(int iCol, CString sToken, int& iTransType);
-	static bool	EscapeChars(CString& sText);
 };

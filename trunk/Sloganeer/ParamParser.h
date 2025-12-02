@@ -12,6 +12,7 @@
 		02		14nov25	add recording
 		03		15nov25	add color names
         04      25nov25	support decimal colors
+		05		02dec25	add text and transition type
 
 */
 
@@ -30,6 +31,7 @@ public:
 	static	CString	GetHelpString();
 	static	void	ScanColor(LPCTSTR pszParam, D2D1::ColorF& color);
 	static	bool	ScanDecimalColor(LPCTSTR pszParam, D2D1::ColorF& color);
+	static	bool	ParseTransType(CString sToken, int& iTransType);
 
 // Overrides
 	virtual void ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast);
@@ -65,9 +67,11 @@ protected:
 	virtual void OnError(int nErrID, LPCTSTR pszParam, LPCTSTR pszErrInfo = NULL);
 
 // Helpers
-	template<typename T> void Convert(LPCTSTR pszParam, T& val);
+	template<typename T> static void Convert(LPCTSTR pszParam, T& val);
 	template<typename T> void Scan(LPCTSTR pszParam, T& val);
 	template<typename T> bool Scan(LPCTSTR pszParam, T& val, T minVal, T maxVal);
+	void	ScanTransType(LPCTSTR pszParam);
+	void	ScanText(CString sText);
 	static	void	BreakIntoLines(CString sText, CStringArrayEx& arrLine, int nMaxLine = 80);
 	static	CString	UnpackHelp(CString& sParam, int nParamHelpResID, bool bArgumentUpperCase = true);
 	static	CString	UnpackHelp(LPCTSTR pszParam, int nParamHelpResID, bool bArgumentUpperCase = true);

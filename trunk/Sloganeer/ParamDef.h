@@ -15,6 +15,7 @@
         05      18nov25	add slogan members
         06      25nov25	add color palette and cycling
         07      27nov25	add submarine transition
+		08		02dec25	add text and transition type
 
 */
 
@@ -22,6 +23,7 @@
 
 PARAMDEF(help)			// display help
 PARAMDEF(fullscr)		// start application in full screen mode
+PARAMDEF(text)			// slogan text
 PARAMDEF(fontsize)		// font size in points
 PARAMDEF(fontname)		// font name
 PARAMDEF(fontwt)		// font weight, from 1 - 999
@@ -39,6 +41,7 @@ PARAMDEF(drawfrq)		// drawing color cycling frequency in Hertz
 PARAMDEF(nowrap)		// disables automatic word wrapping
 PARAMDEF(easing)		// percentage of motion to ease
 PARAMDEF(seed)			// starting point for random number generation
+PARAMDEF(transtyp)		// transition type override
 PARAMDEF(record)		// recording destination folder path
 PARAMDEF(recsize)		// recording frame size, in pixels
 PARAMDEF(recrate)		// recording frame rate, in frames per second

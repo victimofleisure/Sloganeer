@@ -14,6 +14,7 @@
 		04		18nov25	add CSV support
         05      25nov25	add color palette and cycling
 		06		27nov25	fix decimal color false positive
+		07		02dec25	add text and transition type
 
 */
 
@@ -173,6 +174,41 @@ bool CParamParser::ScanDecimalColor(LPCTSTR pszParam, D2D1::ColorF& color)
 	return true;
 }
 
+bool CParamParser::ParseTransType(CString sToken, int& iTransType)
+{
+	sToken.Trim();	// remove leading and trailing whitespace
+	int	iType = FindTransTypeCode(sToken);	// try code lookup first
+	if (iType < 0) {	// if transition type code not found
+		// assume token is a numeric transition index
+		Convert(sToken, iType);	// try decimal conversion; may throw
+		if (iType < 0 || iType >= TRANS_TYPES)	// if type out of range
+			return false;	// fail
+	}
+	iTransType = iType;	// pass transition type index to caller
+	return true;	// transition type successfully parsed
+}
+
+void CParamParser::ScanTransType(LPCTSTR pszParam)
+{
+	int iType;
+	if (!ParseTransType(pszParam, iType)) {	// parse transition type
+		OnError(IDS_ERR_PARAM_RANGE, m_aFlag[m_iFlag]);	// report error
+		return;
+	}
+	m_aTransType[TD_INCOMING] = iType;	// set both incoming and outgoing
+	m_aTransType[TD_OUTGOING] = iType;
+}
+
+void CParamParser::ScanText(CString sText)
+{
+	if (!EscapeChars(sText)) {	// handle escape sequences
+		OnError(IDS_ERR_BAD_ESCAPE_SEQ, sText);
+		return;
+	}
+	m_sText = sText;
+	m_aSlogan.Add(*this);
+}
+
 void CParamParser::ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast)
 {
 	// ParseCommandLine calls this callback for each parameter string
@@ -218,6 +254,9 @@ void CParamParser::ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast)
 		if (m_iFlag >= 0) {	// if parameter expected
 			try {
 				switch (m_iFlag) {
+				case FLAG_text:
+					ScanText(pszParam);
+					break;
 				case FLAG_fontsize:
 					Scan(pszParam, m_fFontSize);
 					break;
@@ -260,13 +299,16 @@ void CParamParser::ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast)
 				case FLAG_drawfrq:
 					Scan(pszParam, m_palDraw.m_fCycleFreq);
 					break;
+				case FLAG_easing:
+					Scan(pszParam, fParam);
+					m_fEasing = fParam / 100;	// convert percentage to fraction
+					break;
 				case FLAG_seed:
 					Scan(pszParam, m_nRandSeed);
 					m_bHasRandSeed = true;
 					break;
-				case FLAG_easing:
-					Scan(pszParam, fParam);
-					m_fEasing = fParam / 100;	// convert percentage to fraction
+				case FLAG_transtyp:
+					ScanTransType(pszParam);
 					break;
 				case FLAG_record:
 					m_sRecFolderPath = pszParam;

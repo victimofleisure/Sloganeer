@@ -11,9 +11,9 @@
 #define IDS_APP_ERR_CANT_CREATE_APP_DATA_FOLDER 201
 #define IDS_APP_LICENSE                 202
 #define IDS_APP_UNKNOWN_SYSTEM_ERROR    203
-#define IDS_CSV_ERR_BAD_ESCAPE_SEQ      204
-#define IDS_CSV_ERR_LOCATION            205
-#define IDS_ERR_BAD_COLUMN_NAME         206
+#define IDS_CSV_ERR_LOCATION            204
+#define IDS_ERR_BAD_COLUMN_NAME         205
+#define IDS_ERR_BAD_ESCAPE_SEQ          206
 #define IDS_ERR_CANT_INIT_COM           207
 #define IDS_ERR_CAPTURE_FRAME_SIZE_CHANGE 208
 #define IDS_ERR_PARAM_INVALID           209
@@ -51,13 +51,15 @@
 #define IDS_FLAG_HELP_recsize           241
 #define IDS_FLAG_HELP_seed              242
 #define IDS_FLAG_HELP_seqtext           243
-#define IDS_FLAG_HELP_transdur          244
-#define IDS_FULL_SCREEN                 245
-#define IDS_HELP                        246
-#define IDS_HELP_EXAMPLES               247
-#define IDS_HELP_PARAM_path             248
-#define IDS_HELP_USAGE                  249
-#define IDS_IMAGE_SEQ_OVERWRITE_WARN    250
+#define IDS_FLAG_HELP_text              244
+#define IDS_FLAG_HELP_transdur          245
+#define IDS_FLAG_HELP_transtyp          246
+#define IDS_FULL_SCREEN                 247
+#define IDS_HELP                        248
+#define IDS_HELP_EXAMPLES               249
+#define IDS_HELP_PARAM_path             250
+#define IDS_HELP_USAGE                  251
+#define IDS_IMAGE_SEQ_OVERWRITE_WARN    252
 #define IDC_ABOUT_LICENSE               1001
 #define IDC_ABOUT_VERSION               1002
 #define IDC_HELP_EDIT                   1003
@@ -69,7 +71,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                1
-#define _APS_NEXT_RESOURCE_VALUE        251
+#define _APS_NEXT_RESOURCE_VALUE        253
 #define _APS_NEXT_COMMAND_VALUE         32771
 #define _APS_NEXT_CONTROL_VALUE         1006
 #define _APS_NEXT_SYMED_VALUE           101
