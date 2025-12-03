@@ -13,6 +13,7 @@
 		03		15nov25	add color names
 		04		18nov25	add CSV support
         05      25nov25	add color palette and cycling
+		06		03dec25	handle escape sequences in text file
 
 */
 
@@ -56,7 +57,7 @@ void CSloganParams::ReadSlogans(LPCTSTR pszPath)
 	CSlogan	slogan(*this);	// set slogan attributes to defaults
 	while (fSlogan.ReadString(sText)) {	// read slogan text
 		if (!sText.IsEmpty()) {	// if string isn't empty
-			sText.Replace('\t', '\n');	// replace tabs with newlines
+			EscapeChars(sText);	// // handle escape sequences
 			slogan.m_sText = sText;
 			aSlogan.Add(slogan);	// add slogan to array
 		}
