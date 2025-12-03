@@ -103,9 +103,9 @@ void CSloganDraw::TransFade()
 	double	fPhase = GetPhase(GP_INVERT);
 	D2D1::ColorF	clr(0);
 	if (m_bTransparentBkgnd) {	// if transparent background
-		// use draw color RGB values with phase as alpha
+		// use draw color RGB values, scaling alpha by phase
 		clr = D2D1::ColorF(
-			m_clrDraw.r, m_clrDraw.g, m_clrDraw.b, DTF(fPhase));
+			m_clrDraw.r, m_clrDraw.g, m_clrDraw.b, DTF(m_clrDraw.a * fPhase));
 	} else {	// linear interpolation with background color
 		clr = D2D1::ColorF(
 			DTF(Lerp(m_clrBkgnd.r, m_clrDraw.r, fPhase)),
