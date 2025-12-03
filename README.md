@@ -138,7 +138,7 @@ And if your slogan also contains double quotes, you must double them:
 
 ### Escape sequences
 
-The slogan text also supports a few common escape sequences:
+The slogan text supports a few common escape sequences:
 
 |Seq|Meaning|
 |-|-|
