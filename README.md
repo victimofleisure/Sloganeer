@@ -70,7 +70,7 @@ For example, to set incoming transitions to 1 second, a hold time of 3 seconds, 
 
 ### Slogans file
 
-The slogans file is a plain text file containing the slogans to be displayed. Each non-empty line of the file is interpreted as a single slogan. You can create multi-line slogans by inserting the [escape sequence](#escape_sequences) \n where you want line breaks. Each \n in a slogan is replaced with a newline when the text is displayed. To create a blank slogan, use a line containing a single space.
+The slogans file is a plain text file containing the slogans to be displayed. Each non-empty line of the file is interpreted as a single slogan. You can create multi-line slogans by inserting the [escape sequence](#escape-sequences) \n where you want line breaks. Each \n in a slogan is replaced with a newline when the text is displayed. To create a blank slogan, use a line containing a single space.
 
 The slogans file must be in either ANSI or UTF-8 format. To use non-ANSI characters, UTF-8 format is strongly recommended. UTF-8 supports nearly all languages including Chinese, Japanese, Arabic, and Hindi.
 
