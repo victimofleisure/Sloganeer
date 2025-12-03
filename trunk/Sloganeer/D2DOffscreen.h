@@ -8,6 +8,7 @@
 		revision history:
 		rev		date	comments
         00		13nov25	initial version
+		01		03dec25	move auto unmap resource to helpers
 		
 */
 
@@ -15,7 +16,6 @@
 
 #include "d2d1_1.h"
 #include "d3d11.h"
-#include "dxgi1_2.h"
 
 class CD2DOffscreen : public WObject {
 public:
@@ -36,21 +36,9 @@ public:
     CComPtr<ID2D1DeviceContext>	m_pD2DDeviceContext;	// Direct2D device context
 
 protected:
-// Types
-	// helper class to automatically unmap a resource when the helper's instance
-	// is destroyed; the resource must be mapped, otherwise behavior is undefined
-	class CAutoUnmapResource {
-	public:
-		CAutoUnmapResource(ID3D11DeviceContext* pD3DDC, ID3D11Resource* pD3DRes);
-		~CAutoUnmapResource();
-
-	protected:
-		ID3D11DeviceContext*	m_pD3DDC;	// pointer to Direct3D device context
-		ID3D11Resource*	m_pD3DRes;	// pointer to Direct3D resource to be unmapped
-	};
-
 // Member data
 	CComPtr<ID3D11Device> m_pD3DDevice;	// Direct3D device
+	CComPtr<ID3D11DeviceContext>	m_pD3DDeviceContext;	// Direct3D device context
 	CComPtr<ID2D1Device>	m_pD2DDevice;	// Direct2D device
     CComPtr<ID3D11Texture2D>	m_pRenderTex;	 // GPU render target
 	CComPtr<ID3D11Texture2D>	m_pStaging; // GPU to CPU staging texture

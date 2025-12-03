@@ -8,11 +8,13 @@
 		revision history:
 		rev		date	comments
         00		13nov25	initial version
+		01		03dec25	move auto unmap resource to helpers
 		
 */
 
 #include "stdafx.h"
 #include "D2DOffscreen.h"
+#include "D2DHelper.h"
 
 #define CHECK(x) { HRESULT hr = x; if (FAILED(hr)) { OnError(hr, __FILE__, __LINE__, __DATE__); return false; }}
 
@@ -31,19 +33,6 @@ void CD2DOffscreen::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPC
 	UNREFERENCED_PARAMETER(pszSrcFileName);
 	UNREFERENCED_PARAMETER(nLineNum);
 	UNREFERENCED_PARAMETER(pszSrcFileDate);
-}
-
-CD2DOffscreen::CAutoUnmapResource::CAutoUnmapResource(ID3D11DeviceContext* pD3DDC, ID3D11Resource* pD3DRes)
-{
-	ASSERT(pD3DDC != NULL);
-	ASSERT(pD3DRes != NULL);
-	m_pD3DDC = pD3DDC;
-	m_pD3DRes = pD3DRes;	// assume the resource is already mapped
-}
-
-CD2DOffscreen::CAutoUnmapResource::~CAutoUnmapResource()
-{
-	m_pD3DDC->Unmap(m_pD3DRes, 0);	// unmap resource
 }
 
 bool CD2DOffscreen::Create(D2D1_SIZE_U szImage, D2D1_SIZE_F szDPI)
@@ -65,6 +54,7 @@ bool CD2DOffscreen::Create(D2D1_SIZE_U szImage, D2D1_SIZE_F szDPI)
 	CHECK(m_pD3DDevice->QueryInterface(IID_PPV_ARGS(&pDXGIDevice)));
 	CHECK(m_pD2DFactory->CreateDevice(pDXGIDevice, &m_pD2DDevice));
 	CHECK(m_pD2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &m_pD2DDeviceContext));
+	m_pD3DDevice->GetImmediateContext(&m_pD3DDeviceContext);	// cache device context
 	//
 	// Create the D3D render texture that D2D will draw into.
 	//
@@ -110,12 +100,10 @@ bool CD2DOffscreen::Create(D2D1_SIZE_U szImage, D2D1_SIZE_F szDPI)
 
 bool CD2DOffscreen::Write(LPCTSTR pszPath)
 {
-	CComPtr<ID3D11DeviceContext>	pD3DDeviceContext;
-	m_pD3DDevice->GetImmediateContext(&pD3DDeviceContext);
-	pD3DDeviceContext->CopyResource(m_pStaging, m_pRenderTex);
+	m_pD3DDeviceContext->CopyResource(m_pStaging, m_pRenderTex);
 	D3D11_MAPPED_SUBRESOURCE map = {};
-	CHECK(pD3DDeviceContext->Map(m_pStaging, 0, D3D11_MAP_READ, 0, &map));
-	CAutoUnmapResource	unmapStaging(pD3DDeviceContext, m_pStaging);	// dtor unmaps staging
+	CHECK(m_pD3DDeviceContext->Map(m_pStaging, 0, D3D11_MAP_READ, 0, &map));
+	CAutoUnmapResource	unmapStaging(m_pD3DDeviceContext, m_pStaging);	// dtor unmaps staging
 	BYTE*	pData = static_cast<BYTE*>(map.pData);
 	UINT	nPitch = map.RowPitch;
 	UINT	nWidth = m_szImage.width;

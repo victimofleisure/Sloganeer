@@ -17,12 +17,14 @@
 		08		29nov25	add dips to pixels conversion methods
 		09		30nov25	add ascent and descent attributes to glyph iterator
 		10		01dec25	add reset transform
+		11		03dec25 add auto unmap resource
 
 */
 
 #pragma once
 
 #include "d2d1_1.h"
+#include "d3d11.h"
 
 inline D2D1_SIZE_F GetDpi(ID2D1RenderTarget* pRT)
 {
@@ -267,4 +269,29 @@ inline D2D1::ColorF RGBAColorF(UINT32 rgba)
 inline void ResetTransform(ID2D1DeviceContext* pDC)
 {
 	pDC->SetTransform(D2D1::Matrix3x2F::Identity());
+}
+
+// helper class to automatically unmap a resource when the helper's instance
+// is destroyed; the resource must be mapped, otherwise behavior is undefined
+class CAutoUnmapResource {
+public:
+	CAutoUnmapResource(ID3D11DeviceContext* pD3DDC, ID3D11Resource* pD3DRes);
+	~CAutoUnmapResource();
+
+protected:
+	ID3D11DeviceContext*	m_pD3DDC;	// pointer to Direct3D device context
+	ID3D11Resource*	m_pD3DRes;	// pointer to Direct3D resource to be unmapped
+};
+
+inline CAutoUnmapResource::CAutoUnmapResource(ID3D11DeviceContext* pD3DDC, ID3D11Resource* pD3DRes)
+{
+	ASSERT(pD3DDC != NULL);
+	ASSERT(pD3DRes != NULL);
+	m_pD3DDC = pD3DDC;
+	m_pD3DRes = pD3DRes;	// assume the resource is already mapped
+}
+
+inline CAutoUnmapResource::~CAutoUnmapResource()
+{
+	m_pD3DDC->Unmap(m_pD3DRes, 0);	// unmap resource
 }
