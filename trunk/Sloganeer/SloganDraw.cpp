@@ -32,6 +32,7 @@
 		22		29nov25	fix text bounds; use overhang metrics only
 		23		30nov25	add eraser bitmap
 		24		01dec25	add transparent background special cases
+		25		03dec25	add recording to named pipe
 
 */
 
@@ -41,7 +42,7 @@
 #include "Easing.h"
 #include "PathStr.h"
 #include "SaveObj.h"
-#include "D2DOffscreen.h"
+#include "D2DPipe.h"
 
 #define DTF(x) static_cast<float>(x)
 
@@ -134,17 +135,23 @@ bool CSloganDraw::FullScreen(bool bEnable)
 	return true;
 }
 
-class CSloganOffscreen : public CD2DOffscreen {
+class CSloganPipe : public CD2DPipe {
 	virtual void OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate) {
 		theApp.OnError(hr, pszSrcFileName, nLineNum, pszSrcFileDate);
 	}
+	virtual bool OnConnectTimeout() { return AfxMessageBox(IDS_ERR_PIPE_TIMEOUT, MB_RETRYCANCEL) == IDRETRY; }
 };
 
 bool CSloganDraw::Record()
 {
-	CSloganOffscreen	offScreen;
+	CSloganPipe	offScreen;
 	if (!offScreen.Create(CD2DSizeU(m_szRecFrameSize)))
-		return false;
+		return false;	// can't create offscreen instance
+	bool	bIsPipe = IsPipeName(m_sRecFolderPath);	// true if path is a pipe name
+	if (bIsPipe) {	// if recording to pipe
+		if (!offScreen.CreatePipe(m_sRecFolderPath))
+			return false;	// can't create pipe
+	}
 	// set recording state to true; restored automatically when we exit
 	CSaveObj<bool>	saveRecording(m_bIsRecording, true);
 	// use CopyTo instead of Attach because we don't own these objects,
@@ -162,9 +169,14 @@ bool CSloganDraw::Record()
 		CHECK(offScreen.m_pD2DDeviceContext->EndDraw());	// end draw
 		if (!bDrawResult)	// if drawing failed
 			return false;	// error already handled
-		CString	sImagePath(MakeImageSequenceFileName(m_sRecFolderPath, m_iFrame));
-		if (!offScreen.Write(sImagePath))	// write frame to file
-			return false;
+		if (bIsPipe) {	// if recording to pipe
+			if (!offScreen.WritePipe())	// write frame to pipe
+				return false;
+		} else {	// recording to image sequence
+			CString	sImagePath(MakeImageSequenceFileName(m_sRecFolderPath, m_iFrame));
+			if (!offScreen.Write(sImagePath))	// write frame to file
+				return false;
+		}
 	}
 	return true;
 }

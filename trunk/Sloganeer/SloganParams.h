@@ -13,6 +13,7 @@
 		03		15nov25	add color names
 		04		18nov25	add CSV support
         05      25nov25	add color palette and cycling
+		06		03dec25	add pipe name attribute
 
 */
 
@@ -57,6 +58,7 @@ public:
 // Attributes
 	void	SetSlogans(const LPCTSTR *aSlogan, int nSlogans);
 	bool	IsRecording() const;
+	static bool	IsPipeName(CString sPath);
 
 // Operations
 	void	ReadSlogans(LPCTSTR pszPath);

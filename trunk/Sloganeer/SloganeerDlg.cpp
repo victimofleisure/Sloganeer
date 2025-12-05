@@ -10,6 +10,7 @@
         00      24oct25	initial version
 		01		30oct25	move parameters to their own class
 		02		14nov25	add recording
+		03		03dec25	add recording to named pipe
 
 */
 
@@ -74,19 +75,21 @@ bool CDlgSloganDraw::OnDraw()
 
 bool CSloganeerDlg::Record()
 {
-	// check for pre-existing image sequence in export folder
 	CString	sRecFolderPath(m_sd.GetParams().m_sRecFolderPath);
-	CString	sImagePath(CSloganDraw::MakeImageSequenceFileName(sRecFolderPath, 0));
-	if (PathFileExists(sImagePath)) {	// if first frame exists
-		UINT	nType = MB_YESNO | MB_DEFBUTTON2 | MB_ICONWARNING;
-		if (AfxMessageBox(IDS_IMAGE_SEQ_OVERWRITE_WARN, nType) != IDYES)
-			return false;	// user chickened out
+	if (!CSloganParams::IsPipeName(sRecFolderPath)) {	// if path isn't a named pipe
+		// check for pre-existing image sequence in export folder
+		CString	sImagePath(CSloganDraw::MakeImageSequenceFileName(sRecFolderPath, 0));
+		if (PathFileExists(sImagePath)) {	// if first frame exists
+			UINT	nType = MB_YESNO | MB_DEFBUTTON2 | MB_ICONWARNING;
+			if (AfxMessageBox(IDS_IMAGE_SEQ_OVERWRITE_WARN, nType) != IDYES)
+				return false;	// user chickened out
+		}
+		// delete pre-existing image sequence if any
+		CString	sRecordExt(PathFindExtension(sImagePath));
+		CPathStr	sWildcardPath(sRecFolderPath);
+		sWildcardPath.Append('*' + sRecordExt);
+		WildcardDeleteFile(sWildcardPath);
 	}
-	// delete pre-existing image sequence if any
-	CString	sRecordExt(PathFindExtension(sImagePath));
-	CPathStr	sWildcardPath(sRecFolderPath);
-	sWildcardPath.Append('*' + sRecordExt);
-	WildcardDeleteFile(sWildcardPath);
 	// construct local slogan draw instance
 	CDlgSloganDraw	sd(m_sd.GetParams());
 	sd.Create();

@@ -14,6 +14,7 @@
 		04		18nov25	add CSV support
         05      25nov25	add color palette and cycling
 		06		03dec25	handle escape sequences in text file
+		07		03dec25	add pipe name attribute
 
 */
 
@@ -149,4 +150,10 @@ void CSloganParams::CPalette::CycleColor(double fElapsedTime, D2D1::ColorF& colo
 		DTF(Lerp(clr0.g, clr1.g, fBlend)),
 		DTF(Lerp(clr0.b, clr1.b, fBlend)),
 		DTF(Lerp(clr0.a, clr1.a, fBlend)));
+}
+
+bool CSloganParams::IsPipeName(CString sPath)
+{
+	// return true if path is a pipe name
+	return !sPath.Left(9).CompareNoCase(_T("\\\\.\\pipe\\"));
 }
