@@ -34,7 +34,7 @@ Simple example: `Sloganeer myslogans.txt -fontname Calibri -fontsize 120`
 |&#8209;easing&nbsp;PCT|The percentage of motion to ease. Only applies to transition types that support easing.|
 |&#8209;seed|Starting point for random number generation; integer only. If not specified, seed is current time so that each run is different.|
 |&#8209;transtyp&nbsp;TYPE|Override the transition type to a single type, specified via its index or code; useful for testing.|
-|&#8209;record&nbsp;PATH|Destination folder path for recording an image sequence.|
+|&#8209;record&nbsp;PATH|Destination folder path for recording an image sequence; a pipe name such as \\.\pipe\foo is also accepted.|
 |&#8209;recsize&nbsp;SIZE|Recording frame width and height in pixels, separated by a lowercase 'x' as in 640x480.|
 |&#8209;recrate&nbsp;FPS|Recording frame rate in frames per second.|
 |&#8209;recdur&nbsp;SECS|Recording duration in seconds.|
