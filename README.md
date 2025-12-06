@@ -203,6 +203,15 @@ To enter or exit full screen mode, use the app’s system menu or the shortcut k
 
 There is no installer. Unzip the distribution file and run the executable. The application does not store settings in the registry or anywhere else.
 
+### Pipes
+
+Sloganeer can send raw uncompressed frames to another application via a named pipe. This may be more efficient than recording an image sequence, as it avoids compressing each frame to a PNG and writing it to disk. To create a pipe, simply specify a pipe name instead of a folder path as the argument to the record option. The other record options still apply, including the duration. Example commands known to work are below.
+```
+sloganeer -record \\.\pipe\slog -recsize 1920x1080 -recrate 60 -recdur 300
+
+ffplay -f rawvideo -pixel_format bgra -video_size 1920x1080 -framerate 60 \\.\pipe\slog
+```
+
 ### Development
 
 * There’s a [development blog](https://sloganeers.blogspot.com/). See you there!
