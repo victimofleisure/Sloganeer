@@ -11,6 +11,7 @@
 		02		24nov25	fix glyph iterator handling of RTL languages
 		03		27nov25	add tight vertical bounds flag to glyph iterator
 		04		30nov25	add calculate maximum glyph bounds
+		05		11dec25 add font collection class
 
 */
 
@@ -148,4 +149,46 @@ void AddPieWedge(ID2D1GeometrySink *pSink, D2D1_POINT_2F ptOrigin, D2D1_SIZE_F s
 		D2D1_SWEEP_DIRECTION_COUNTER_CLOCKWISE, arcSize};
 	pSink->AddArc(&arc);
 	pSink->EndFigure(D2D1_FIGURE_END_CLOSED);
+}
+
+bool CD2DFontCollection::Create()
+{
+	if (FAILED(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, 
+		__uuidof(IDWriteFactory), (IUnknown**)&m_pDWriteFactory)))
+		return false;
+	if (FAILED(m_pDWriteFactory->GetSystemFontCollection(&m_pFontCollection, FALSE)))
+		return false;
+	UINT32	nFamilies = m_pFontCollection->GetFontFamilyCount();
+	WCHAR	szLocaleName[LOCALE_NAME_MAX_LENGTH] = {};
+	int	nLocaleLen = GetUserDefaultLocaleName(szLocaleName, _countof(szLocaleName));
+	m_aFontFamilyName.SetSize(nFamilies);
+	m_aFontFamilyName.FastRemoveAll();
+	for (UINT32 iFamily = 0; iFamily < nFamilies; iFamily++) {
+		CComPtr<IDWriteFontFamily> pFamily;
+		if (FAILED(m_pFontCollection->GetFontFamily(iFamily, &pFamily)))
+			continue;
+		CComPtr<IDWriteLocalizedStrings> pNames;
+		if (FAILED(pFamily->GetFamilyNames(&pNames)))
+			continue;
+		UINT32	iIndex = 0;
+		BOOL	bExists = FALSE;
+		if (nLocaleLen) {
+			if (FAILED(pNames->FindLocaleName(szLocaleName, &iIndex, &bExists)))
+				continue;
+		}
+		if (!bExists) {
+			if (FAILED(pNames->FindLocaleName(L"en-us", &iIndex, &bExists)))
+				continue;
+		}
+		UINT32	nNameLen = 0;
+		if (FAILED(pNames->GetStringLength(iIndex, &nNameLen)))
+			continue;
+		CString	sFamilyName;
+		LPTSTR	pszFamilyName = sFamilyName.GetBuffer(nNameLen);
+		if (FAILED(pNames->GetString(iIndex, pszFamilyName, nNameLen + 1)))
+			continue;
+		sFamilyName.ReleaseBuffer();
+		m_aFontFamilyName.Add(sFamilyName);
+	}
+	return true;
 }

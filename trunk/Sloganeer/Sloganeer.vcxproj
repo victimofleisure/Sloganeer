@@ -33,10 +33,12 @@
     <ClCompile Include="HelpDlg.cpp" />
     <ClCompile Include="MeltProbe.cpp" />
     <ClCompile Include="ParamParser.cpp" />
+    <ClCompile Include="ParamsDlg.cpp" />
     <ClCompile Include="ParseCSV.cpp" />
     <ClCompile Include="ProgressDlg.cpp" />
     <ClCompile Include="Slogan.cpp" />
     <ClCompile Include="SloganCSV.cpp" />
+    <ClCompile Include="SloganDrawCmds.cpp" />
     <ClCompile Include="SloganDrawTrans.cpp" />
     <ClCompile Include="SloganParams.cpp" />
     <ClCompile Include="PathStr.cpp" />
@@ -79,6 +81,7 @@
     <ClInclude Include="MeltProbe.h" />
     <ClInclude Include="ParamDef.h" />
     <ClInclude Include="ParamParser.h" />
+    <ClInclude Include="ParamsDlg.h" />
     <ClInclude Include="ParseCSV.h" />
     <ClInclude Include="ProgressDlg.h" />
     <ClInclude Include="SaveObj.h" />

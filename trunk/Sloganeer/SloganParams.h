@@ -14,6 +14,7 @@
 		04		18nov25	add CSV support
         05      25nov25	add color palette and cycling
 		06		03dec25	add pipe name attribute
+		07		12dec25	add slogan play modes
 
 */
 
@@ -40,10 +41,18 @@ public:
 		double	m_fCycleFreq;	// color cycling frequency in Hertz
 	};
 
+// Constants
+	enum {	// slogan play modes
+		SPM_SHUFFLE,
+		SPM_SEQUENTIAL,
+		SPM_MANUAL,
+		SLOGAN_PLAY_MODES
+	};
+
 // Public data
 	CSloganArray	m_aSlogan;	// array of slogans to display
 	bool	m_bStartFullScreen;	// true if starting in full screen mode
-	bool	m_bSeqSlogans;		// true if showing slogans sequentially
+	BYTE	m_iSloganPlayMode;	// slogan play mode index; see enum above
 	bool	m_bNoWordWrap;		// true if automatic word wrapping is disabled
 	bool	m_bCustomSlogans;	// true if doing per-slogan customization
 	UINT	m_nRandSeed;		// starting point for random number generation

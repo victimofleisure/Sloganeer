@@ -8,6 +8,7 @@
 		revision history:
 		rev		date	comments
         00      18nov25	initial version
+		01		11dec25	add update columns
 
 */
 
@@ -24,6 +25,8 @@ const LPCTSTR CSlogan::m_aTransTypeCode[TRANS_TYPES] = {
 	#define TRANSTYPEDEF(code, name) _T(#code),
 	#include "ParamDef.h"	// generate code
 };
+
+const TCHAR CSlogan::m_cEsc = '\\';	// escape character
 
 const D2D1::ColorF CSlogan::INVALID_COLOR(INVALID, INVALID, INVALID, INVALID);
 
@@ -43,23 +46,23 @@ CSlogan::CSlogan(bool bAppDefaults) :
 	m_sFontName = L"Arial";
 	m_fFontSize = 150.0f;
 	m_nFontWeight = DWRITE_FONT_WEIGHT_BLACK;
-	m_nHoldDuration = 1000;
-	m_nPauseDuration = 0;
-	m_fInTransDuration = 2.0f;
-	m_fOutTransDuration = 2.0f;
+	m_nHoldDur = 1000;
+	m_nPauseDur = 0;
+	m_fInTransDur = 2.0f;
+	m_fOutTransDur = 2.0f;
 }
 
 void CSlogan::InitSloganColumns()
 {
-	m_nCustomColMask = 0;
 	m_fFontSize = INVALID;
 	m_nFontWeight = INVALID;
-	m_nHoldDuration = INVALID;
-	m_nPauseDuration = INVALID;
-	m_fInTransDuration = INVALID;
-	m_fOutTransDuration = INVALID;
+	m_nHoldDur = INVALID;
+	m_nPauseDur = INVALID;
+	m_fInTransDur = INVALID;
+	m_fOutTransDur = INVALID;
 	m_aTransType[TD_INCOMING] = INVALID;
 	m_aTransType[TD_OUTGOING] = INVALID;
+	m_nCustomColMask = 0;
 }
 
 bool CSlogan::IsSameFont(const CSlogan& slogan) const
@@ -121,22 +124,21 @@ CString CSlogan::Format() const
 	return s;
 }
 
-void CSloganArray::DumpSlogans() const
+void CSlogan::UpdateColumns(const CSlogan& src, UINT nColMask)
 {
-	int	nSlogans = GetSize();
-	for (int iSlogan = 0; iSlogan < nSlogans; iSlogan++) {
-		const CSlogan& slogan = GetAt(iSlogan);
-		_tprintf(_T("[%s]\n"), slogan.Format().GetString());
-	}
+	// update uncustomized columns that are included in nColMask
+	nColMask &= ~m_nCustomColMask;	// exclude customized columns
+	#define SLOGANDEF(name, member) if (nColMask & (1 << COL_##name)) \
+		m_##member = src.m_##member;
+	#include "ParamDef.h"	// generate code
 }
 
 bool CSlogan::EscapeChars(CString& sText)
 {
-	static const TCHAR cEsc = '\\';	// escape character
 	CString	sEdit(sText);	// copy text argument to edit buffer
 	int	iPos = 0;
 	// while escape character is found in edit buffer
-	while ((iPos = sEdit.Find(cEsc, iPos)) >= 0) {
+	while ((iPos = sEdit.Find(m_cEsc, iPos)) >= 0) {
 		sEdit.Delete(iPos);	// delete escape char
 		if (iPos < sEdit.GetLength()) {	// if not end of string
 			TCHAR	cIn = sEdit[iPos];	// copy escape argument
@@ -149,8 +151,8 @@ bool CSlogan::EscapeChars(CString& sText)
 			case 't':
 				cOut = '\t';	// tab
 				break;
-			case cEsc:
-				cOut = cEsc;	// escape
+			case m_cEsc:
+				cOut = m_cEsc;	// escape
 				break;
 			default:
 				return false;	// unknown escape sequence
@@ -161,4 +163,48 @@ bool CSlogan::EscapeChars(CString& sText)
 	}
 	sText = sEdit;	// pass edited string to caller
 	return true;
+}
+
+void CSlogan::UnescapeChars(CString& sText)
+{
+	int	iPos = 0;
+	// while characters remain unprocessed
+	while (iPos < sText.GetLength()) {
+		TCHAR	cIn = sText[iPos];
+		TCHAR	cOut = 0;
+		switch (cIn) {
+		case '\n':
+			cOut = 'n';	// newline
+			break;
+		case '\t':
+			cOut = 't';	// tab
+			break;
+		case m_cEsc:
+			cOut = m_cEsc;	// escape
+			break;
+		}
+		if (cOut) {	// if char needs escaping
+			sText.Delete(iPos);
+			sText.Insert(iPos, m_cEsc);
+			iPos++;
+			sText.Insert(iPos, cOut);
+		}
+		iPos++;
+	}
+}
+
+void CSloganArray::DumpSlogans() const
+{
+	int	nSlogans = GetSize();
+	for (int iSlogan = 0; iSlogan < nSlogans; iSlogan++) {
+		_tprintf(_T("[%s]\n"), GetAt(iSlogan).Format().GetString());
+	}
+}
+
+void CSloganArray::UpdateColumns(const CSlogan& src, UINT nColMask)
+{
+	int	nSlogans = GetSize();
+	for (int iSlogan = 0; iSlogan < nSlogans; iSlogan++) {
+		GetAt(iSlogan).UpdateColumns(src, nColMask);
+	}
 }

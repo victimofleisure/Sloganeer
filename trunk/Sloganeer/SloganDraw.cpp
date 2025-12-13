@@ -33,6 +33,7 @@
 		23		30nov25	add eraser bitmap
 		24		01dec25	add transparent background special cases
 		25		03dec25	add recording to named pipe
+		26		11dec25	add drawing commands
 
 */
 
@@ -67,7 +68,8 @@ CSloganDraw::~CSloganDraw()
 
 void CSloganDraw::Init()
 {
-	m_nWakeTime = 0;
+	m_nIdleStartTime = 0;
+	m_nIdleEndTime = 0;
 	m_fTransProgress = 0;
 	m_bThreadExit = false;
 	m_bIsFullScreen = false;
@@ -76,13 +78,14 @@ void CSloganDraw::Init()
 	m_iState = ST_TRANS_OUT;
 	m_iSlogan = 0;
 	m_iTransType = 0;
-	m_fTransDuration = 2.0f;
+	m_fTransDur = 2.0f;
 	m_fTileSize = 0;
 	m_szTileLayout = CSize(0, 0);
 	m_ptTileOffset = CD2DPointF(0, 0);
 	m_bIsGlyphRising = false;
 	m_bIsFirstGlyphRun = false;
 	m_bTransparentBkgnd = false;
+	m_bIsImmediateMode = false;
 	m_iGlyphLine = 0;
 	m_iFrame = 0;
 	m_nSwapChainBuffers = 0;
@@ -92,16 +95,16 @@ void CSloganDraw::Init()
 	m_fClockRadius = 0;
 }
 
-bool CSloganDraw::Create(HWND hWnd)
+bool CSloganDraw::Create(HWND hWnd, CWnd* pNotifyWnd)
 {
 #if SD_CAPTURE >= SD_CAPTURE_MAKE_REF_IMAGES	// if regression testing
 	RegressionTestSetup();	// override parameters for testing
 #endif	// SD_CAPTURE
 	if (m_aSlogan.IsEmpty())	// at least one slogan required
 		return false;
-	if (!m_evtWake.Create(NULL, false, false, NULL))	// create wake event
+	if (!m_evtIdleWake.Create(NULL, false, false, NULL))	// create idle wake event
 		return false;
-	return CreateThread(hWnd);	// create render thread
+	return CreateThread(hWnd, pNotifyWnd);	// create render thread
 }
 
 void CSloganDraw::Destroy()
@@ -109,7 +112,7 @@ void CSloganDraw::Destroy()
 	// order matters
 	m_thrMeltWorker.Destroy();	// destroy melt worker thread
 	m_bThreadExit = true;	// request render thread to exit
-	m_evtWake.Set();	// set wake event to signaled
+	m_evtIdleWake.Set();	// set idle wake event to signaled
 	DestroyThread();	// destroy render thread
 #if SD_CAPTURE	// if capturing frames
 	m_capture.Destroy();	// destroy capture instance
@@ -119,7 +122,7 @@ void CSloganDraw::Destroy()
 void CSloganDraw::Resize()
 {
 	// don't access render thread's data in this method
-	m_evtWake.Set();	// set wake event to signaled
+	m_evtIdleWake.Set();	// set wake event to signaled
 	PushCommand(RC_RESIZE);	// enqueue command
 }
 
@@ -128,7 +131,7 @@ bool CSloganDraw::FullScreen(bool bEnable)
 	// don't access render thread's data in this method
 	if (bEnable == m_bIsFullScreen)	// if state unchanged
 		return true;	// nothing to do
-	m_evtWake.Set();	// set wake event to signaled
+	m_evtIdleWake.Set();	// set wake event to signaled
 	if (!PushCommand(CRenderCmd(RC_SET_FULLSCREEN, !m_bIsFullScreen)))	// enqueue command
 		return false;
 	m_bIsFullScreen ^= 1;
@@ -234,7 +237,7 @@ bool CSloganDraw::OnThreadCreate()
 	srand(m_nRandSeed);	// initialize random number generator
 	m_rlSloganIdx.Init(m_aSlogan.GetSize());	// init slogan index shuffler
 	m_rlTransType.Init(TRANS_TYPES);	// init transition type shuffler
-	if (m_bSeqSlogans) {	// if showing slogans sequentially
+	if (m_iSloganPlayMode == SPM_SEQUENTIAL) {	// if showing slogans sequentially
 		m_iSlogan = -1;	// avoid skipping first slogan
 	}
 	LaunchMeltWorker();
@@ -284,10 +287,10 @@ bool CSloganDraw::OnDraw()
 	} else {	// not recording
 		fTransElapsed = m_timerTrans.Elapsed();	// get elapsed time from transition timer
 	}
-	double	fTransRemain = m_fTransDuration - fTransElapsed;	// remaining transition time
+	double	fTransRemain = m_fTransDur - fTransElapsed;	// remaining transition time
 	bool	bTransComplete;
 	if (fTransRemain > 0) {	// if transition has time remaining
-		m_fTransProgress = 1 - fTransRemain / m_fTransDuration;
+		m_fTransProgress = 1 - fTransRemain / m_fTransDur;
 		bTransComplete = false;
 	} else {	// transition is complete
 		m_fTransProgress = 1;
@@ -354,25 +357,25 @@ bool CSloganDraw::OnDraw()
 	switch (m_iState) {
 	case ST_TRANS_IN:
 		if (bTransComplete) {	// if incoming transition completed
-			if (m_nHoldDuration > 0) {	// if hold desired
-				StartIdle(m_nHoldDuration);	// start hold idle
+			if (m_nHoldDur > 0) {	// if hold desired
+				StartIdle(m_nHoldDur);	// start hold idle
 				m_iState = ST_HOLD;	// set state to hold
 			} else {	// skip hold state
-				StartTrans(ST_TRANS_OUT, m_fOutTransDuration);	// start outgoing transition
+				StartTrans(ST_TRANS_OUT, m_fOutTransDur);	// start outgoing transition
 			}
 		}
 		break;
 	case ST_HOLD:
 		if (!m_bThreadExit) {	// if exit wasn't requested
 			if (ContinueIdle()) {	// if hold completed
-				StartTrans(ST_TRANS_OUT, m_fOutTransDuration);	// start outgoing transition
+				StartTrans(ST_TRANS_OUT, m_fOutTransDur);	// start outgoing transition
 			}
 		}
 		break;
 	case ST_TRANS_OUT:
 		if (bTransComplete) {	// if outgoing transition completed
-			if (m_nPauseDuration > 0) {	// if pause desired
-				StartIdle(m_nPauseDuration);	// start pause idle
+			if (m_nPauseDur > 0) {	// if pause desired
+				StartIdle(m_nPauseDur);	// start pause idle
 				m_iState = ST_PAUSE;	// set state to pause
 			} else {	// skip pause state
 				StartSlogan();	// start a new slogan
@@ -445,19 +448,25 @@ HRESULT CSloganDraw::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOr
 
 void CSloganDraw::StartSlogan()
 {
-	if (m_bSeqSlogans) {	// if showing slogans sequentially
+	switch (m_iSloganPlayMode) {
+	case SPM_SHUFFLE:
+		m_iSlogan = m_rlSloganIdx.GetNext(m_iSlogan);	// get next slogan index
+		break;
+	case SPM_SEQUENTIAL:
 		m_iSlogan++;	// next slogan index
 		if (m_iSlogan >= m_aSlogan.GetSize())	// if reached end of slogans
 			m_iSlogan = 0;	// reset to first slogan
-	} else {	// randomizing slogans
-		m_iSlogan = m_rlSloganIdx.GetNext(m_iSlogan);	// get next slogan index
+		break;
+	case SPM_MANUAL:
+		m_iSlogan = max(m_iSlogan, 0);	// ensure slogan index is positive
+		break;
 	}
 	m_sSlogan = m_aSlogan[m_iSlogan].m_sText;	// cache current slogan
 	if (m_bCustomSlogans)	// if doing per-slogan customization
 		OnCustomSlogan();	// customize current slogan
 	OnTextChange();	// update text
 	m_bTransparentBkgnd = m_clrBkgnd.a == 0.0f;	// true if alpha is zero
-	StartTrans(ST_TRANS_IN, m_fInTransDuration);	// start incoming transition
+	StartTrans(ST_TRANS_IN, m_fInTransDur);	// start incoming transition
 }
 
 void CSloganDraw::StartTrans(int nState, float fDuration)
@@ -474,7 +483,7 @@ void CSloganDraw::StartTrans(int nState, float fDuration)
 		}
 	}
 	m_iState = nState;	// set state
-	m_fTransDuration = fDuration;
+	m_fTransDur = fDuration;
 	m_bIsTransStart = true;	// set transition start flag
 	if (m_bIsRecording) {	// if recording
 		m_fStateStartTime = GetFrameTime();	// compute time from frame index
@@ -496,9 +505,10 @@ void CSloganDraw::StartIdle(int nDuration)
 {
 	if (m_bIsRecording) {	// if recording
 		// compute time from frame index
-		m_nWakeTime = Round64(GetFrameTime() * 1000 + nDuration);
+		m_nIdleEndTime = Round64(GetFrameTime() * 1000 + nDuration);
 	} else {	// not recording
-		m_nWakeTime = GetTickCount64() + nDuration;	// set wake time
+		m_nIdleStartTime = GetTickCount64();
+		m_nIdleEndTime = m_nIdleStartTime + nDuration;	// set wake time
 	}
 }
 
@@ -506,10 +516,10 @@ bool CSloganDraw::ContinueIdle()
 {
 	if (m_bIsRecording) {	// if recording
 		ULONGLONG	nNow = Round64(GetFrameTime() * 1000);
-		return nNow >= m_nWakeTime;
+		return nNow >= m_nIdleEndTime;
 	}
 	ULONGLONG	nNow = GetTickCount64();
-	if (nNow < m_nWakeTime) {	// if more idle time remains
+	if (nNow < m_nIdleEndTime) {	// if more idle time remains
 #if SD_CAPTURE	// if capturing frames
 		return false;	// draw during idle, so idle gets captured
 #else	// not capturing frames
@@ -517,9 +527,9 @@ bool CSloganDraw::ContinueIdle()
 		if (!m_palBkgnd.IsEmpty() || !m_palDraw.IsEmpty())
 			return false;	// color cycle during idle
 		// block instead of drawing, to reduce power usage
-		DWORD	nTimeout = static_cast<DWORD>(m_nWakeTime - nNow);
+		DWORD	nTimeout = static_cast<DWORD>(m_nIdleEndTime - nNow);
 		// wait for wake signal or timeout
-		DWORD	nRet = WaitForSingleObject(m_evtWake, nTimeout);
+		DWORD	nRet = WaitForSingleObject(m_evtIdleWake, nTimeout);
 		if (nRet == WAIT_OBJECT_0)	// if wake signal
 			return false;	// idle is incomplete
 #endif	// SD_CAPTURE
@@ -875,8 +885,8 @@ bool CSloganDraw::RegressionTest()
 			: m_iFrame / REF_FRAMES % TRANS_TYPES;
 	}
 	m_fTransProgress = 1.0 / 3;	// override transition progress
-	m_nHoldDuration = 0;	// no hold
-	m_nPauseDuration = 0;	// no pause either
+	m_nHoldDur = 0;	// no hold
+	m_nPauseDur = 0;	// no pause either
 	srand(0);	// ensure consistent behavior for transitions that use randomness
 	return true;
 }

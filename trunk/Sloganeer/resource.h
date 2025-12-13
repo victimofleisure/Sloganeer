@@ -5,8 +5,9 @@
 #define IDR_MAINFRAME                   101
 #define IDD_ABOUTBOX                    102
 #define IDD_HELPBOX                     103
-#define IDD_PROGRESS                    104
-#define IDD_SLOGANEER_DIALOG            105
+#define IDD_PARAMS                      104
+#define IDD_PROGRESS                    105
+#define IDD_SLOGANEER_DIALOG            106
 #define IDS_ABOUTBOX                    200
 #define IDS_APP_ERR_CANT_CREATE_APP_DATA_FOLDER 201
 #define IDS_APP_LICENSE                 202
@@ -61,20 +62,63 @@
 #define IDS_HELP_PARAM_path             251
 #define IDS_HELP_USAGE                  252
 #define IDS_IMAGE_SEQ_OVERWRITE_WARN    253
+#define IDS_NONE                        254
+#define IDS_PARAMS                      255
+#define IDS_TT_CLOCK                    256
+#define IDS_TT_CONVERGE_HORZ            257
+#define IDS_TT_CONVERGE_VERT            258
+#define IDS_TT_ELEVATOR                 259
+#define IDS_TT_EXPLODE                  260
+#define IDS_TT_FADE                     261
+#define IDS_TT_MELT                     262
+#define IDS_TT_RAND_TILE                263
+#define IDS_TT_RAND_TYPE                264
+#define IDS_TT_REVEAL_LR                265
+#define IDS_TT_REVEAL_TB                266
+#define IDS_TT_SCALE_BOTH               267
+#define IDS_TT_SCALE_HORZ               268
+#define IDS_TT_SCALE_SPIN               269
+#define IDS_TT_SCALE_VERT               270
+#define IDS_TT_SCROLL_BT                271
+#define IDS_TT_SCROLL_LR                272
+#define IDS_TT_SCROLL_RL                273
+#define IDS_TT_SCROLL_TB                274
+#define IDS_TT_SKEW                     275
+#define IDS_TT_SUBMARINE                276
+#define IDS_TT_TYPEWRITER               277
 #define IDC_ABOUT_LICENSE               1001
 #define IDC_ABOUT_VERSION               1002
 #define IDC_HELP_EDIT                   1003
-#define IDC_PROGRESS                    1004
-#define IDC_PROGRESS_PERCENT            1005
+#define IDC_PARAMS_COLOR_BKGND          1004
+#define IDC_PARAMS_COLOR_BKGND_ALPHA    1005
+#define IDC_PARAMS_COLOR_DRAW           1006
+#define IDC_PARAMS_COLOR_DRAW_ALPHA     1007
+#define IDC_PARAMS_DUR_HOLD             1008
+#define IDC_PARAMS_DUR_IN               1009
+#define IDC_PARAMS_DUR_OUT              1010
+#define IDC_PARAMS_DUR_PAUSE            1011
+#define IDC_PARAMS_FONT_NAME            1012
+#define IDC_PARAMS_FONT_SIZE            1013
+#define IDC_PARAMS_FONT_WEIGHT          1014
+#define IDC_PARAMS_IMMEDIATE_MODE       1015
+#define IDC_PARAMS_PLAY_MODE_0          1016
+#define IDC_PARAMS_PLAY_MODE_1          1017
+#define IDC_PARAMS_PLAY_MODE_2          1018
+#define IDC_PARAMS_SLOGAN               1019
+#define IDC_PARAMS_SLOGAN_NEW           1020
+#define IDC_PARAMS_TRANS_TYPE_IN        1021
+#define IDC_PARAMS_TRANS_TYPE_OUT       1022
+#define IDC_PROGRESS                    1023
+#define IDC_PROGRESS_PERCENT            1024
 
 // Next default values for new objects
 //
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                1
-#define _APS_NEXT_RESOURCE_VALUE        254
+#define _APS_NEXT_RESOURCE_VALUE        278
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1006
+#define _APS_NEXT_CONTROL_VALUE         1025
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

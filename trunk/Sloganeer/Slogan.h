@@ -9,6 +9,7 @@
 		rev		date	comments
         00      18nov25	initial version
         01      25nov25	add customized column mask
+		02		11dec25	add update columns
 
 */
 
@@ -26,6 +27,15 @@ public:
 		#include "ParamDef.h"	// generate code
 		COLUMNS
 	};
+	enum {	// per-column bitmasks
+		#define SLOGANDEF(name, member) CBM_##name = 1 << COL_##name,
+		#include "ParamDef.h"	// generate code
+		// column group bitmasks
+		CGBM_FONT = CBM_fontname | CBM_fontsize | CBM_fontwt,
+		CGBM_COLOR = CBM_bgclr | CBM_drawclr,
+		CGBM_DURATION = CBM_transdur | CBM_holddur | CBM_outdur | CBM_pausedur,
+		CGBM_TRANSITION = CBM_intrans | CBM_outtrans,
+	};
 	enum {	// transition types
 		#define TRANSTYPEDEF(code, name) TT_##name,
 		#include "ParamDef.h"	// generate code
@@ -42,18 +52,18 @@ public:
 	static const D2D1::ColorF INVALID_COLOR;
 
 // Public data
-	UINT	m_nCustomColMask;	// bitmask indicating which columns are customized
 	CString	m_sText;			// text to display
 	CString	m_sFontName;		// font name
 	float	m_fFontSize;		// font size, in points
 	int		m_nFontWeight;		// font weight, from 1 to 999
-	int		m_nHoldDuration;	// hold duration in milliseconds
-	int		m_nPauseDuration;	// pause duration in milliseconds
-	float	m_fInTransDuration;	// incoming transition duration in seconds
-	float	m_fOutTransDuration;	// outgoing transition duration in seconds
+	int		m_nHoldDur;			// hold duration in milliseconds
+	int		m_nPauseDur;		// pause duration in milliseconds
+	float	m_fInTransDur;		// incoming transition duration in seconds
+	float	m_fOutTransDur;		// outgoing transition duration in seconds
 	D2D1::ColorF	m_clrBkgnd;	// background color
 	D2D1::ColorF	m_clrDraw;	// drawing color
 	int		m_aTransType[TRANS_DIRS];	// transition type for each direction
+	UINT	m_nCustomColMask;	// bitmask indicating which columns are customized
 
 // Attributes
 	bool	IsCustomized(int iCol) const;
@@ -70,12 +80,15 @@ public:
 
 // Operations
 	void	InitSloganColumns();
+	void	UpdateColumns(const CSlogan& src, UINT nColMask);
 	static double	Lerp(double a, double b, double t);
 	static bool	EscapeChars(CString& sText);
+	static void UnescapeChars(CString& sText);
 
 protected:
 	static const LPCTSTR m_aColumnName[COLUMNS];	// column names
 	static const LPCTSTR m_aTransTypeCode[TRANS_TYPES];	// transition type codes
+	static const TCHAR m_cEsc;	// escape character
 };
 
 inline bool CSlogan::IsCustomized(int iCol) const
@@ -106,4 +119,5 @@ inline double CSlogan::Lerp(double a, double b, double t)
 class CSloganArray : public CArrayEx<CSlogan, CSlogan&> {
 public:
 	void	DumpSlogans() const;
+	void	UpdateColumns(const CSlogan& src, UINT nColMask);
 };

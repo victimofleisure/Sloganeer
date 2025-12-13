@@ -15,6 +15,7 @@
         05      25nov25	add color palette and cycling
 		06		03dec25	handle escape sequences in text file
 		07		03dec25	add pipe name attribute
+		08		12dec25	add slogan play modes
 
 */
 
@@ -39,7 +40,7 @@ const COLORREF CSloganParams::m_aColorVal[] = {
 CSloganParams::CSloganParams() : CSlogan(true)	// app defaults
 {
 	m_bStartFullScreen = false;
-	m_bSeqSlogans = false;
+	m_iSloganPlayMode = SPM_SHUFFLE;
 	m_bNoWordWrap = false;
 	m_bCustomSlogans = false;
 	m_nRandSeed = 0;

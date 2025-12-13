@@ -197,7 +197,7 @@ void CSloganDraw::TransScale()
 void CSloganDraw::InitTiling(const CKD2DRectF& rText)
 {
 	// ideal tile count is one tile for each frame of transition
-	float	fIdealTileCount = DTF(GetFrameRate() * m_fTransDuration);
+	float	fIdealTileCount = DTF(GetFrameRate() * m_fTransDur);
 	// compute tile size: divide text area by ideal tile count and take square root
 	CD2DSizeF	szText(rText.Size());
 	m_fTileSize = DTF(sqrt(szText.width * szText.height / fIdealTileCount));
@@ -363,7 +363,7 @@ bool CSloganDraw::TransMelt()
 		}
 	}
 	// if pausing between slogans, and outgoing transition complete
-	if (m_nPauseDuration && IsTransOut() && m_fTransProgress >= 1)
+	if (m_nPauseDur && IsTransOut() && m_fTransProgress >= 1)
 		return true;	// avoid potentially showing scraps of unerased text while paused
 	m_pD2DDeviceContext->DrawTextLayout(CD2DPointF(0, 0), m_pTextLayout, m_pDrawBrush);	// fill text
 	CHECK(m_pTextLayout->Draw(0, this, 0, 0));	// erase text outline
@@ -411,12 +411,13 @@ bool CSloganDraw::TransMelt(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE m
 	return S_OK;
 }
 
-bool CSloganDraw::LaunchMeltWorker()
+bool CSloganDraw::LaunchMeltWorker(int iSelSlogan)
 {
+	m_thrMeltWorker.Destroy();	// wait for worker thread to exit
 	CD2DPointF	ptDPI;
 	m_pD2DDeviceContext->GetDpi(&ptDPI.x, &ptDPI.y);
 	m_aMeltStroke.SetSize(m_aSlogan.GetSize());	// allocate destination stroke array
-	return m_thrMeltWorker.Create(m_aSlogan, ptDPI, m_aMeltStroke);	// launch worker thread
+	return m_thrMeltWorker.Create(m_aSlogan, ptDPI, m_aMeltStroke, iSelSlogan);	// launch worker thread
 }
 
 bool CSloganDraw::MeasureMeltStroke()

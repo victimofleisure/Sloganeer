@@ -10,6 +10,7 @@
         00      14jul05	initial version
 		01		12apr18	move ctor to header
 		02		10feb25	reset method now returns elapsed time
+		03		13dec25	add start accessors
 
         compute benchmarks using performance counter
  
@@ -22,9 +23,11 @@ public:
 	CBenchmark();
 	double	Elapsed() const;
 	double	Reset();
+	double	GetStart() const;
+	void	SetStart(double fStart);
 	static	double	Time();
 
-private:
+protected:
 	double	m_fStart;		// start time, in seconds since boot
 	static	LONGLONG	m_nFreq;	// performance counter frequency, in Hz
 	static	LONGLONG	InitFreq();
@@ -53,4 +56,14 @@ inline double CBenchmark::Reset()
 	double	fElapsed = fTime - m_fStart;
 	m_fStart = fTime;
 	return fElapsed;
+}
+
+inline double CBenchmark::GetStart() const
+{
+	return m_fStart;
+}
+
+inline void CBenchmark::SetStart(double fStart)
+{
+	m_fStart = fStart;
 }

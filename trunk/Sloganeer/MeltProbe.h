@@ -10,6 +10,7 @@
         00      08nov25	initial version
         01      09nov25	add worker thread
         02      18nov25	add slogan customization
+		03		11dec25	add cancel flag and selected slogan
 
 */
 
@@ -23,9 +24,12 @@ class CMeltProbe : public CTextRenderer {
 public:
 	CMeltProbe(ID2D1Factory1* pD2DFactory, IDWriteFactory* pDWriteFactory, ID2D1StrokeStyle1* pStrokeStyle);
 	virtual ~CMeltProbe();
+	void	Init(ID2D1Factory1* pD2DFactory, IDWriteFactory* pDWriteFactory, ID2D1StrokeStyle1* pStrokeStyle);
 	bool	Create(CString sText, CString sFontName, float fFontSize, int nFontWeight, CD2DPointF ptDPI, float &fEraseStroke);
+	void	Destroy();
 	IWICBitmap*	GetBitmap();
 	CSize	GetBitmapSize() const;
+	void	SetCancel(bool bCancel = true);
 
 protected:
 // Overrides
@@ -56,6 +60,7 @@ protected:
 	CComPtr<IWICBitmap>	m_pWICBmp;	// WIC bitmap interface
 	CSize	m_szBmp;	// size of bitmap in pixels
 	CD2DPointF	m_ptText;	// text origin in DIPs
+	volatile bool	m_bCancel;	// true if canceling probe
 
 // Helpers
 	bool	ProbeText(float &fEraseStroke);
@@ -74,22 +79,32 @@ inline CSize CMeltProbe::GetBitmapSize() const
 	return m_szBmp;
 }
 
+inline void CMeltProbe::SetCancel(bool bCancel)
+{
+	m_bCancel = bCancel;
+}
+
 class CMeltProbeWorker {
 public:
 	CMeltProbeWorker();
 	~CMeltProbeWorker();
-	bool	Create(const CSloganArray& aSlogan, CD2DPointF ptDPI, CArrayEx<float, float>& aOutStroke);
+	bool	Create(const CSloganArray& aSlogan, CD2DPointF ptDPI, CArrayEx<float, float>& aOutStroke, int iSelSlogan = -1);
 	void	Destroy();
 	static HRESULT CreateStrokeStyle(ID2D1Factory1 *pD2DFactory, ID2D1StrokeStyle1 **ppStrokeStyle);
 
 protected:
+// Member data
+	CMeltProbe	m_probe;
 	CSloganArray	m_aSlogan;	// array of input slogans to probe
 	CD2DPointF	m_ptDPI;	// caller's DPI
 	CArrayEx<float, float>*	m_paStroke;	// pointer to stroke result array
+	CAutoPtr<CWinThread>	m_pWorker;	// pointer to worker thread
+	int		m_iSelSlogan;	// selected slogan to probe, or -1 to probe all
 	bool	m_bIsCOMInit;	// true if COM initialization succeeded
+	volatile bool	m_bThreadExit;	// true if worker thread should exit
+
+// Helpers
 	bool	Probe();
 	void	OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate);
-	CAutoPtr<CWinThread>	m_pWorker;	// pointer to worker thread
-	bool	m_bThreadExit;	// true if worker thread should exit
 	static UINT	ThreadFunc(LPVOID pParam);
 };

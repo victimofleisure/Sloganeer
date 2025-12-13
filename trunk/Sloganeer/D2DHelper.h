@@ -18,6 +18,8 @@
 		09		30nov25	add ascent and descent attributes to glyph iterator
 		10		01dec25	add reset transform
 		11		03dec25 add auto unmap resource
+		12		11dec25 add BGR color init
+		13		11dec25 add font collection class
 
 */
 
@@ -266,6 +268,20 @@ inline D2D1::ColorF RGBAColorF(UINT32 rgba)
 		static_cast<FLOAT>((rgba & maskA) >> shiftA) / 255.f);
 }
 
+inline D2D1::ColorF BGRColorF(COLORREF clr, float fAlpha = 1.0)
+{
+	return D2D1::ColorF(
+		static_cast<FLOAT>(GetRValue(clr)) / 255.f,
+		static_cast<FLOAT>(GetGValue(clr)) / 255.f,
+		static_cast<FLOAT>(GetBValue(clr)) / 255.f,
+		fAlpha);
+}
+
+inline COLORREF ColorFBGR(const D2D1::ColorF& clr)
+{
+	return RGB(Round(clr.r * 255.), Round(clr.g * 255.), Round(clr.b * 255.));
+}
+
 inline void ResetTransform(ID2D1DeviceContext* pDC)
 {
 	pDC->SetTransform(D2D1::Matrix3x2F::Identity());
@@ -295,3 +311,26 @@ inline CAutoUnmapResource::~CAutoUnmapResource()
 {
 	m_pD3DDC->Unmap(m_pD3DRes, 0);	// unmap resource
 }
+
+class CD2DFontCollection {
+public:
+	bool	Create();
+	int		GetFamilyCount() const;
+	CString	GetFamilyName(int iFamily) const;
+
+protected:
+	CComPtr<IDWriteFactory>		m_pDWriteFactory;
+	CComPtr<IDWriteFontCollection>	m_pFontCollection;
+	CStringArrayEx	m_aFontFamilyName;
+};
+
+inline int CD2DFontCollection::GetFamilyCount() const
+{
+	return m_aFontFamilyName.GetSize();
+}
+
+inline CString	CD2DFontCollection::GetFamilyName(int iFamily) const
+{
+	return m_aFontFamilyName[iFamily];
+}
+

@@ -11,6 +11,7 @@
 		01		30oct25	move parameters to their own class
 		02		14nov25	add recording
 		03		03dec25	add recording to named pipe
+		04		11dec25	add parameters dialog
 
 */
 
@@ -35,6 +36,7 @@ CSloganeerDlg::CSloganeerDlg(CSloganParams& params, CWnd* pParent /*=NULL*/)
 	: m_sd(params), CDialogEx(CSloganeerDlg::IDD, pParent)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+	m_bShowParamsDlg = false;
 }
 
 class CDlgSloganDraw : public CSloganDraw {
@@ -128,6 +130,13 @@ bool CSloganeerDlg::CustomizeSystemMenu()
 		// insert full screen command into system menu, before minimize
 		pSysMenu->InsertMenu(SC_MINIMIZE, 0, IDM_FULLSCREEN, sMenuItem);
 	}
+	bNameValid = sMenuItem.LoadString(IDS_PARAMS);
+	ASSERT(bNameValid);
+	if (!sMenuItem.IsEmpty())
+	{
+		// insert full screen command into system menu, before minimize
+		pSysMenu->InsertMenu(SC_MINIMIZE, 0, IDM_SHOWPARAMS, sMenuItem);
+	}
 	return true;
 }
 
@@ -137,13 +146,65 @@ void CSloganeerDlg::ShowHelp()
 	dlgHelp.DoModal();
 }
 
+void CSloganeerDlg::FullScreen(bool bEnable)
+{
+	if (bEnable == m_sd.IsFullScreen())	// if already in requested state
+		return;	// nothing to do
+	if (bEnable) {	// if entering full screen
+		// can't go full screen exclusive with child dialogs visible,
+		// so save their visibility and then hide them
+		m_bShowParamsDlg = IsParamsDlgVisible();
+		if (m_bShowParamsDlg) {
+			m_dlgParams.ShowWindow(SW_HIDE);
+			SetFocus();
+		}
+	}
+	m_sd.FullScreen(bEnable);
+}
+
+bool CSloganeerDlg::ShowParamsDlg(bool bEnable)
+{
+	if (!m_dlgParams.m_hWnd) {	// if parameters dialog not created
+		if (!m_dlgParams.Create(IDD_PARAMS))	// create dialog
+			return false;
+	}
+	m_dlgParams.ShowWindow(bEnable ? SW_SHOW : SW_HIDE);
+	return true;
+}
+
+bool CSloganeerDlg::IsParamsDlgVisible() const
+{
+	// dialog may not exist yet, so check window handle first
+	return m_dlgParams.m_hWnd && m_dlgParams.IsWindowVisible();
+}
+
+bool CSloganeerDlg::HandleKey(UINT nKey)
+{
+	switch (nKey) {
+	case VK_F11:
+		FullScreen(!m_sd.IsFullScreen());
+		break;
+	case VK_F1:
+		ShowHelp();
+		break;
+	case VK_F5:
+		ShowParamsDlg(!IsParamsDlgVisible());
+		break;
+	default:
+		return false;
+	}
+	return true;
+}
+
 BEGIN_MESSAGE_MAP(CSloganeerDlg, CDialogEx)
 	ON_WM_PAINT()
+	ON_WM_CLOSE()
 	ON_WM_KEYDOWN()
 	ON_WM_SIZE()
 	ON_WM_SETCURSOR()
 	ON_WM_SYSCOMMAND()
 	ON_MESSAGE(UWM_DELAYED_CREATE, OnDelayedCreate)
+	ON_MESSAGE(UWM_FULL_SCREEN_CHANGED, OnFullScreenChanged)
 END_MESSAGE_MAP()
 
 // CSloganeerDlg message handlers
@@ -159,15 +220,29 @@ BOOL CSloganeerDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
-	if (m_sd.GetParams().IsRecording()) {
-		PostMessage(UWM_DELAYED_CREATE);
-		return TRUE;
+	m_initSlogan = m_sd.GetParams();	// copy initial slogan state
+	PostMessage(UWM_DELAYED_CREATE);
+	if (m_sd.GetParams().IsRecording()) {	// if recording
+		return TRUE;	// no further creation
 	}
-	if (!m_sd.Create(m_hWnd))	// create slogan drawing object
+	if (!m_sd.Create(m_hWnd, this))	// create slogan drawing object
 		return TRUE;
 	m_sd.FullScreen(m_sd.GetParams().m_bStartFullScreen);	// go full screen if requested
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
+}
+
+void CSloganeerDlg::OnOK()
+{
+}
+
+void CSloganeerDlg::OnCancel()
+{
+}
+
+void CSloganeerDlg::OnClose()
+{
+	EndDialog(IDOK);
 }
 
 // If you add a minimize button to your dialog, you will need the code below
@@ -215,10 +290,13 @@ void CSloganeerDlg::OnSysCommand(UINT nID, LPARAM lParam)
 		}
 		break;
 	case IDM_FULLSCREEN:
-		m_sd.FullScreen(!m_sd.IsFullScreen());
+		FullScreen(!m_sd.IsFullScreen());
 		break;
 	case IDM_SHOWHELP:
 		ShowHelp();
+		break;
+	case IDM_SHOWPARAMS:
+		ShowParamsDlg(!IsParamsDlgVisible());
 		break;
 	default:
 		CDialogEx::OnSysCommand(nID, lParam);
@@ -227,15 +305,8 @@ void CSloganeerDlg::OnSysCommand(UINT nID, LPARAM lParam)
 
 void CSloganeerDlg::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 {
-	switch (nChar) {
-	case VK_F11:
-		m_sd.FullScreen(!m_sd.IsFullScreen());
-		break;
-	case VK_F1:
-		ShowHelp();
-		break;
-	}
-	CDialogEx::OnKeyDown(nChar, nRepCnt, nFlags);
+	if (!HandleKey(nChar))
+		CDialogEx::OnKeyDown(nChar, nRepCnt, nFlags);
 }
 
 void CSloganeerDlg::OnSize(UINT nType, int cx, int cy)
@@ -258,6 +329,17 @@ LRESULT CSloganeerDlg::OnDelayedCreate(WPARAM wParam, LPARAM lParam)
 	if (m_sd.GetParams().IsRecording()) {	// if recording
 		Record();
 		OnOK();	// exit app regardless
+		return 0;
+	}
+	return 0;
+}
+
+LRESULT CSloganeerDlg::OnFullScreenChanged(WPARAM wParam, LPARAM lParam)
+{
+	if (!wParam) {	// if windowed
+		// restore child windows
+		if (m_bShowParamsDlg)
+			m_dlgParams.ShowWindow(SW_SHOW);
 	}
 	return 0;
 }

@@ -231,7 +231,7 @@ void CParamParser::ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast)
 				m_bStartFullScreen = true;
 				break;
 			case FLAG_seqtext:
-				m_bSeqSlogans = true;	// sequential order
+				m_iSloganPlayMode = SPM_SEQUENTIAL;	// sequential order
 				break;
 			case FLAG_nowrap:
 				m_bNoWordWrap = true;	// disable word wrapping
@@ -267,19 +267,19 @@ void CParamParser::ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast)
 					Scan(pszParam, m_nFontWeight, 1, 999);
 					break;
 				case FLAG_transdur:
-					Scan(pszParam, m_fInTransDuration);
+					Scan(pszParam, m_fInTransDur);
 					break;
 				case FLAG_outdur:
-					Scan(pszParam, m_fOutTransDuration);
+					Scan(pszParam, m_fOutTransDur);
 					m_bHasOutDur = true;
 					break;
 				case FLAG_holddur:
 					Scan(pszParam, fParam);
-					m_nHoldDuration = Round(fParam * 1000);	// convert to milliseconds
+					m_nHoldDur = Round(fParam * 1000);	// convert to milliseconds
 					break;
 				case FLAG_pausedur:
 					Scan(pszParam, fParam);
-					m_nPauseDuration = Round(fParam * 1000);	// convert to milliseconds
+					m_nPauseDur = Round(fParam * 1000);	// convert to milliseconds
 					break;
 				case FLAG_bgclr:
 					ScanColor(pszParam, m_clrBkgnd);
@@ -341,7 +341,7 @@ void CParamParser::ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast)
 			OnError(IDS_ERR_PARAM_MISSING, m_aFlag[m_iFlag]);
 		}
 		if (!m_bHasOutDur)	// if outgoing transition duration not specified
-			m_fOutTransDuration = m_fInTransDuration;	// same as incoming
+			m_fOutTransDur = m_fInTransDur;	// same as incoming
 		if (!m_bHasRandSeed)	// if random number seed not specified
 			m_nRandSeed = GetTickCount();	// seed from time so runs vary
 	}

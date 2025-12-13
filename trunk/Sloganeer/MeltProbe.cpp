@@ -10,6 +10,7 @@
         00      08nov25	initial version
         01      09nov25	add worker thread
         02      18nov25	add slogan customization
+		03		11dec25	add cancel flag and selected slogan
 
 */
 
@@ -26,6 +27,16 @@
 
 CMeltProbe::CMeltProbe(ID2D1Factory1* pD2DFactory, IDWriteFactory* pDWriteFactory, ID2D1StrokeStyle1* pStrokeStyle)
 { 
+	Init(pD2DFactory, pDWriteFactory, pStrokeStyle);
+	m_bCancel = false;
+}
+
+CMeltProbe::~CMeltProbe()
+{
+}
+
+void CMeltProbe::Init(ID2D1Factory1* pD2DFactory, IDWriteFactory* pDWriteFactory, ID2D1StrokeStyle1* pStrokeStyle)
+{
 	m_pD2DFactory = pD2DFactory;
 	m_pDWriteFactory = pDWriteFactory;
 	m_pStrokeStyle = pStrokeStyle;
@@ -33,8 +44,15 @@ CMeltProbe::CMeltProbe(ID2D1Factory1* pD2DFactory, IDWriteFactory* pDWriteFactor
 	m_ptText = CD2DPointF(0, 0);
 }
 
-CMeltProbe::~CMeltProbe()
+void CMeltProbe::Destroy()
 {
+	m_pBkgndBrush.Release();
+	m_pDrawBrush.Release();
+	m_pTextFormat.Release();
+	m_pTextLayout.Release();
+	m_pRT.Release();
+	m_pWICFactory.Release();
+	m_pWICBmp.Release();
 }
 
 void CMeltProbe::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR pszSrcFileDate)
@@ -107,6 +125,8 @@ bool CMeltProbe::ProbeText(float &fEraseStroke)
 	const int	nTries = 10;	// maximum stroke of 2 ^ nTries
 	int	iTry;
 	for (iTry = 0; iTry < nTries; iTry++) {
+		if (m_bCancel)	// if probe canceled
+			return false;
 		fStroke = static_cast<float>(1 << iTry);
 		if (OutlineErasesText(fStroke))	// try to erase text
 			break;	// we're done
@@ -126,6 +146,8 @@ bool CMeltProbe::ProbeText(float &fEraseStroke)
 	float	fLowStroke = static_cast<float>(1 << (iTry - 1));	// stroke that doesn't erase text
 	const float	fStrokeTolerance = 0.5f;	// search ends when this tolerance is achieved
 	while (fHighStroke - fLowStroke > fStrokeTolerance) {	// while difference exceeds tolerance
+		if (m_bCancel)	// if probe canceled
+			return false;
 		fStroke = fLowStroke + (fHighStroke - fLowStroke) / 2;	// new guess
 		bool	bIsErased = OutlineErasesText(fStroke);	// try to erase text
 		if (bIsErased) {	// if text was erased
@@ -240,9 +262,10 @@ bool CMeltProbe::WriteBitmap(IWICBitmap* pBitmap, LPCTSTR pszImagePath)
 	return true;
 }
 
-CMeltProbeWorker::CMeltProbeWorker()
+CMeltProbeWorker::CMeltProbeWorker() : m_probe(NULL, NULL, NULL)
 {
 	m_paStroke = NULL;
+	m_iSelSlogan = -1;
 	m_bIsCOMInit = false;
 	m_bThreadExit = false;
 }
@@ -252,7 +275,7 @@ CMeltProbeWorker::~CMeltProbeWorker()
 	Destroy();
 }
 
-bool CMeltProbeWorker::Create(const CSloganArray& aSlogan, CD2DPointF ptDPI, CArrayEx<float, float>& aStroke)
+bool CMeltProbeWorker::Create(const CSloganArray& aSlogan, CD2DPointF ptDPI, CArrayEx<float, float>& aStroke, int iSelSlogan)
 {
 	ASSERT(m_pWorker == NULL);	// single worker thread only
 	if (m_pWorker != NULL)	// if worker already running
@@ -263,6 +286,9 @@ bool CMeltProbeWorker::Create(const CSloganArray& aSlogan, CD2DPointF ptDPI, CAr
 	m_aSlogan = aSlogan;
 	m_ptDPI = ptDPI;
 	m_paStroke = &aStroke;
+	m_iSelSlogan = iSelSlogan;
+	m_bThreadExit = false;	// reset exit flag
+	m_probe.SetCancel(false);	// reset probe cancel flag
 	// create thread suspended so we can safely clear its auto delete flag
 	CWinThread*	pThread = AfxBeginThread(ThreadFunc, this, 0, 0, CREATE_SUSPENDED);
 	if (pThread == NULL)	// if can't create thread
@@ -277,6 +303,7 @@ void CMeltProbeWorker::Destroy()
 {
 	if (m_pWorker == NULL)	// if worker not launched
 		return;	// nothing to do
+	m_probe.SetCancel();	// cancel probe
 	m_bThreadExit = true;	// request worker to exit
 	WaitForSingleObject(m_pWorker->m_hThread, INFINITE);
 	m_pWorker.Free();	// free worker thread instance
@@ -321,15 +348,23 @@ bool CMeltProbeWorker::Probe()
 	CHECK(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(pDWriteFactory),
 		reinterpret_cast<IUnknown **>(&pDWriteFactory)));
 	CHECK(CreateStrokeStyle(pD2DFactory, &pStrokeStyle));
+	m_probe.Init(pD2DFactory, pDWriteFactory, pStrokeStyle);
+	int	iStart, iEnd;	// half-open range; end is exclusive
+	if (m_iSelSlogan >= 0) {	// if selected slogan specified
+		iStart = m_iSelSlogan;
+		iEnd = m_iSelSlogan + 1;
+	} else {	// probe all slogans
+		iStart = 0;
+		iEnd = m_aSlogan.GetSize();
+	}
 	// now find the optimal maximum outline stroke for each text array element
-	int	nSlogans = m_aSlogan.GetSize();
-	for (int iSlogan = 0; iSlogan < nSlogans; iSlogan++) {	// for each text
+	for (int iSlogan = iStart; iSlogan < iEnd; iSlogan++) {	// for each text
 		if (m_bThreadExit)	// if worker should exit
 			return false;
 		const CSlogan&	slogan(m_aSlogan[iSlogan]);	// access slogan array element
-		CMeltProbe	probe(pD2DFactory, pDWriteFactory, pStrokeStyle);
 		float&	fOutStroke = (*m_paStroke)[iSlogan];	// dereference stroke array element
-		if (!probe.Create(slogan.m_sText, slogan.m_sFontName, slogan.m_fFontSize, 
+		m_probe.Destroy();	// release existing probe interfaces
+		if (!m_probe.Create(slogan.m_sText, slogan.m_sFontName, slogan.m_fFontSize, 
 			slogan.m_nFontWeight, m_ptDPI, fOutStroke)) {
 			return false;	// probe failed; error already handled
 		}

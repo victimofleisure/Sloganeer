@@ -162,7 +162,7 @@ bool CSloganCSV::ParseLine(CString sLine)
 		}
 	}
 	if (!m_bHasOutDur)	// if outgoing transition duration not specified
-		m_fOutTransDuration = m_fInTransDuration;	// same as incoming
+		m_fOutTransDur = m_fInTransDur;	// same as incoming
 	return true;	// line successfully parsed
 }
 

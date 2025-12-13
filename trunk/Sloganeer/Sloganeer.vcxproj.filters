@@ -114,6 +114,12 @@
     <ClCompile Include="D2DPipe.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ParamsDlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SloganDrawCmds.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AboutDlg.h">
@@ -249,6 +255,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="D2DPipe.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ParamsDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

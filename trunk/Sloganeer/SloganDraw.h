@@ -27,6 +27,7 @@
 		17		28nov25	add symmetrical easing
 		18		30nov25	add eraser bitmap
 		19		01dec25	add transparent background special cases
+		20		11dec25	add drawing commands
 
 */
 
@@ -57,12 +58,21 @@ public:
 	CSloganDraw();
 	CSloganDraw(const CSloganParams& params);
 	~CSloganDraw();
-	bool	Create(HWND hWnd);
+	bool	Create(HWND hWnd, CWnd* pNotifyWnd = NULL);
 	void	Destroy();
 
 // Attributes
 	bool	IsFullScreen() const;
 	const CSloganParams&	GetParams() const;
+
+// Commands
+	void	SetSlogan(const CSlogan& slogan);
+	void	InsertSlogan(int iSlogan, const CSlogan& slogan);
+	void	SetSloganText(int iSlogan, CString sSlogan);
+	void	SelectSlogan(int iSlogan);
+	void	SetCustomSlogans(bool bEnable);
+	void	SetImmediateMode(bool bEnable);
+	void	SetSloganPlayMode(int iPlayMode);
 
 // Operations
 	void	Resize();
@@ -88,6 +98,13 @@ protected:
 		AA_MARGIN = 1,	// extra margin to account for antialiasing
 	};
 	static const float m_fSpaceWidth;	// glyph this wide or less is a space, in DIPs
+	enum {	// drawing commands
+		RC_SET_SLOGAN = BASE_RENDER_COMMANDS,	// param: none, prop: CSlogan*
+		RC_INSERT_SLOGAN,			// param: iSlogan, prop: CSlogan*
+		RC_SET_SLOGAN_TEXT,			// param: iSlogan, prop: LPTSTR
+		RC_SELECT_SLOGAN,			// param: iSlogan, prop: none
+		RC_SET_SLOGAN_PLAY_MODE,	// param: iPlayMode, prop: none
+	};
 
 // Types
 	typedef CArrayEx<DWRITE_GLYPH_OFFSET, DWRITE_GLYPH_OFFSET&> CGlyphOffsetArray;
@@ -104,11 +121,12 @@ protected:
 	CComPtr<ID2D1Bitmap1> m_pEraserBitmap;	// for erasing to transparent background
 	DWRITE_TEXT_METRICS	m_textMetrics;	// text metrics
 	DWRITE_OVERHANG_METRICS	m_overhangMetrics;	// overhang metrics
-	WEvent	m_evtWake;			// during hold, signals wake from idle
+	WEvent	m_evtIdleWake;		// during idle, signals wake from idle
 	CRandList	m_rlTransType;	// randomized list of transition types
 	CRandList	m_rlSloganIdx;	// randomized list of slogan indices
 	CBenchmark	m_timerTrans;	// high-performance transition timer
-	ULONGLONG	m_nWakeTime;	// during hold, wake time in CPU ticks
+	ULONGLONG	m_nIdleStartTime;	// time at which idle began, in CPU ticks
+	ULONGLONG	m_nIdleEndTime;	// time at which idle should end, in CPU ticks
 	CString		m_sSlogan;		// current slogan being displayed
 	double	m_fTransProgress;	// transition progress, normalized from 0 to 1
 	bool	m_bThreadExit;		// true if render thread exit requested
@@ -118,7 +136,7 @@ protected:
 	int		m_iState;			// index of current state
 	int		m_iSlogan;			// index of current slogan
 	int		m_iTransType;		// index of current transition type
-	float	m_fTransDuration;	// duration of current transition, in seconds
+	float	m_fTransDur;		// duration of current transition, in seconds
 	float	m_fTileSize;		// tile size, in DIPs
 	CSize	m_szTileLayout;		// tiling layout, in rows and columns
 	CD2DPointF	m_ptTileOffset;	// tile offset, in DIPs
@@ -128,6 +146,7 @@ protected:
 	bool	m_bIsGlyphRising;	// true if glyph is rising; for vertical converge
 	bool	m_bIsFirstGlyphRun;	// true if first run of a text renderer callback
 	bool	m_bTransparentBkgnd;	// true if background is fully transparent
+	bool	m_bIsImmediateMode;	// true if commands should take effect immediately
 	int		m_iGlyphLine;		// index of line text renderer is currently on
 	CIntArrayEx	m_aCharToLine;	// for each character of slogan, index of its line
 	double	m_fThreadStartTime;	// when thread was launched, in seconds since boot
@@ -168,6 +187,7 @@ protected:
 	virtual	bool	OnThreadCreate();
 	virtual	void	OnResize();
 	virtual	bool	OnDraw();
+	virtual void	OnRenderCommand(const CRenderCmd& cmd);
 
 // COM overrides
 	// AddRef and Release should never be called, but overload them safely anyway
@@ -180,6 +200,7 @@ protected:
 // Helpers
 	void	Init();
 	bool	IsTransOut() const;
+	bool	IsIdle() const;
 	void	StartSlogan();
 	void	StartTrans(int nState, float fDuration);
 	void	StartIdle(int nDuration);
@@ -201,6 +222,8 @@ protected:
 	double	GetFrameTime() const;
 	bool	CreateEraser(CD2DSizeF& szMask, FLOAT fAlpha = 1.0f);
 	void	EraseBackground(D2D1_POINT_2F ptTargetOffset, D2D1_RECT_F *pImageRect = NULL);
+	bool	PushDrawCommand(const CRenderCmd& cmd);
+	void	UpdateCurrentSloganText();
 
 // Regression test
 	bool	SetCapture(bool bEnable = true);
@@ -227,7 +250,7 @@ protected:
 	bool	TransMelt();
 	bool	TransMelt(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
-	bool	LaunchMeltWorker();
+	bool	LaunchMeltWorker(int iSelSlogan = -1);
 	bool	MeasureMeltStroke();
 	bool	TransElevator();
 	void	TransElevator(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
@@ -249,6 +272,11 @@ protected:
 inline bool CSloganDraw::IsTransOut() const
 {
 	return m_iState == ST_TRANS_OUT || m_iState == ST_PAUSE;
+}
+
+inline bool CSloganDraw::IsIdle() const
+{
+	return m_iState == ST_HOLD || m_iState == ST_PAUSE;
 }
 
 inline bool CSloganDraw::IsFullScreen() const
