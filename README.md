@@ -2,6 +2,8 @@
 
 ## Artisanal signage app that displays text with animated transitions.
 
+<img src="docs/images/sloganeer-screenshot.png" alt="Sloganeer UI screenshot" width=600>
+
 ### Command line
 
 Simple example: `Sloganeer myslogans.txt -fontname Calibri -fontsize 120`
