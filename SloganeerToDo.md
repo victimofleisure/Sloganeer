@@ -28,11 +28,11 @@
 | 30 | 11/28/25 | 11/29/25 | done | Reveal leaves scrap in upper left corner; use overhang metrics only in GetTextBounds                    | 1.0.00.038 |      |
 | 34 | 11/29/25 | 11/29/25 | done | Refactor simple reveal to use clipping instead of overdrawing in background color                       | 1.0.00.038 |      |
 | 7  | 11/13/25 | 12/02/25 | done | Transparent background color breaks some transitions: reveal, random tiles, elevator, clock, fade, melt | 1.0.00.038 |      |
+| 32 | 11/28/25 | 12/02/25 | done | Command line parameter to override transition type; useful for testing                                  | 1.0.00.039 |      |
+| 29 | 11/28/25 | 12/13/25 | done | add UI for adjusting parameters and adding/editing slogans                                              | 1.0.00.040 |      |
 | 24 | 11/26/25 |          | punt | Hollow transition; like melt, but outline in draw color, using glyphs as clipping mask; lacks suspense  |            |      |
 | 35 | 11/30/25 |          | punt | Scale up until all glyphs are off screen; way too many degenerate cases                                 |            |      |
 | 14 | 11/13/25 |          | todo | Research smoke / fog / blur transition                                                                  |            |      |
 | 28 | 11/28/25 |          | todo | Spout support                                                                                           |            |      |
-| 29 | 11/28/25 |          | todo | VJ features; needs UI, ability to add slogans live, adjust parameters, etc                              |            |      |
 | 31 | 11/28/25 |          | todo | Customize transition probabilities via control file; weighted random list                               |            |      |
-| 32 | 11/28/25 |          | todo | Command line parameter to override transition type; useful for testing                                  |            |      |
 | 36 | 12/01/25 |          | todo | Record to named pipe                                                                                    |            |      |
