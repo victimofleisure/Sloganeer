@@ -27,7 +27,8 @@
 		17		28nov25	add symmetrical easing
 		18		30nov25	add eraser bitmap
 		19		01dec25	add transparent background special cases
-		20		11dec25	add drawing commands
+		20		11dec25	add commands for UI
+		21		14dec25	add manual trigger
 
 */
 
@@ -73,6 +74,8 @@ public:
 	void	SetCustomSlogans(bool bEnable);
 	void	SetImmediateMode(bool bEnable);
 	void	SetSloganPlayMode(int iPlayMode);
+	void	SetTriggerType(bool bIsManual);
+	void	TriggerGo();
 
 // Operations
 	void	Resize();
@@ -104,6 +107,8 @@ protected:
 		RC_SET_SLOGAN_TEXT,			// param: iSlogan, prop: LPTSTR
 		RC_SELECT_SLOGAN,			// param: iSlogan, prop: none
 		RC_SET_SLOGAN_PLAY_MODE,	// param: iPlayMode, prop: none
+		RC_SET_TRIGGER_TYPE,		// param: bIsManual, prop: none
+		RC_TRIGGER_GO,				// param: none, prop: none
 	};
 
 // Types
@@ -128,6 +133,7 @@ protected:
 	ULONGLONG	m_nIdleStartTime;	// time at which idle began, in CPU ticks
 	ULONGLONG	m_nIdleEndTime;	// time at which idle should end, in CPU ticks
 	CString		m_sSlogan;		// current slogan being displayed
+	double	m_fThreadStartTime;	// when thread was launched, in seconds since boot
 	double	m_fTransProgress;	// transition progress, normalized from 0 to 1
 	bool	m_bThreadExit;		// true if render thread exit requested
 	bool	m_bIsFullScreen;	// true if in full screen mode
@@ -143,13 +149,13 @@ protected:
 	CIntArrayEx	m_aTileIdx;		// array of tile indices
 	CGlyphOffsetArray	m_aGlyphOffset;	// array of glyph offsets, for text renderer
 	CLineMetricsArray	m_aLineMetrics;	// array of line metrics, for text renderer
+	CIntArrayEx	m_aCharToLine;	// for each character of slogan, index of its line
+	int		m_iGlyphLine;		// index of line text renderer is currently on
 	bool	m_bIsGlyphRising;	// true if glyph is rising; for vertical converge
 	bool	m_bIsFirstGlyphRun;	// true if first run of a text renderer callback
 	bool	m_bTransparentBkgnd;	// true if background is fully transparent
 	bool	m_bIsImmediateMode;	// true if commands should take effect immediately
-	int		m_iGlyphLine;		// index of line text renderer is currently on
-	CIntArrayEx	m_aCharToLine;	// for each character of slogan, index of its line
-	double	m_fThreadStartTime;	// when thread was launched, in seconds since boot
+	bool	m_bIsManualTrigger;	// true if starting slogans manually; false for auto
 
 	// recording and capture
 	UINT	m_iFrame;			// frame counter

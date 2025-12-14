@@ -8,6 +8,7 @@
 		revision history:
 		rev		date	comments
         00      11dec25	initial version
+		01		14dec25	add manual trigger
 
 */
 
@@ -26,10 +27,11 @@ IMPLEMENT_DYNAMIC(CParamsDlg, CDialog)
 CParamsDlg::CParamsDlg(CWnd* pParent /*=NULL*/)
 	: CDialog(CParamsDlg::IDD, pParent)
 {
-	m_pParentDlg = NULL;
+	m_pAppDlg = NULL;
 	m_iSloganPlayMode = 0;
 	m_iSelSlogan = -1;
 	m_bImmediateMode = false;
+	m_iTriggerType = 0;
 }
 
 CParamsDlg::~CParamsDlg()
@@ -67,6 +69,7 @@ void CParamsDlg::DoDataExchange(CDataExchange* pDX)
 	m_nPauseDur = Round(fPauseDur * 1000.0f);
 	DDX_Control(pDX, IDC_PARAMS_TRANS_TYPE_IN, m_cbTransType[TD_INCOMING]);
 	DDX_Control(pDX, IDC_PARAMS_TRANS_TYPE_OUT, m_cbTransType[TD_OUTGOING]);
+	DDX_Radio(pDX, IDC_PARAMS_TRIGGER_TYPE_0, m_iTriggerType);
 }
 
 BOOL CParamsDlg::OnInitDialog()
@@ -74,7 +77,7 @@ BOOL CParamsDlg::OnInitDialog()
 	// get pointer to app dialog
 	CSloganeerDlg*	pParentDlg = STATIC_DOWNCAST(CSloganeerDlg, theApp.m_pMainWnd);
 	ASSERT(pParentDlg != NULL);
-	m_pParentDlg = pParentDlg;
+	m_pAppDlg = pParentDlg;
 	// do init that must precede child control creation
 	const CSloganParams& params = pParentDlg->m_sd.GetParams();
 	CSlogan::operator=(pParentDlg->m_initSlogan);
@@ -157,10 +160,49 @@ void CParamsDlg::InitTransTypeCombo(CComboBox& cb, int iSelTransType, const CStr
 	cb.SetRedraw();	// reenable redraw
 }
 
+void CParamsDlg::EndSloganEdit()
+{
+	int	iSlogan = m_iSelSlogan;
+	if (iSlogan >= 0) {	// if selected slogan is valid
+		CString	sEditText;	// retrieve slogan text
+		m_cbSlogan.GetWindowText(sEditText);
+		CString	sLBText;	// retrieve list box text for selected item
+		m_cbSlogan.GetLBText(iSlogan, sLBText);
+		if (sEditText != sLBText) {	// if edited and list box text differ
+			m_cbSlogan.DeleteString(iSlogan);	// delete item from list
+			m_cbSlogan.InsertString(iSlogan, sEditText);	// insert edited item
+			m_cbSlogan.SetCurSel(iSlogan);	// set current selection to item
+			EscapeChars(sEditText);	// handle escape sequences
+			m_pAppDlg->m_sd.SetSloganText(iSlogan, sEditText);	// update view
+		}
+	}
+}
+
 void CParamsDlg::PushSlogan(CSlogan& src, UINT nColMask)
 {
 	src.m_nCustomColMask = nColMask;
-	m_pParentDlg->m_sd.SetSlogan(src);
+	m_pAppDlg->m_sd.SetSlogan(src);
+}
+
+bool CParamsDlg::CommitFocusedEdit(HWND hDlgWnd)
+{
+	HWND	hFocusWnd = ::GetFocus();	// get focus window
+	if (::IsChild(hDlgWnd, hFocusWnd)) {	// if focus window is dialog's child
+		// if focus window is an edit control
+		TCHAR	szClassName[32];
+		if (GetClassName(hFocusWnd, szClassName, 6) 
+		&& _tcsicmp(szClassName, _T("Edit")) == 0) {
+			// get focus window's control ID
+			UINT	id = ::GetDlgCtrlID(hFocusWnd);
+			// run the dialog's EN_KILLFOCUS handler for that control ID
+			::SendMessage(hDlgWnd, WM_COMMAND, 
+				MAKEWPARAM(id, EN_KILLFOCUS), (LPARAM)hFocusWnd);
+			// select all the text in the edit control
+			::SendMessage(hFocusWnd, EM_SETSEL, 0, -1);
+			return true;
+		}
+	}
+	return false;
 }
 
 BEGIN_MESSAGE_MAP(CParamsDlg, CDialog)
@@ -183,6 +225,8 @@ BEGIN_MESSAGE_MAP(CParamsDlg, CDialog)
 	ON_CBN_SELENDOK(IDC_PARAMS_TRANS_TYPE_OUT, OnSelendokTransTypeOut)
 	ON_BN_CLICKED(IDC_PARAMS_IMMEDIATE_MODE, OnClickedImmediateMode)
 	ON_BN_CLICKED(IDC_PARAMS_SLOGAN_NEW, OnClickedSloganNew)
+	ON_CONTROL_RANGE(BN_CLICKED, IDC_PARAMS_TRIGGER_TYPE_0, IDC_PARAMS_TRIGGER_TYPE_1, OnClickedTrigger)
+	ON_BN_CLICKED(IDC_PARAMS_TRIGGER_GO, OnClickedGo)
 END_MESSAGE_MAP()
 
 // CParamsDlg message handlers
@@ -203,8 +247,12 @@ void CParamsDlg::OnClose()
 BOOL CParamsDlg::PreTranslateMessage(MSG* pMsg)
 {
 	if (pMsg->message == WM_KEYDOWN) {
-		if (m_pParentDlg->HandleKey(static_cast<UINT>(pMsg->wParam)))
+		if (m_pAppDlg->HandleKey(static_cast<UINT>(pMsg->wParam)))
 			return true;
+		if (pMsg->wParam == VK_RETURN) {	// if return key
+			if (CommitFocusedEdit(m_hWnd))
+				return true;
+		}
 	}
 	return CDialog::PreTranslateMessage(pMsg);
 }
@@ -239,27 +287,14 @@ void CParamsDlg::OnSelendokSlogan()
 {
 	int	iSlogan = m_cbSlogan.GetCurSel();
 	if (iSlogan >= 0) {	// if valid item selection
-		m_pParentDlg->m_sd.SelectSlogan(iSlogan);
+		m_pAppDlg->m_sd.SelectSlogan(iSlogan);
 	}
 	m_iSelSlogan = iSlogan;
 }
 
 void CParamsDlg::OnKillfocusSlogan()
 {
-	int	iSlogan = m_iSelSlogan;
-	if (iSlogan >= 0) {
-		CString	sEditText;
-		m_cbSlogan.GetWindowText(sEditText);
-		CString	sLBText;
-		m_cbSlogan.GetLBText(iSlogan, sLBText);
-		if (sEditText != sLBText) {
-			m_cbSlogan.DeleteString(iSlogan);
-			m_cbSlogan.InsertString(iSlogan, sEditText);
-			m_cbSlogan.SetCurSel(iSlogan);
-			EscapeChars(sEditText);	// handle escape sequences
-			m_pParentDlg->m_sd.SetSloganText(iSlogan, sEditText);
-		}
-	}
+	EndSloganEdit();
 }
 
 void CParamsDlg::OnSelendokFontName()
@@ -308,7 +343,7 @@ void CParamsDlg::OnClickedPlayMode(UINT nID)
 {
 	int	iMode = nID - IDC_PARAMS_PLAY_MODE_0;
 	ASSERT(iMode >= 0 && iMode < CSloganParams::SLOGAN_PLAY_MODES);
-	m_pParentDlg->m_sd.SetSloganPlayMode(iMode);
+	m_pAppDlg->m_sd.SetSloganPlayMode(iMode);
 }
 
 void CParamsDlg::OnKillfocusDurIn()
@@ -354,20 +389,34 @@ void CParamsDlg::OnSelendokTransTypeOut()
 void CParamsDlg::OnClickedImmediateMode()
 {
 	if (UpdateData()) {
-		m_pParentDlg->m_sd.SetImmediateMode(m_bImmediateMode != 0);
+		m_pAppDlg->m_sd.SetImmediateMode(m_bImmediateMode != 0);
 	}
 }
 
 void CParamsDlg::OnClickedSloganNew()
 {
+	EndSloganEdit();
 	int	iItem = m_cbSlogan.AddString(_T(""));	// add empty string to combo box
 	if (iItem >= 0) {	// if string was added
-		CSlogan	slogan(m_pParentDlg->m_sd.GetParams());	// use current slogan defaults
+		CSlogan	slogan(m_pAppDlg->m_sd.GetParams());	// use current slogan defaults
 		slogan.m_sText.Empty();	// except text is empty
-		m_pParentDlg->m_sd.InsertSlogan(iItem, slogan);	// insert slogan
-		m_pParentDlg->m_sd.SelectSlogan(iItem);	// select slogan
+		m_pAppDlg->m_sd.InsertSlogan(iItem, slogan);	// insert slogan
+		m_pAppDlg->m_sd.SelectSlogan(iItem);	// select slogan
 		m_cbSlogan.SetCurSel(iItem);	// select combo box item
 		m_iSelSlogan = iItem;	// update selected slogan index
 		m_cbSlogan.SetFocus();	// focus combo box edit control for convenience
 	}
+}
+
+void CParamsDlg::OnClickedTrigger(UINT nID)
+{
+	int	iTrigger = nID - IDC_PARAMS_TRIGGER_TYPE_0;
+	ASSERT(iTrigger >= 0 && iTrigger < TRIGGER_TYPES);
+	m_pAppDlg->m_sd.SetTriggerType(iTrigger != 0);
+}
+
+void CParamsDlg::OnClickedGo()
+{
+	EndSloganEdit();
+	m_pAppDlg->m_sd.TriggerGo();
 }

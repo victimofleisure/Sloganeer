@@ -33,7 +33,8 @@
 		23		30nov25	add eraser bitmap
 		24		01dec25	add transparent background special cases
 		25		03dec25	add recording to named pipe
-		26		11dec25	add drawing commands
+		26		11dec25	add commands for UI
+		27		14dec25	add manual trigger
 
 */
 
@@ -70,6 +71,7 @@ void CSloganDraw::Init()
 {
 	m_nIdleStartTime = 0;
 	m_nIdleEndTime = 0;
+	m_fThreadStartTime = 0;
 	m_fTransProgress = 0;
 	m_bThreadExit = false;
 	m_bIsFullScreen = false;
@@ -82,11 +84,12 @@ void CSloganDraw::Init()
 	m_fTileSize = 0;
 	m_szTileLayout = CSize(0, 0);
 	m_ptTileOffset = CD2DPointF(0, 0);
+	m_iGlyphLine = 0;
 	m_bIsGlyphRising = false;
 	m_bIsFirstGlyphRun = false;
 	m_bTransparentBkgnd = false;
 	m_bIsImmediateMode = false;
-	m_iGlyphLine = 0;
+	m_bIsManualTrigger = false;
 	m_iFrame = 0;
 	m_nSwapChainBuffers = 0;
 	m_fStateStartTime = 0;
@@ -374,7 +377,7 @@ bool CSloganDraw::OnDraw()
 		break;
 	case ST_TRANS_OUT:
 		if (bTransComplete) {	// if outgoing transition completed
-			if (m_nPauseDur > 0) {	// if pause desired
+			if (m_nPauseDur > 0 || m_bIsManualTrigger) {	// if pause desired
 				StartIdle(m_nPauseDur);	// start pause idle
 				m_iState = ST_PAUSE;	// set state to pause
 			} else {	// skip pause state
@@ -384,6 +387,8 @@ bool CSloganDraw::OnDraw()
 		break;
 	case ST_PAUSE:
 		if (!m_bThreadExit) {	// if exit wasn't requested
+			if (m_bIsManualTrigger)
+				break;
 			if (ContinueIdle()) {	// if pause completed
 				StartSlogan();	// start a new slogan
 			}

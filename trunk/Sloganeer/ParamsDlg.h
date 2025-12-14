@@ -8,6 +8,7 @@
 		revision history:
 		rev		date	comments
         00      11dec25	initial version
+		01		14dec25	add manual trigger
 
 */
 
@@ -29,23 +30,33 @@ public:
 	enum { IDD = IDD_PARAMS };
 
 protected:
+// Constants
+	enum {	// trigger types
+		TRIG_AUTO,
+		TRIG_MANUAL,
+		TRIGGER_TYPES
+	};
+
 // Data members
-	CSloganeerDlg*	m_pParentDlg;
-	CComboBox	m_cbSlogan;
-	CComboBox	m_cbFontName;
-	CMFCColorButton	m_btnBkgnd;
-	CMFCColorButton	m_btnDraw;
-	CComboBox	m_cbTransType[TRANS_DIRS];
-	int		m_iSloganPlayMode;
-	int		m_iSelSlogan;
-	BOOL	m_bImmediateMode;
+	CSloganeerDlg*	m_pAppDlg;	// pointer to app dialog
+	CComboBox	m_cbSlogan;		// slogan combo box
+	CComboBox	m_cbFontName;	// font combo box
+	CMFCColorButton	m_btnBkgnd;	// background color button
+	CMFCColorButton	m_btnDraw;	// draw color button
+	CComboBox	m_cbTransType[TRANS_DIRS];	// transition type combo boxes
+	int		m_iSloganPlayMode;	// slogan play mode radio button index
+	int		m_iSelSlogan;		// index of selected slogan
+	BOOL	m_bImmediateMode;	// immediate mode checkbox state
+	int		m_iTriggerType;		// trigger type radio button index
 
 // Helpers
 	bool	InitFontFamilyCombo();
 	static void	GetTransTypeNames(CStringArrayEx& aTypeName);
 	static void	InitTransTypeCombo(CComboBox& cb, int iSelTransType, const CStringArrayEx& aTypeName);
 	void	UpdateTransType(int iDir);
+	void	EndSloganEdit();
 	void	PushSlogan(CSlogan& src, UINT nColMask);
+	static bool	CommitFocusedEdit(HWND hDlgWnd);
 
 // Overrides
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
@@ -74,6 +85,7 @@ protected:
 	afx_msg void OnSelendokTransTypeIn();
 	afx_msg void OnSelendokTransTypeOut();
 	afx_msg void OnClickedImmediateMode();
-public:
 	afx_msg void OnClickedSloganNew();
+	afx_msg void OnClickedTrigger(UINT nID);
+	afx_msg void OnClickedGo();
 };

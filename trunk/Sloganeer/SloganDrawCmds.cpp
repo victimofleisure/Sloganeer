@@ -8,6 +8,7 @@
 		revision history:
 		rev		date	comments
 		00		11dec25	initial version
+		01		14dec25	add manual trigger
 
 */
 
@@ -65,6 +66,16 @@ void CSloganDraw::SetImmediateMode(bool bEnable)
 {
 	// render thread only reads this boolean; command isn't queued
 	m_bIsImmediateMode = bEnable;	// has immediate effect
+}
+
+void CSloganDraw::SetTriggerType(bool bIsManual)
+{
+	PushDrawCommand(CRenderCmd(RC_SET_TRIGGER_TYPE, bIsManual));
+}
+
+void CSloganDraw::TriggerGo()
+{
+	PushDrawCommand(CRenderCmd(RC_TRIGGER_GO));
 }
 
 void CSloganDraw::UpdateCurrentSloganText()
@@ -179,6 +190,17 @@ void CSloganDraw::OnRenderCommand(const CRenderCmd& cmd)
 			int	iPlayMode = cmd.m_nParam;
 			ASSERT(iPlayMode >= 0 && iPlayMode < SLOGAN_PLAY_MODES);	// check index range
 			m_iSloganPlayMode = iPlayMode;
+		}
+		break;
+	case RC_SET_TRIGGER_TYPE:
+		m_bIsManualTrigger = cmd.m_nParam != 0;
+		break;
+	case RC_TRIGGER_GO:
+		if (m_bIsManualTrigger) {	// if manual trigger
+			// if we're paused, or immediate effect desired
+			if (m_iState == ST_PAUSE || m_bIsImmediateMode) {
+				StartSlogan();
+			}
 		}
 		break;
 	default:
