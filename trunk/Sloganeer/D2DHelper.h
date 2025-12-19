@@ -20,6 +20,8 @@
 		11		03dec25 add auto unmap resource
 		12		11dec25 add BGR color init
 		13		11dec25 add font collection class
+		14		18dec25	add set position method to glyph iterator
+		15		19dec25	add save transform class
 
 */
 
@@ -213,6 +215,7 @@ public:
 	float	GetAscent() const;
 	float	GetDescent() const;
 	void	Reset();
+	void	SetPos(UINT iGlyph);
 	CD2DSizeF	CalcMaxGlyphBounds();
 
 protected:
@@ -329,8 +332,29 @@ inline int CD2DFontCollection::GetFamilyCount() const
 	return m_aFontFamilyName.GetSize();
 }
 
-inline CString	CD2DFontCollection::GetFamilyName(int iFamily) const
+inline CString CD2DFontCollection::GetFamilyName(int iFamily) const
 {
 	return m_aFontFamilyName[iFamily];
 }
 
+class CD2DSaveTransform {
+public:
+	CD2DSaveTransform(ID2D1DeviceContext *pDC);
+	~CD2DSaveTransform();
+
+protected:
+	ID2D1DeviceContext	*m_pDC;
+	D2D1::Matrix3x2F	m_matPrev;
+};
+
+inline CD2DSaveTransform::CD2DSaveTransform(ID2D1DeviceContext *pDC)
+{
+	ASSERT(pDC != NULL);
+	m_pDC = pDC;
+	pDC->GetTransform(&m_matPrev);
+}
+
+inline CD2DSaveTransform::~CD2DSaveTransform()
+{
+	m_pDC->SetTransform(&m_matPrev);
+}

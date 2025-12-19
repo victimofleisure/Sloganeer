@@ -85,7 +85,8 @@
 #define IDS_TT_SCROLL_TB                274
 #define IDS_TT_SKEW                     275
 #define IDS_TT_SUBMARINE                276
-#define IDS_TT_TYPEWRITER               277
+#define IDS_TT_TUMBLE                   277
+#define IDS_TT_TYPEWRITER               278
 #define IDC_ABOUT_LICENSE               1001
 #define IDC_ABOUT_VERSION               1002
 #define IDC_HELP_EDIT                   1003
@@ -119,7 +120,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                1
-#define _APS_NEXT_RESOURCE_VALUE        278
+#define _APS_NEXT_RESOURCE_VALUE        279
 #define _APS_NEXT_COMMAND_VALUE         32771
 #define _APS_NEXT_CONTROL_VALUE         1028
 #define _APS_NEXT_SYMED_VALUE           101

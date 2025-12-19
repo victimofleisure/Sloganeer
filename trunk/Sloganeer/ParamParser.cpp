@@ -15,6 +15,7 @@
         05      25nov25	add color palette and cycling
 		06		27nov25	fix decimal color false positive
 		07		02dec25	add text and transition type
+		08		19dec25	fix incorrect init if no command line parameters
 
 */
 
@@ -340,10 +341,6 @@ void CParamParser::ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast)
 		if (m_iFlag >= 0) {	// if parameter expected
 			OnError(IDS_ERR_PARAM_MISSING, m_aFlag[m_iFlag]);
 		}
-		if (!m_bHasOutDur)	// if outgoing transition duration not specified
-			m_fOutTransDur = m_fInTransDur;	// same as incoming
-		if (!m_bHasRandSeed)	// if random number seed not specified
-			m_nRandSeed = GetTickCount();	// seed from time so runs vary
 	}
 }
 
@@ -374,6 +371,10 @@ bool CParamParser::ParseCommandLine()
 		WriteHelpMarkdown(m_sHelpMarkdownPath);	// write help markdown
 		return false;	// exit app
 	}
+	if (!m_bHasOutDur)	// if outgoing transition duration not specified
+		m_fOutTransDur = m_fInTransDur;	// same as incoming
+	if (!m_bHasRandSeed)	// if random number seed not specified
+		m_nRandSeed = GetTickCount();	// seed from time so runs vary
 	if (!m_strFileName.IsEmpty()) {	// if file path specified
 		// if file format is CSV
 		if (!_tcsicmp(PathFindExtension(m_strFileName), _T(".csv"))) {

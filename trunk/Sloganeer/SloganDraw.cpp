@@ -35,6 +35,7 @@
 		25		03dec25	add recording to named pipe
 		26		11dec25	add commands for UI
 		27		14dec25	add manual trigger
+		28		15dec25	add tumble transition
 
 */
 
@@ -353,6 +354,9 @@ bool CSloganDraw::OnDraw()
 	case TT_SUBMARINE:
 		TransSubmarine();
 		break;
+	case TT_TUMBLE:
+		TransTumble();
+		break;
 	default:
 		NODEFAULTCASE;	// logic error
 	}
@@ -444,6 +448,9 @@ HRESULT CSloganDraw::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOr
 		break;
 	case TT_SUBMARINE:
 		TransSubmarine(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
+		break;
+	case TT_TUMBLE:
+		TransTumble(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
 		break;
 	default:
 		NODEFAULTCASE;

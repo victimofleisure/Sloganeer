@@ -16,6 +16,7 @@
         06      25nov25	add color palette and cycling
         07      27nov25	add submarine transition
 		08		02dec25	add text and transition type
+		09		15dec25	add tumble transition
 
 */
 
@@ -109,6 +110,7 @@ TRANSTYPEDEF(	CLK,	CLOCK)			// per-character radial reveal
 TRANSTYPEDEF(	SKW,	SKEW)			// tip over or return to upright
 TRANSTYPEDEF(	XPL,	EXPLODE)		// explode each letter into fragments
 TRANSTYPEDEF(	SUB,	SUBMARINE)		// rise from or sink into horizon
+TRANSTYPEDEF(	TMB,	TUMBLE)			// spin and scale while bunching or spreading
 					
 #undef TRANSTYPEDEF
 #endif

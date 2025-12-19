@@ -12,6 +12,8 @@
 		03		27nov25	add tight vertical bounds flag to glyph iterator
 		04		30nov25	add calculate maximum glyph bounds
 		05		11dec25 add font collection class
+		06		18dec25	add set position method to glyph iterator
+		07		19dec25	add save transform class
 
 */
 
@@ -102,6 +104,24 @@ CD2DSizeF CGlyphIter::CalcMaxGlyphBounds()
 			szMax.height = szGlyph.height;	// update height
 	}
 	return szMax;
+}
+
+void CGlyphIter::SetPos(UINT iGlyph)
+{
+	ASSERT(m_pGlyphRun != NULL);
+	ASSERT(iGlyph >= 0 && iGlyph < m_pGlyphRun->glyphCount);	// check index range
+	if (iGlyph < m_iGlyph)	// if target index is before current index
+		Reset();	// only advance is supported, so start at beginning
+	bool	bRTL = m_pGlyphRun->bidiLevel & 1;	// odd level indicates right-to-left
+	while (m_iGlyph < iGlyph) {	// while below target index, advance
+		float	fGlyphAdvance = m_pGlyphRun->glyphAdvances[m_iGlyph];
+		if (bRTL) {	// if right-to-left
+			m_ptOrigin.x -= fGlyphAdvance;	// negative advance
+		} else {	// left-to-right
+			m_ptOrigin.x += fGlyphAdvance;	// positive advance
+		}
+		m_iGlyph++;	// next glyph
+	}
 }
 
 void AddEllipse(ID2D1GeometrySink *pSink, D2D1_POINT_2F ptOrigin, D2D1_SIZE_F szRadius)
