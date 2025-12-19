@@ -180,6 +180,7 @@ My slogan\nhas two lines
 |20|SKW|Skew|Tip over or return to upright|
 |21|XPL|Explode|Explode each letter into fragments|
 |22|SUB|Submarine|Rise from or sink into horizon|
+|23|TMB|Tumble|Spin and scale while bunching or spreading|
 
 ### Colors
 
