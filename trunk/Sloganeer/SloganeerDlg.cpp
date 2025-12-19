@@ -328,7 +328,7 @@ LRESULT CSloganeerDlg::OnDelayedCreate(WPARAM wParam, LPARAM lParam)
 {
 	if (m_sd.GetParams().IsRecording()) {	// if recording
 		Record();
-		OnOK();	// exit app regardless
+		PostMessage(WM_CLOSE);	// exit app regardless; OnOK is disabled
 		return 0;
 	}
 	return 0;
