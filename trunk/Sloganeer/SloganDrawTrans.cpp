@@ -15,6 +15,7 @@
 		05		30nov25	add eraser to handle transparent background
 		06		01dec25	add transparent background special cases
 		07		15dec25	add tumble transition
+		08		19dec25	add vertical displacement to tumble
 
 */
 
@@ -666,6 +667,7 @@ void CSloganDraw::TransSubmarine(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_M
 
 bool CSloganDraw::TransTumble()
 {
+	m_bIsGlyphRising = false;
 	CHECK(m_pTextLayout->Draw(0, this, 0, 0));	// call text renderer
 	return true;
 }
@@ -696,25 +698,31 @@ void CSloganDraw::TransTumble(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE
 	iterGlyph.Reset();	// reset glyph iterator
 	CD2DSaveTransform	transSave(m_pD2DDeviceContext);	// save transform, restore on exit
 	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
-		CD2DPointF	ptCenter(rGlyph.CenterPoint());
-		// glyph center's horizontal position within run, normalized to [-1, 1]
-		// so that first glyph's center X == -1 and last glyph's center X == 1
-		double	fNormCtrX;
-		if (fRunWidth) {	// if non-zero run width
-			// normalized delta X divided by run width, centered and rescaled
-			fNormCtrX = ((ptCenter.x - fFirstCtrX) / fRunWidth - 0.5) * 2;
-		} else {	// single glyph; avoid divide by zero
-			fNormCtrX = 0;	// center of run
-		}
-		float	fTransX = DTF((1 - fPhase) * fNormCtrX * szMaxGlyph.width);
-		run.glyphIndices = pGlyphRun->glyphIndices + iGlyph;
 		run.glyphAdvances = pGlyphRun->glyphAdvances + iGlyph;
-		run.glyphOffsets = pGlyphRun->glyphOffsets + iGlyph;
-		m_pD2DDeviceContext->SetTransform(
-			D2D1::Matrix3x2F::Scale(szScale, ptCenter)	// scale
-			* D2D1::Matrix3x2F::Rotation(fRotoAngle, ptCenter)	// rotation
-			* D2D1::Matrix3x2F::Translation(fTransX, 0));	// translation
-		m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, &run, m_pDrawBrush, measuringMode);
+		if (!theApp.IsSpace(pGlyphRunDescription->string[iGlyph])) {	// exclude spaces
+			CD2DPointF	ptCenter(rGlyph.CenterPoint());
+			// glyph center's horizontal position within run, normalized to [-1, 1]
+			// so that first glyph's center X == -1 and last glyph's center X == 1
+			double	fNormCtrX;
+			if (fRunWidth) {	// if non-zero run width
+				// normalized delta X divided by run width, centered and rescaled
+				fNormCtrX = ((ptCenter.x - fFirstCtrX) / fRunWidth - 0.5) * 2;
+			} else {	// single glyph; avoid divide by zero
+				fNormCtrX = 0;	// center of run
+			}
+			double fNormCtrY = m_bIsGlyphRising ? -1 : 1;	// alternate rise and fall
+			m_bIsGlyphRising ^= 1;	// update alternation state
+			CD2DSizeF	szTrans(
+				DTF((1 - fPhase) * fNormCtrX * szMaxGlyph.width),
+				DTF((1 - fPhase) * fNormCtrY * szMaxGlyph.height));
+			run.glyphIndices = pGlyphRun->glyphIndices + iGlyph;
+			run.glyphOffsets = pGlyphRun->glyphOffsets + iGlyph;
+			m_pD2DDeviceContext->SetTransform(
+				D2D1::Matrix3x2F::Scale(szScale, ptCenter)	// scale
+				* D2D1::Matrix3x2F::Rotation(fRotoAngle, ptCenter)	// rotation
+				* D2D1::Matrix3x2F::Translation(szTrans));	// translation
+			m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, &run, m_pDrawBrush, measuringMode);
+		}
 		if (bRTL) {	// if right-to-left
 			ptBaselineOrigin.x -= *run.glyphAdvances;	// negative advance
 		} else {	// left-to-right
