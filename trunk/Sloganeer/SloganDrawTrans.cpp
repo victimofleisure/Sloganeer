@@ -769,8 +769,7 @@ void CSloganDraw::TransIris(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE m
 			m_pD2DDeviceContext->PushLayer(D2D1::LayerParameters1(
 				rGlyph, m_pPathGeom, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE,
 				D2D1::Matrix3x2F::Scale(szScale, CD2DPointF(0, 0))
-					* D2D1::Matrix3x2F::Translation(ptCtr.x, ptCtr.y),
-				1.0, NULL, D2D1_LAYER_OPTIONS1_NONE), m_pLayer);
+				* D2D1::Matrix3x2F::Translation(ptCtr.x, ptCtr.y)), m_pLayer);
 			m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, &run, m_pDrawBrush, measuringMode);
 			m_pD2DDeviceContext->PopLayer();
 		}
