@@ -30,6 +30,7 @@
 		20		11dec25	add commands for UI
 		21		14dec25	add manual trigger
 		22		15dec25	add tumble transition
+		23		20dec25	add iris transition
 
 */
 
@@ -125,6 +126,7 @@ protected:
 	CComPtr<IDWriteTextLayout>	m_pTextLayout;	// text layout interface
 	CComPtr<ID2D1StrokeStyle1>	m_pStrokeStyle;	// stroke style for melt effect
 	CComPtr<ID2D1Bitmap1> m_pEraserBitmap;	// for erasing to transparent background
+	CComPtr<ID2D1Layer> m_pLayer;	// for transitions that need a layer
 	DWRITE_TEXT_METRICS	m_textMetrics;	// text metrics
 	DWRITE_OVERHANG_METRICS	m_overhangMetrics;	// overhang metrics
 	WEvent	m_evtIdleWake;		// during idle, signals wake from idle
@@ -276,6 +278,9 @@ protected:
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
 	bool	TransTumble();
 	void	TransTumble(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
+	bool	TransIris();
+	void	TransIris(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
 };
 

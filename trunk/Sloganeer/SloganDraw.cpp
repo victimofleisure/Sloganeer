@@ -36,6 +36,7 @@
 		26		11dec25	add commands for UI
 		27		14dec25	add manual trigger
 		28		15dec25	add tumble transition
+		29		20dec25	add iris transition
 
 */
 
@@ -211,6 +212,7 @@ void CSloganDraw::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCST
 
 bool CSloganDraw::CreateUserResources()
 {
+	m_bIsTransStart = true;	// redo initialization
 	CHECK(m_pD2DDeviceContext->CreateSolidColorBrush(m_clrBkgnd, &m_pBkgndBrush));
 	CHECK(m_pD2DDeviceContext->CreateSolidColorBrush(m_clrDraw, &m_pDrawBrush));
 	CHECK(m_pD2DDeviceContext->CreateSolidColorBrush(m_clrDraw, &m_pVarBrush));
@@ -231,6 +233,7 @@ void CSloganDraw::DestroyUserResources()
 	m_pStrokeStyle.Release();
 	m_pEraserBitmap.Release();
 	m_pPathGeom.Release();
+	m_pLayer.Release();
 	if (m_bThreadExit)	// if thread exiting
 		CoUninitialize();	// needed for WIC
 }
@@ -357,6 +360,9 @@ bool CSloganDraw::OnDraw()
 	case TT_TUMBLE:
 		TransTumble();
 		break;
+	case TT_IRIS:
+		TransIris();
+		break;
 	default:
 		NODEFAULTCASE;	// logic error
 	}
@@ -451,6 +457,9 @@ HRESULT CSloganDraw::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOr
 		break;
 	case TT_TUMBLE:
 		TransTumble(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
+		break;
+	case TT_IRIS:
+		TransIris(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
 		break;
 	default:
 		NODEFAULTCASE;

@@ -16,6 +16,7 @@
 		06		01dec25	add transparent background special cases
 		07		15dec25	add tumble transition
 		08		19dec25	add vertical displacement to tumble
+		09		20dec25	add iris transition
 
 */
 
@@ -699,7 +700,7 @@ void CSloganDraw::TransTumble(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE
 	CD2DSaveTransform	transSave(m_pD2DDeviceContext);	// save transform, restore on exit
 	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
 		run.glyphAdvances = pGlyphRun->glyphAdvances + iGlyph;
-		if (!theApp.IsSpace(pGlyphRunDescription->string[iGlyph])) {	// exclude spaces
+		if (rGlyph.Width() > m_fSpaceWidth) {	// exclude spaces
 			CD2DPointF	ptCenter(rGlyph.CenterPoint());
 			// glyph center's horizontal position within run, normalized to [-1, 1]
 			// so that first glyph's center X == -1 and last glyph's center X == 1
@@ -722,6 +723,56 @@ void CSloganDraw::TransTumble(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE
 				* D2D1::Matrix3x2F::Rotation(fRotoAngle, ptCenter)	// rotation
 				* D2D1::Matrix3x2F::Translation(szTrans));	// translation
 			m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, &run, m_pDrawBrush, measuringMode);
+		}
+		if (bRTL) {	// if right-to-left
+			ptBaselineOrigin.x -= *run.glyphAdvances;	// negative advance
+		} else {	// left-to-right
+			ptBaselineOrigin.x += *run.glyphAdvances;	// positive advance
+		}
+	}
+}
+
+bool CSloganDraw::TransIris()
+{
+	if (m_bIsTransStart) {	// if start of transition
+		m_pPathGeom.Release();
+		CHECK(m_pD2DFactory->CreatePathGeometry(&m_pPathGeom));	// create path geometry
+		CComPtr<ID2D1GeometrySink> pGeomSink;
+		CHECK(m_pPathGeom->Open(&pGeomSink));
+		AddEllipse(pGeomSink, CD2DPointF(0, 0), CD2DSizeF(0.5, 0.5));	// unit ellipse
+		CHECK(pGeomSink->Close());
+		m_pLayer.Release();
+		CHECK(m_pD2DDeviceContext->CreateLayer(NULL, &m_pLayer));	// create layer
+	}
+	CHECK(m_pTextLayout->Draw(0, this, 0, 0));	// call text renderer
+	return true;
+}
+
+void CSloganDraw::TransIris(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
+{
+	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun, true);	// tight vertical bounds
+	CKD2DRectF	rGlyph;
+	UINT	iGlyph;
+	DWRITE_GLYPH_RUN	run = *pGlyphRun;	// copy run struct to local var
+	run.glyphCount = 1;	// override run's glyph count; one glyph at a time
+	bool	bRTL = run.bidiLevel & 1;	// odd level indicates right-to-left
+	double	fPhase = GetPhase(GP_INVERT) * M_SQRT2;	// ensure ellipse covers bounding rect
+	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
+		run.glyphAdvances = pGlyphRun->glyphAdvances + iGlyph;
+		if (rGlyph.Width() > m_fSpaceWidth) {	// exclude spaces
+			rGlyph.InflateRect(AA_MARGIN, AA_MARGIN);	// add antialiasing margin
+			run.glyphIndices = pGlyphRun->glyphIndices + iGlyph;
+			run.glyphOffsets = pGlyphRun->glyphOffsets + iGlyph;
+			CD2DPointF	ptCtr(rGlyph.CenterPoint());
+			CD2DSizeF	szScale(DTF(rGlyph.Width() * fPhase), DTF(rGlyph.Height() * fPhase));
+			m_pD2DDeviceContext->PushLayer(D2D1::LayerParameters1(
+				rGlyph, m_pPathGeom, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE,
+				D2D1::Matrix3x2F::Scale(szScale, CD2DPointF(0, 0))
+					* D2D1::Matrix3x2F::Translation(ptCtr.x, ptCtr.y),
+				1.0, NULL, D2D1_LAYER_OPTIONS1_NONE), m_pLayer);
+			m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, &run, m_pDrawBrush, measuringMode);
+			m_pD2DDeviceContext->PopLayer();
 		}
 		if (bRTL) {	// if right-to-left
 			ptBaselineOrigin.x -= *run.glyphAdvances;	// negative advance
