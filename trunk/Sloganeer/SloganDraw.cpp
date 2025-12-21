@@ -37,7 +37,7 @@
 		27		14dec25	add manual trigger
 		28		15dec25	add tumble transition
 		29		20dec25	add iris transition
-		30		21dec25	remove unused member vars
+		30		21dec25	remove idle block and always render
 
 */
 
@@ -72,8 +72,6 @@ CSloganDraw::~CSloganDraw()
 
 void CSloganDraw::Init()
 {
-	m_nIdleStartTime = 0;
-	m_nIdleEndTime = 0;
 	m_fThreadStartTime = 0;
 	m_fTransProgress = 0;
 	m_bThreadExit = false;
@@ -83,7 +81,7 @@ void CSloganDraw::Init()
 	m_iState = ST_TRANS_OUT;
 	m_iSlogan = 0;
 	m_iTransType = 0;
-	m_fTransDur = 2.0f;
+	m_fStateDur = 0;
 	m_fTileSize = 0;
 	m_szTileLayout = CSize(0, 0);
 	m_ptTileOffset = CD2DPointF(0, 0);
@@ -106,8 +104,6 @@ bool CSloganDraw::Create(HWND hWnd, CWnd* pNotifyWnd)
 #endif	// SD_CAPTURE
 	if (m_aSlogan.IsEmpty())	// at least one slogan required
 		return false;
-	if (!m_evtIdleWake.Create(NULL, false, false, NULL))	// create idle wake event
-		return false;
 	return CreateThread(hWnd, pNotifyWnd);	// create render thread
 }
 
@@ -116,7 +112,6 @@ void CSloganDraw::Destroy()
 	// order matters
 	m_thrMeltWorker.Destroy();	// destroy melt worker thread
 	m_bThreadExit = true;	// request render thread to exit
-	m_evtIdleWake.Set();	// set idle wake event to signaled
 	DestroyThread();	// destroy render thread
 #if SD_CAPTURE	// if capturing frames
 	m_capture.Destroy();	// destroy capture instance
@@ -126,7 +121,6 @@ void CSloganDraw::Destroy()
 void CSloganDraw::Resize()
 {
 	// don't access render thread's data in this method
-	m_evtIdleWake.Set();	// set wake event to signaled
 	PushCommand(RC_RESIZE);	// enqueue command
 }
 
@@ -135,7 +129,6 @@ bool CSloganDraw::FullScreen(bool bEnable)
 	// don't access render thread's data in this method
 	if (bEnable == m_bIsFullScreen)	// if state unchanged
 		return true;	// nothing to do
-	m_evtIdleWake.Set();	// set wake event to signaled
 	if (!PushCommand(CRenderCmd(RC_SET_FULLSCREEN, !m_bIsFullScreen)))	// enqueue command
 		return false;
 	m_bIsFullScreen ^= 1;
@@ -247,7 +240,7 @@ bool CSloganDraw::OnThreadCreate()
 		m_iSlogan = -1;	// avoid skipping first slogan
 	}
 	LaunchMeltWorker();
-	m_fThreadStartTime = m_timerTrans.Time();
+	m_fThreadStartTime = m_timer.Time();
 	StartSlogan();	// start the first slogan
 #if SD_CAPTURE	// if capturing frames
 	if (!SetCapture())
@@ -287,90 +280,99 @@ bool CSloganDraw::OnDraw()
 		UpdateColor(m_palDraw, m_clrDraw, m_pDrawBrush);	// update draw color and brush
 	}
 	m_pD2DDeviceContext->Clear(m_clrBkgnd);	// clear frame to background color
-	double	fTransElapsed;	// elapsed time since transition started
-	if (m_bIsRecording) {	// if recording
-		fTransElapsed = GetFrameTime() - m_fStateStartTime;	// compute time from frame index
-	} else {	// not recording
-		fTransElapsed = m_timerTrans.Elapsed();	// get elapsed time from transition timer
-	}
-	double	fTransRemain = m_fTransDur - fTransElapsed;	// remaining transition time
-	bool	bTransComplete;
-	if (fTransRemain > 0) {	// if transition has time remaining
-		m_fTransProgress = 1 - fTransRemain / m_fTransDur;
-		bTransComplete = false;
-	} else {	// transition is complete
-		m_fTransProgress = 1;
-		bTransComplete = true;
-	}
+	bool	bTransComplete = false;
+	switch (m_iState) {
+	case ST_TRANS_IN:	// if transitioning
+	case ST_TRANS_OUT:
+		{
+			double	fElapsed;	// elapsed time since transition started
+			if (m_bIsRecording) {	// if recording
+				fElapsed = GetFrameTime() - m_fStateStartTime;	// compute time from frame index
+			} else {	// not recording
+				fElapsed = m_timer.Elapsed();	// get elapsed time from timer
+			}
+			double	fTransRemain = m_fStateDur - fElapsed;	// remaining transition time
+			if (fTransRemain > 0) {	// if transition has time remaining
+				m_fTransProgress = 1 - fTransRemain / m_fStateDur;
+			} else {	// transition is complete
+				m_fTransProgress = 1;
+				bTransComplete = true;
+			}
+		}
 #if SD_CAPTURE >= SD_CAPTURE_MAKE_REF_IMAGES	// if regression testing
-	bTransComplete = RegressionTest();
+		bTransComplete = RegressionTest();
 #endif	// SD_CAPTURE
-	switch (m_iTransType) {	// switch on transition type
-	case TT_SCROLL_LR:
-	case TT_SCROLL_RL:
-	case TT_SCROLL_TB:
-	case TT_SCROLL_BT:
-		TransScroll();
+		switch (m_iTransType) {	// switch on transition type
+		case TT_SCROLL_LR:
+		case TT_SCROLL_RL:
+		case TT_SCROLL_TB:
+		case TT_SCROLL_BT:
+			TransScroll();
+			break;
+		case TT_REVEAL_LR:
+		case TT_REVEAL_TB:
+			TransReveal();
+			break;
+		case TT_TYPEWRITER:
+			TransTypewriter();
+			break;
+		case TT_RAND_TYPE:
+			TransRandomTypewriter();
+			break;
+		case TT_FADE:
+			TransFade();
+			break;
+		case TT_SCALE_HORZ:
+		case TT_SCALE_VERT:
+		case TT_SCALE_BOTH:
+		case TT_SCALE_SPIN:
+			TransScale();
+			break;
+		case TT_RAND_TILE:
+			TransRandTile();
+			break;
+		case TT_CONVERGE_HORZ:
+		case TT_CONVERGE_VERT:
+			TransConverge();
+			break;
+		case TT_MELT:
+			TransMelt();
+			break;
+		case TT_ELEVATOR:
+			TransElevator();
+			break;
+		case TT_CLOCK:
+			TransClock();
+			break;
+		case TT_SKEW:
+			TransSkew();
+			break;
+		case TT_EXPLODE:
+			TransExplode();
+			break;
+		case TT_SUBMARINE:
+			TransSubmarine();
+			break;
+		case TT_TUMBLE:
+			TransTumble();
+			break;
+		case TT_IRIS:
+			TransIris();
+			break;
+		default:
+			NODEFAULTCASE;	// logic error
+		}
 		break;
-	case TT_REVEAL_LR:
-	case TT_REVEAL_TB:
-		TransReveal();
+	case ST_HOLD:	// if holding
+		m_pD2DDeviceContext->DrawTextLayout(CD2DPointF(0, 0), m_pTextLayout, m_pDrawBrush); // draw text
 		break;
-	case TT_TYPEWRITER:
-		TransTypewriter();
-		break;
-	case TT_RAND_TYPE:
-		TransRandomTypewriter();
-		break;
-	case TT_FADE:
-		TransFade();
-		break;
-	case TT_SCALE_HORZ:
-	case TT_SCALE_VERT:
-	case TT_SCALE_BOTH:
-	case TT_SCALE_SPIN:
-		TransScale();
-		break;
-	case TT_RAND_TILE:
-		TransRandTile();
-		break;
-	case TT_CONVERGE_HORZ:
-	case TT_CONVERGE_VERT:
-		TransConverge();
-		break;
-	case TT_MELT:
-		TransMelt();
-		break;
-	case TT_ELEVATOR:
-		TransElevator();
-		break;
-	case TT_CLOCK:
-		TransClock();
-		break;
-	case TT_SKEW:
-		TransSkew();
-		break;
-	case TT_EXPLODE:
-		TransExplode();
-		break;
-	case TT_SUBMARINE:
-		TransSubmarine();
-		break;
-	case TT_TUMBLE:
-		TransTumble();
-		break;
-	case TT_IRIS:
-		TransIris();
-		break;
-	default:
-		NODEFAULTCASE;	// logic error
 	}
 	m_bIsTransStart = false;	// reset transition start flag
 	switch (m_iState) {
 	case ST_TRANS_IN:
 		if (bTransComplete) {	// if incoming transition completed
-			if (m_nHoldDur > 0) {	// if hold desired
-				StartIdle(m_nHoldDur);	// start hold idle
+			if (m_fHoldDur > 0) {	// if hold desired
+				StartIdle(m_fHoldDur);	// start hold idle
 				m_iState = ST_HOLD;	// set state to hold
 			} else {	// skip hold state
 				StartTrans(ST_TRANS_OUT, m_fOutTransDur);	// start outgoing transition
@@ -386,8 +388,8 @@ bool CSloganDraw::OnDraw()
 		break;
 	case ST_TRANS_OUT:
 		if (bTransComplete) {	// if outgoing transition completed
-			if (m_nPauseDur > 0 || m_bIsManualTrigger) {	// if pause desired
-				StartIdle(m_nPauseDur);	// start pause idle
+			if (m_fPauseDur > 0 || m_bIsManualTrigger) {	// if pause desired
+				StartIdle(m_fPauseDur);	// start pause idle
 				m_iState = ST_PAUSE;	// set state to pause
 			} else {	// skip pause state
 				StartSlogan();	// start a new slogan
@@ -503,12 +505,12 @@ void CSloganDraw::StartTrans(int nState, float fDuration)
 		}
 	}
 	m_iState = nState;	// set state
-	m_fTransDur = fDuration;
+	m_fStateDur = fDuration;
 	m_bIsTransStart = true;	// set transition start flag
 	if (m_bIsRecording) {	// if recording
 		m_fStateStartTime = GetFrameTime();	// compute time from frame index
 	} else {	// not recording
-		m_timerTrans.Reset();	// reset transition timer
+		m_timer.Reset();	// reset timer
 	}
 	int	iTransDir = nState == ST_TRANS_OUT;	// get transition direction
 	// if current slogan specifies a transition type override for this direction
@@ -521,40 +523,25 @@ void CSloganDraw::StartTrans(int nState, float fDuration)
 	m_pEraserBitmap.Release();	// recreate eraser bitmap if needed
 }
 
-void CSloganDraw::StartIdle(int nDuration)
+void CSloganDraw::StartIdle(float fDuration)
 {
 	if (m_bIsRecording) {	// if recording
-		// compute time from frame index
-		m_nIdleEndTime = Round64(GetFrameTime() * 1000 + nDuration);
+		m_fStateStartTime = GetFrameTime();	// compute time from frame index
 	} else {	// not recording
-		m_nIdleStartTime = GetTickCount64();
-		m_nIdleEndTime = m_nIdleStartTime + nDuration;	// set wake time
+		m_timer.Reset();	// reset timer
 	}
+	m_fStateDur = fDuration;
 }
 
 bool CSloganDraw::ContinueIdle()
 {
+	double	fElapsed;
 	if (m_bIsRecording) {	// if recording
-		ULONGLONG	nNow = Round64(GetFrameTime() * 1000);
-		return nNow >= m_nIdleEndTime;
+		fElapsed = GetFrameTime() - m_fStateStartTime;	// compute time from frame index
+	} else {	// not recording
+		fElapsed = m_timer.Elapsed();	// get elapsed time from timer
 	}
-	ULONGLONG	nNow = GetTickCount64();
-	if (nNow < m_nIdleEndTime) {	// if more idle time remains
-#if SD_CAPTURE	// if capturing frames
-		return false;	// draw during idle, so idle gets captured
-#else	// not capturing frames
-		// if either palette is non-empty, assume color cycling
-		if (!m_palBkgnd.IsEmpty() || !m_palDraw.IsEmpty())
-			return false;	// color cycle during idle
-		// block instead of drawing, to reduce power usage
-		DWORD	nTimeout = static_cast<DWORD>(m_nIdleEndTime - nNow);
-		// wait for wake signal or timeout
-		DWORD	nRet = WaitForSingleObject(m_evtIdleWake, nTimeout);
-		if (nRet == WAIT_OBJECT_0)	// if wake signal
-			return false;	// idle is incomplete
-#endif	// SD_CAPTURE
-	}
-	return true;	// idle is over
+	return fElapsed >= m_fStateDur;
 }
 
 bool CSloganDraw::CreateStrokeStyle()
@@ -574,13 +561,13 @@ bool CSloganDraw::ResetDrawingEffect()
 
 void CSloganDraw::UpdateColor(CPalette& palette, D2D1::ColorF& color, ID2D1SolidColorBrush* pBrush)
 {
-	double	fElapsedTime;
+	double	fElapsed;
 	if (m_bIsRecording) {	// if recording
-		fElapsedTime = GetFrameTime();	// compute time from frame index
+		fElapsed = GetFrameTime();	// compute time from frame index
 	} else {	// not recording
-		fElapsedTime = m_timerTrans.Time() - m_fThreadStartTime;	// get time from timer
+		fElapsed = m_timer.Time() - m_fThreadStartTime;	// get time from timer
 	}
-	palette.CycleColor(fElapsedTime, color);	// cycle color based on elapsed time
+	palette.CycleColor(fElapsed, color);	// cycle color based on elapsed time
 	pBrush->SetColor(color);	// update brush color
 }
 
@@ -905,8 +892,8 @@ bool CSloganDraw::RegressionTest()
 			: m_iFrame / REF_FRAMES % TRANS_TYPES;
 	}
 	m_fTransProgress = 1.0 / 3;	// override transition progress
-	m_nHoldDur = 0;	// no hold
-	m_nPauseDur = 0;	// no pause either
+	m_fHoldDur = 0;	// no hold
+	m_fPauseDur = 0;	// no pause either
 	srand(0);	// ensure consistent behavior for transitions that use randomness
 	return true;
 }

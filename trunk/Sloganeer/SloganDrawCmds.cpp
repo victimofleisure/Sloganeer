@@ -9,6 +9,7 @@
 		rev		date	comments
 		00		11dec25	initial version
 		01		14dec25	add manual trigger
+		02		21dec25	refactor hold and pause
 
 */
 
@@ -18,11 +19,7 @@
 
 bool CSloganDraw::PushDrawCommand(const CRenderCmd& cmd)
 {
-	if (!PushCommand(cmd))	// queue command to render thread
-		return false;	// retries aren't currently supported
-	if (m_bIsImmediateMode)	// if commands should have immediate effect
-		m_evtIdleWake.Set();	// render thread could be blocked in idle wait, so wake it
-	return true;
+	return PushCommand(cmd);	// queue command to render thread
 }
 
 void CSloganDraw::SetSlogan(const CSlogan& slogan)
@@ -81,8 +78,6 @@ void CSloganDraw::TriggerGo()
 void CSloganDraw::UpdateCurrentSloganText()
 {
 	if (m_iSlogan >= 0) {	// if current slogan index is valid
-		if (IsIdle())	// if idling, assume we're blocked in wait
-			m_evtIdleWake.Set();	// force render to make update visible
 		m_sSlogan = m_aSlogan[m_iSlogan].m_sText;	// update current slogan
 		OnResize();	// update layout and reset various dependent states
 	}
@@ -101,36 +96,34 @@ void CSloganDraw::OnRenderCommand(const CRenderCmd& cmd)
 			UINT	nUpdateColMask = pSlogan->m_nCustomColMask;
 			m_aSlogan.UpdateColumns(*pSlogan, nUpdateColMask);
 			if (m_bIsImmediateMode) {	// if immediate effect desired
-				if (IsIdle())	// if idling, assume we're blocked in wait
-					m_evtIdleWake.Set();	// force render to make update visible
 				OnCustomSlogan();	// applies font and color updates
 				if (nUpdateColMask & CGBM_DURATION) {	// if duration updated
 					switch (m_iState) {	// duration updates are state-dependent
 					case ST_TRANS_IN:
 						if (nUpdateColMask & CBM_transdur)	// if incoming duration
-							m_fTransDur = m_fInTransDur;
+							m_fStateDur = m_fInTransDur;
 						break;
 					case ST_HOLD:
 						if (nUpdateColMask & CBM_holddur)	// if hold duration
-							m_nIdleEndTime = m_nIdleStartTime + m_nHoldDur;
+							m_fStateDur = m_fHoldDur;
 						break;
 					case ST_TRANS_OUT:
 						if (nUpdateColMask & CBM_outdur)	// if outgoing duration
-							m_fTransDur = m_fOutTransDur;
+							m_fStateDur = m_fOutTransDur;
 						break;
 					case ST_PAUSE:
 						if (nUpdateColMask & CBM_pausedur)	// if pause duration
-							m_nIdleEndTime = m_nIdleStartTime + m_nPauseDur;
+							m_fStateDur = m_fPauseDur;
 						break;
 					}
 				}
-				if (nUpdateColMask && CGBM_TRANSITION) {	// if transition type updated
+				if (nUpdateColMask & CGBM_TRANSITION) {	// if transition type updated
 					if (!IsIdle()) {	// if currently in transition state
-						double	fRemainDur = m_fTransDur - m_timerTrans.Elapsed();
+						double	fRemainDur = m_fStateDur - m_timer.Elapsed();
 						if (fRemainDur > 0) {	// if transition has duration remaining
-							double	fStartTime = m_timerTrans.GetStart();	// save start time
+							double	fStartTime = m_timer.GetStart();	// save start time
 							StartTrans(m_iState, static_cast<float>(fRemainDur));	// restart transition
-							m_timerTrans.SetStart(fStartTime);	// restore previous start time
+							m_timer.SetStart(fStartTime);	// restore previous start time
 						}
 					}
 				}

@@ -10,6 +10,7 @@
         00      18nov25	initial version
         01      25nov25	add customized column mask
 		02		11dec25	add update columns
+		03		21dec25	refactor hold and pause
 
 */
 
@@ -56,8 +57,8 @@ public:
 	CString	m_sFontName;		// font name
 	float	m_fFontSize;		// font size, in points
 	int		m_nFontWeight;		// font weight, from 1 to 999
-	int		m_nHoldDur;			// hold duration in milliseconds
-	int		m_nPauseDur;		// pause duration in milliseconds
+	float	m_fHoldDur;			// hold duration in seconds
+	float	m_fPauseDur;		// pause duration in seconds
 	float	m_fInTransDur;		// incoming transition duration in seconds
 	float	m_fOutTransDur;		// outgoing transition duration in seconds
 	D2D1::ColorF	m_clrBkgnd;	// background color

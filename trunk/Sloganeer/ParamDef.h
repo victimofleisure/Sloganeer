@@ -18,6 +18,7 @@
 		08		02dec25	add text and transition type
 		09		15dec25	add tumble transition
 		10		20dec25	add iris transition
+		11		21dec25	refactor hold and pause
 
 */
 
@@ -77,9 +78,9 @@ SLOGANDEF(	fontwt,		nFontWeight)
 SLOGANDEF(	bgclr,		clrBkgnd)
 SLOGANDEF(	drawclr,	clrDraw)
 SLOGANDEF(	transdur,	fInTransDur)
-SLOGANDEF(	holddur,	nHoldDur)
+SLOGANDEF(	holddur,	fHoldDur)
 SLOGANDEF(	outdur,		fOutTransDur)
-SLOGANDEF(	pausedur,	nPauseDur)
+SLOGANDEF(	pausedur,	fPauseDur)
 SLOGANDEF(	intrans,	aTransType[TD_INCOMING])
 SLOGANDEF(	outtrans,	aTransType[TD_OUTGOING])
 					

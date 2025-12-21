@@ -201,7 +201,7 @@ void CSloganDraw::TransScale()
 void CSloganDraw::InitTiling(const CKD2DRectF& rText)
 {
 	// ideal tile count is one tile for each frame of transition
-	float	fIdealTileCount = DTF(GetFrameRate() * m_fTransDur);
+	float	fIdealTileCount = DTF(GetFrameRate() * m_fStateDur);
 	// compute tile size: divide text area by ideal tile count and take square root
 	CD2DSizeF	szText(rText.Size());
 	m_fTileSize = DTF(sqrt(szText.width * szText.height / fIdealTileCount));
@@ -366,9 +366,6 @@ bool CSloganDraw::TransMelt()
 			MeasureMeltStroke();	// find appropriate maximum outline stroke
 		}
 	}
-	// if pausing between slogans, and outgoing transition complete
-	if (m_nPauseDur && IsTransOut() && m_fTransProgress >= 1)
-		return true;	// avoid potentially showing scraps of unerased text while paused
 	m_pD2DDeviceContext->DrawTextLayout(CD2DPointF(0, 0), m_pTextLayout, m_pDrawBrush);	// fill text
 	CHECK(m_pTextLayout->Draw(0, this, 0, 0));	// erase text outline
 	return true;

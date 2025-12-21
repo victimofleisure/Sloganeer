@@ -131,12 +131,9 @@ protected:
 	CComPtr<ID2D1Layer> m_pLayer;	// for transitions that need a layer
 	DWRITE_TEXT_METRICS	m_textMetrics;	// text metrics
 	DWRITE_OVERHANG_METRICS	m_overhangMetrics;	// overhang metrics
-	WEvent	m_evtIdleWake;		// during idle, signals wake from idle
 	CRandList	m_rlTransType;	// randomized list of transition types
 	CRandList	m_rlSloganIdx;	// randomized list of slogan indices
-	CBenchmark	m_timerTrans;	// high-performance transition timer
-	ULONGLONG	m_nIdleStartTime;	// time at which idle began, in CPU ticks
-	ULONGLONG	m_nIdleEndTime;	// time at which idle should end, in CPU ticks
+	CBenchmark	m_timer;		// high-performance timer
 	CString		m_sSlogan;		// current slogan being displayed
 	double	m_fThreadStartTime;	// when thread was launched, in seconds since boot
 	double	m_fTransProgress;	// transition progress, normalized from 0 to 1
@@ -147,7 +144,7 @@ protected:
 	int		m_iState;			// index of current state
 	int		m_iSlogan;			// index of current slogan
 	int		m_iTransType;		// index of current transition type
-	float	m_fTransDur;		// duration of current transition, in seconds
+	float	m_fStateDur;		// duration of current state, in seconds
 	float	m_fTileSize;		// tile size, in DIPs
 	CSize	m_szTileLayout;		// tiling layout, in rows and columns
 	CD2DPointF	m_ptTileOffset;	// tile offset, in DIPs
@@ -209,7 +206,7 @@ protected:
 	bool	IsIdle() const;
 	void	StartSlogan();
 	void	StartTrans(int nState, float fDuration);
-	void	StartIdle(int nDuration);
+	void	StartIdle(float fDuration);
 	bool	ContinueIdle();
 	bool	CreateStrokeStyle();
 	bool	ResetDrawingEffect();

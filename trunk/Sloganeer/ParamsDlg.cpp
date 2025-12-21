@@ -55,18 +55,14 @@ void CParamsDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_PARAMS_COLOR_DRAW_ALPHA, m_clrDraw.a);
 	DDV_MinMaxFloat(pDX, m_clrDraw.a, 0, 1);
 	DDX_Radio(pDX, IDC_PARAMS_PLAY_MODE_0, m_iSloganPlayMode);
-	float	fHoldDur = m_nHoldDur / 1000.0f;
-	float	fPauseDur = m_nPauseDur / 1000.0f;
 	DDX_Text(pDX, IDC_PARAMS_DUR_IN, m_fInTransDur);
 	DDV_MinMaxFloat(pDX, m_fInTransDur, 0, float(USHORT_MAX));
-	DDX_Text(pDX, IDC_PARAMS_DUR_HOLD, fHoldDur);
-	DDV_MinMaxFloat(pDX, fHoldDur, 0, float(USHORT_MAX));
+	DDX_Text(pDX, IDC_PARAMS_DUR_HOLD, m_fHoldDur);
+	DDV_MinMaxFloat(pDX, m_fHoldDur, 0, float(USHORT_MAX));
 	DDX_Text(pDX, IDC_PARAMS_DUR_OUT, m_fOutTransDur);
 	DDV_MinMaxFloat(pDX, m_fOutTransDur, 0, float(USHORT_MAX));
-	DDX_Text(pDX, IDC_PARAMS_DUR_PAUSE, fPauseDur);
-	DDV_MinMaxFloat(pDX, fPauseDur, 0, float(USHORT_MAX));
-	m_nHoldDur = Round(fHoldDur * 1000.0f);
-	m_nPauseDur = Round(fPauseDur * 1000.0f);
+	DDX_Text(pDX, IDC_PARAMS_DUR_PAUSE, m_fPauseDur);
+	DDV_MinMaxFloat(pDX, m_fPauseDur, 0, float(USHORT_MAX));
 	DDX_Control(pDX, IDC_PARAMS_TRANS_TYPE_IN, m_cbTransType[TD_INCOMING]);
 	DDX_Control(pDX, IDC_PARAMS_TRANS_TYPE_OUT, m_cbTransType[TD_OUTGOING]);
 	DDX_Radio(pDX, IDC_PARAMS_TRIGGER_TYPE_0, m_iTriggerType);
@@ -353,7 +349,7 @@ void CParamsDlg::OnKillfocusDurIn()
 
 void CParamsDlg::OnKillfocusDurHold()
 {
-	UPDATE_PARAM(m_nHoldDur, CBM_holddur);
+	UPDATE_PARAM(m_fHoldDur, CBM_holddur);
 }
 
 void CParamsDlg::OnKillfocusDurOut()
@@ -363,7 +359,7 @@ void CParamsDlg::OnKillfocusDurOut()
 
 void CParamsDlg::OnKillfocusDurPause()
 {
-	UPDATE_PARAM(m_nPauseDur, CBM_pausedur);
+	UPDATE_PARAM(m_fPauseDur, CBM_pausedur);
 }
 
 void CParamsDlg::UpdateTransType(int iDir)

@@ -46,8 +46,8 @@ CSlogan::CSlogan(bool bAppDefaults) :
 	m_sFontName = L"Arial";
 	m_fFontSize = 150.0f;
 	m_nFontWeight = DWRITE_FONT_WEIGHT_BLACK;
-	m_nHoldDur = 1000;
-	m_nPauseDur = 0;
+	m_fHoldDur = 1.0f;
+	m_fPauseDur = 0;
 	m_fInTransDur = 2.0f;
 	m_fOutTransDur = 2.0f;
 }
@@ -56,8 +56,8 @@ void CSlogan::InitSloganColumns()
 {
 	m_fFontSize = INVALID;
 	m_nFontWeight = INVALID;
-	m_nHoldDur = INVALID;
-	m_nPauseDur = INVALID;
+	m_fHoldDur = INVALID;
+	m_fPauseDur = INVALID;
 	m_fInTransDur = INVALID;
 	m_fOutTransDur = INVALID;
 	m_aTransType[TD_INCOMING] = INVALID;

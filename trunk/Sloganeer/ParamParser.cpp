@@ -275,12 +275,10 @@ void CParamParser::ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast)
 					m_bHasOutDur = true;
 					break;
 				case FLAG_holddur:
-					Scan(pszParam, fParam);
-					m_nHoldDur = Round(fParam * 1000);	// convert to milliseconds
+					Scan(pszParam, m_fHoldDur);
 					break;
 				case FLAG_pausedur:
-					Scan(pszParam, fParam);
-					m_nPauseDur = Round(fParam * 1000);	// convert to milliseconds
+					Scan(pszParam, m_fPauseDur);
 					break;
 				case FLAG_bgclr:
 					ScanColor(pszParam, m_clrBkgnd);
