@@ -33,8 +33,11 @@
 | 29 | 11/28/25 | 12/13/25 | done | add UI for adjusting parameters and adding/editing slogans                                              | 1.0.00.040 |      |
 | 37 | 12/11/25 | 12/14/25 | done | add manual trigger                                                                                      | 1.0.00.041 |      |
 | 38 | 12/14/25 | 12/19/25 | done | add tumble transition                                                                                   | 1.0.00.042 |      |
+| 41 | 12/20/25 | 12/20/25 | done | add iris transition                                                                                     | 1.0.00.043 |      |
+| 42 | 12/20/25 | 12/21/25 | done | refactor elevator and clock to clip instead of overdrawing                                              | 1.0.00.044 |      |
+| 43 | 12/20/25 | 12/21/25 | done | refactor hold and pause states to render instead of blocking                                            | 1.0.00.044 |      |
 | 24 | 11/26/25 |          | punt | hollow transition; like melt, but outline in draw color, using glyphs as clipping mask; lacks suspense  |            |      |
-| 35 | 11/30/25 |          | punt | scale up until all glyphs are off screen; way too many degenerate cases                                 |            |      |
+| 35 | 11/30/25 |          | punt | scale up until all glyphs are off screen; too many degenerate cases                                     |            |      |
 | 14 | 11/13/25 |          | todo | research smoke / fog / blur transition                                                                  |            |      |
 | 28 | 11/28/25 |          | todo | Spout support                                                                                           |            |      |
 | 31 | 11/28/25 |          | todo | customize transition probabilities via control file; weighted random list                               |            |      |
