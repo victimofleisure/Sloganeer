@@ -218,5 +218,5 @@ ffplay -f rawvideo -pixel_format bgra -video_size 1920x1080 -framerate 60 \\.\pi
 
 ### Development
 
-* There’s a [development blog](https://sloganeers.blogspot.com/). See you there!
 * The issues list is [here](SloganeerToDo.md).
+* There’s a [development blog](https://sloganeers.blogspot.com/). See you there!
