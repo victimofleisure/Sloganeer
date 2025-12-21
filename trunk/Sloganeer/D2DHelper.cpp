@@ -64,14 +64,14 @@ bool CGlyphIter::GetNext(UINT& iGlyph, CKD2DRectF& rGlyph)
 		rGlyph.left = m_ptOrigin.x + fLeftBearing;
 		rGlyph.right = m_ptOrigin.x + fAdvanceWidth - fRightBearing;
 	}
-	if (m_bTightVertBounds) {	// if tight vertical bound requested
+	if (m_bTightVertBounds) {	// if tight vertical bounds requested
 		float fTopBearing = gm.topSideBearing * m_fEmScale;
 		float fAdvanceHeight = gm.advanceHeight * m_fEmScale;
 		float fBottomBearing = gm.bottomSideBearing * m_fEmScale;
 		float fVertOriginY = gm.verticalOriginY * m_fEmScale;
 		rGlyph.top = m_ptOrigin.y - fVertOriginY + fTopBearing;
 		rGlyph.bottom = m_ptOrigin.y - fVertOriginY + fAdvanceHeight - fBottomBearing;
-	} else {
+	} else {	// use font metrics for vertical bounds
 		rGlyph.top = m_ptOrigin.y - m_fAscent;
 		rGlyph.bottom = m_ptOrigin.y + m_fDescent;
 	}

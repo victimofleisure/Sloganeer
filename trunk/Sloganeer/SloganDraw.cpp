@@ -37,6 +37,7 @@
 		27		14dec25	add manual trigger
 		28		15dec25	add tumble transition
 		29		20dec25	add iris transition
+		30		21dec25	remove unused member vars
 
 */
 
@@ -88,7 +89,6 @@ void CSloganDraw::Init()
 	m_ptTileOffset = CD2DPointF(0, 0);
 	m_iGlyphLine = 0;
 	m_bIsGlyphRising = false;
-	m_bIsFirstGlyphRun = false;
 	m_bTransparentBkgnd = false;
 	m_bIsImmediateMode = false;
 	m_bIsManualTrigger = false;
@@ -97,7 +97,6 @@ void CSloganDraw::Init()
 	m_fStateStartTime = 0;
 	m_fMeltMaxStroke = 0;
 	m_nCharsTyped = 0;
-	m_fClockRadius = 0;
 }
 
 bool CSloganDraw::Create(HWND hWnd, CWnd* pNotifyWnd)

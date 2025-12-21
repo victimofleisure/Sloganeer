@@ -17,6 +17,7 @@
 		07		15dec25	add tumble transition
 		08		19dec25	add vertical displacement to tumble
 		09		20dec25	add iris transition
+		10		21dec25	refactor elevator and clock to use clipping
 
 */
 
@@ -457,49 +458,43 @@ bool CSloganDraw::TransElevator()
 void CSloganDraw::TransElevator(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
 {
-	m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
-	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun);
-	// if transparent background and eraser doesn't exist
-	if (m_bTransparentBkgnd && m_pEraserBitmap == NULL) {
-		CKD2DRectF	rText;
-		GetTextBounds(rText);
-		float	fFontHeight = iterGlyph.GetAscent() + iterGlyph.GetDescent();
-		// eraser bitmap is much wider than necessary, but it's safe and easy
-		CreateEraser(CD2DSizeF(rText.Width(), fFontHeight));	// create eraser
-	}
-	double	fPhase = GetPhase();
+	DWRITE_GLYPH_RUN	run = *pGlyphRun;	// copy run struct to local var
+	run.glyphCount = 1;	// override run's glyph count; one glyph at a time
+	double	fPhase = GetPhase(GP_INVERT);
+	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun, true);	// tight vertical bounds
+	CD2DPointF	ptOrigin(ptBaselineOrigin);
 	CKD2DRectF	rGlyph;
 	UINT	iGlyph;
 	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
 		// for space testing, don't assume one-to-one mapping of glyphs to characters,
 		// as that breaks in RTL languages; safer to test for a zero width bounding box
-		if (rGlyph.Width() > m_fSpaceWidth) {	// if non-space glyph
+		if (rGlyph.Width() > m_fSpaceWidth) {	// exclude spaces
 			rGlyph.InflateRect(AA_MARGIN, AA_MARGIN);	// add antialiasing margin
-			float	fGlyphWidth = rGlyph.Width();
-			float	fDoorWidth = DTF((fGlyphWidth + AA_MARGIN) * fPhase / 2);
-			float	fDoorLeft = rGlyph.left + fDoorWidth;
-			float	fDoorRight = rGlyph.right - fDoorWidth;
-			CKD2DRectF	rDoor(rGlyph.left, rGlyph.top, fDoorLeft, rGlyph.bottom);
-			if (m_bTransparentBkgnd) {	// if transparent background
-				// use eraser bitmap to make doors transparent
-				CKD2DRectF	rImage(CD2DPointF(0, 0), rDoor.Size());
-				EraseBackground(rDoor.TopLeft(), &rImage);	// left door
-				rDoor.left = fDoorRight;
-				rDoor.right = rGlyph.right;
-				EraseBackground(rDoor.TopLeft(), &rImage);	// right door
-			} else {	// overdraw text with background color
-				m_pD2DDeviceContext->FillRectangle(rDoor, m_pBkgndBrush);	// left door
-				rDoor.left = fDoorRight;
-				rDoor.right = rGlyph.right;
-				m_pD2DDeviceContext->FillRectangle(rDoor, m_pBkgndBrush);	// right door
-			}
+			run.glyphIndices = pGlyphRun->glyphIndices + iGlyph;
+			run.glyphAdvances = pGlyphRun->glyphAdvances + iGlyph;
+			run.glyphOffsets = pGlyphRun->glyphOffsets + iGlyph;
+			double	fGlyphWidth = rGlyph.Width();
+			double	fDoorWidth = fGlyphWidth * fPhase;
+			double	fDoorLeft = rGlyph.left + (fGlyphWidth - fDoorWidth) / 2;
+			double	fDoorRight = fDoorLeft + fDoorWidth;
+			CKD2DRectF	rDoor(DTF(fDoorLeft), rGlyph.top, DTF(fDoorRight), rGlyph.bottom);
+			m_pD2DDeviceContext->PushAxisAlignedClip(rDoor, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+			m_pD2DDeviceContext->DrawGlyphRun(ptOrigin, &run, m_pDrawBrush, measuringMode);
+			m_pD2DDeviceContext->PopAxisAlignedClip();
 		}
+		ptOrigin = iterGlyph.GetOrigin();	// update glyph origin
 	}
 }
 
 bool CSloganDraw::TransClock()
 {
-	m_bIsFirstGlyphRun = true;	// for once-per-frame work in text renderer callback
+	m_pPathGeom.Release();
+	CHECK(m_pD2DFactory->CreatePathGeometry(&m_pPathGeom));
+	CComPtr<ID2D1GeometrySink> pGeomSink;
+	CHECK(m_pPathGeom->Open(&pGeomSink));
+	double	fPhase = GetPhase(GP_INVERT);
+	AddPieWedge(pGeomSink, CD2DPointF(0, 0), CD2DSizeF(0.5, 0.5), 180, DTF(fPhase));
+	CHECK(pGeomSink->Close());
 	CHECK(m_pTextLayout->Draw(0, this, 0, 0));
 	return true;
 }
@@ -507,56 +502,30 @@ bool CSloganDraw::TransClock()
 bool CSloganDraw::TransClock(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
 {
-	m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, pGlyphRun, m_pDrawBrush, measuringMode);
+	DWRITE_GLYPH_RUN	run = *pGlyphRun;	// copy run struct to local var
+	run.glyphCount = 1;	// override run's glyph count; one glyph at a time
+	// use font metrics for vertical bounds, so pie centers are vertically aligned
 	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun);
-	if (m_bIsFirstGlyphRun) {	// if first glyph run for this frame
-		m_bIsFirstGlyphRun = false;	// reset first glyph run flag
-		// calculate bounds of largest glyph in this run
-		CD2DSizeF	szMaxGlyph(iterGlyph.CalcMaxGlyphBounds());
-		iterGlyph.Reset();	// reset glyph iterator, as we reuse it below
-		float	fMaxGlyphSize = max(szMaxGlyph.width, szMaxGlyph.height);
-		float	fRadius = DTF(fMaxGlyphSize * M_SQRT2 / 2);
-		m_pPathGeom.Release();
-		CHECK(m_pD2DFactory->CreatePathGeometry(&m_pPathGeom));
-		CComPtr<ID2D1GeometrySink> pGeomSink;
-		CHECK(m_pPathGeom->Open(&pGeomSink));
-		double	fPhase = GetPhase();
-		AddPieWedge(pGeomSink, CD2DPointF(0, 0), CD2DSizeF(fRadius, fRadius), 180, DTF(fPhase));
-		CHECK(pGeomSink->Close());
-		if (m_bTransparentBkgnd) {	// if transparent background
-			if (m_pEraserBitmap == NULL) {	// if eraser doesn't exist
-				CreateEraser(CD2DSizeF(fRadius * 2, fRadius * 2));	// create eraser
-			}
-			CComPtr<ID2D1Image>	pOldTarget;	// smart pointer is required due to reference counting
-			m_pD2DDeviceContext->GetTarget(&pOldTarget);	// increments target's reference count
-			m_pD2DDeviceContext->SetTarget(m_pEraserBitmap);
-			m_pD2DDeviceContext->Clear(0);	// clear background to zero in all channels
-			m_pVarBrush->SetColor(D2D1::ColorF(0, 0, 0, 1));	// draw in full intensity alpha
-			auto mTranslate(D2D1::Matrix3x2F::Translation(fRadius, fRadius));	// account for local coords
-			m_pD2DDeviceContext->SetTransform(mTranslate);
-			m_pD2DDeviceContext->FillGeometry(m_pPathGeom, m_pVarBrush);	// draw pie as alpha mask
-			ResetTransform(m_pD2DDeviceContext);	// remove transform
-			m_pD2DDeviceContext->SetTarget(pOldTarget);
-		}
-		m_fClockRadius = fRadius;	// save radius in member var
-	}
+	CD2DPointF	ptOrigin(ptBaselineOrigin);
 	CKD2DRectF	rGlyph;
 	UINT	iGlyph;
 	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
-		if (rGlyph.Width() > m_fSpaceWidth) {	// if non-space glyph
+		if (rGlyph.Width() > m_fSpaceWidth) {	// exclude spaces
 			rGlyph.InflateRect(AA_MARGIN, AA_MARGIN);	// add antialiasing margin
-			CD2DPointF	ptCenter(rGlyph.CenterPoint());
-			m_pD2DDeviceContext->PushAxisAlignedClip(rGlyph, D2D1_ANTIALIAS_MODE_ALIASED);
-			if (m_bTransparentBkgnd) {	// if transparent background
-				EraseBackground(CD2DPointF(ptCenter.x - m_fClockRadius, ptCenter.y - m_fClockRadius));
-			} else {	// overdraw text with background color
-				auto mTranslate(D2D1::Matrix3x2F::Translation(ptCenter.x, ptCenter.y));
-				m_pD2DDeviceContext->SetTransform(mTranslate);
-				m_pD2DDeviceContext->FillGeometry(m_pPathGeom, m_pBkgndBrush);
-				ResetTransform(m_pD2DDeviceContext);
-			}
-			m_pD2DDeviceContext->PopAxisAlignedClip();
+			run.glyphIndices = pGlyphRun->glyphIndices + iGlyph;
+			run.glyphAdvances = pGlyphRun->glyphAdvances + iGlyph;
+			run.glyphOffsets = pGlyphRun->glyphOffsets + iGlyph;
+			CD2DPointF	ptCtr(rGlyph.CenterPoint());
+			double	fSize = max(rGlyph.Width(), rGlyph.Height()) * M_SQRT2;
+			CD2DSizeF	szScale(DTF(-fSize), DTF(fSize));	// circle enclosing glyph
+			m_pD2DDeviceContext->PushLayer(D2D1::LayerParameters1(
+				rGlyph, m_pPathGeom, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE,
+				D2D1::Matrix3x2F::Scale(szScale, CD2DPointF(0, 0))
+				* D2D1::Matrix3x2F::Translation(ptCtr.x, ptCtr.y)), m_pLayer);
+			m_pD2DDeviceContext->DrawGlyphRun(ptOrigin, &run, m_pDrawBrush, measuringMode);
+			m_pD2DDeviceContext->PopLayer();
 		}
+		ptOrigin = iterGlyph.GetOrigin();	// update glyph origin
 	}
 	return true;
 }
@@ -691,15 +660,14 @@ void CSloganDraw::TransTumble(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE
 	iterGlyph.Reset();	// reset glyph iterator
 	DWRITE_GLYPH_RUN	run = *pGlyphRun;	// copy run struct to local var
 	run.glyphCount = 1;	// override run's glyph count; one glyph at a time
-	bool	bRTL = run.bidiLevel & 1;	// odd level indicates right-to-left
 	double	fPhase = GetPhase(GP_INVERT | GP_EASING);	// inverted phase with easing
 	float	fRotoAngle = DTF(fPhase * 360);	// rotation angle
 	CD2DSizeF	szScale(DTF(fPhase), DTF(fPhase));	// isotropic scaling
 	CD2DSizeF	szMaxGlyph = iterGlyph.CalcMaxGlyphBounds();	// compute max glyph bounds
 	iterGlyph.Reset();	// reset glyph iterator
 	CD2DSaveTransform	transSave(m_pD2DDeviceContext);	// save transform, restore on exit
+	CD2DPointF	ptOrigin(ptBaselineOrigin);
 	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
-		run.glyphAdvances = pGlyphRun->glyphAdvances + iGlyph;
 		if (rGlyph.Width() > m_fSpaceWidth) {	// exclude spaces
 			CD2DPointF	ptCenter(rGlyph.CenterPoint());
 			// glyph center's horizontal position within run, normalized to [-1, 1]
@@ -717,18 +685,15 @@ void CSloganDraw::TransTumble(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE
 				DTF((1 - fPhase) * fNormCtrX * szMaxGlyph.width),
 				DTF((1 - fPhase) * fNormCtrY * szMaxGlyph.height));
 			run.glyphIndices = pGlyphRun->glyphIndices + iGlyph;
+			run.glyphAdvances = pGlyphRun->glyphAdvances + iGlyph;
 			run.glyphOffsets = pGlyphRun->glyphOffsets + iGlyph;
 			m_pD2DDeviceContext->SetTransform(
 				D2D1::Matrix3x2F::Scale(szScale, ptCenter)	// scale
 				* D2D1::Matrix3x2F::Rotation(fRotoAngle, ptCenter)	// rotation
 				* D2D1::Matrix3x2F::Translation(szTrans));	// translation
-			m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, &run, m_pDrawBrush, measuringMode);
+			m_pD2DDeviceContext->DrawGlyphRun(ptOrigin, &run, m_pDrawBrush, measuringMode);
 		}
-		if (bRTL) {	// if right-to-left
-			ptBaselineOrigin.x -= *run.glyphAdvances;	// negative advance
-		} else {	// left-to-right
-			ptBaselineOrigin.x += *run.glyphAdvances;	// positive advance
-		}
+		ptOrigin = iterGlyph.GetOrigin();	// update glyph origin
 	}
 }
 
@@ -751,18 +716,18 @@ bool CSloganDraw::TransIris()
 void CSloganDraw::TransIris(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun)
 {
-	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun, true);	// tight vertical bounds
-	CKD2DRectF	rGlyph;
-	UINT	iGlyph;
 	DWRITE_GLYPH_RUN	run = *pGlyphRun;	// copy run struct to local var
 	run.glyphCount = 1;	// override run's glyph count; one glyph at a time
-	bool	bRTL = run.bidiLevel & 1;	// odd level indicates right-to-left
 	double	fPhase = GetPhase(GP_INVERT) * M_SQRT2;	// ensure ellipse covers bounding rect
+	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun, true);	// tight vertical bounds
+	CD2DPointF	ptOrigin(ptBaselineOrigin);
+	CKD2DRectF	rGlyph;
+	UINT	iGlyph;
 	while (iterGlyph.GetNext(iGlyph, rGlyph)) {	// for each glyph
-		run.glyphAdvances = pGlyphRun->glyphAdvances + iGlyph;
 		if (rGlyph.Width() > m_fSpaceWidth) {	// exclude spaces
 			rGlyph.InflateRect(AA_MARGIN, AA_MARGIN);	// add antialiasing margin
 			run.glyphIndices = pGlyphRun->glyphIndices + iGlyph;
+			run.glyphAdvances = pGlyphRun->glyphAdvances + iGlyph;
 			run.glyphOffsets = pGlyphRun->glyphOffsets + iGlyph;
 			CD2DPointF	ptCtr(rGlyph.CenterPoint());
 			CD2DSizeF	szScale(DTF(rGlyph.Width() * fPhase), DTF(rGlyph.Height() * fPhase));
@@ -770,13 +735,9 @@ void CSloganDraw::TransIris(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE m
 				rGlyph, m_pPathGeom, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE,
 				D2D1::Matrix3x2F::Scale(szScale, CD2DPointF(0, 0))
 				* D2D1::Matrix3x2F::Translation(ptCtr.x, ptCtr.y)), m_pLayer);
-			m_pD2DDeviceContext->DrawGlyphRun(ptBaselineOrigin, &run, m_pDrawBrush, measuringMode);
+			m_pD2DDeviceContext->DrawGlyphRun(ptOrigin, &run, m_pDrawBrush, measuringMode);
 			m_pD2DDeviceContext->PopLayer();
 		}
-		if (bRTL) {	// if right-to-left
-			ptBaselineOrigin.x -= *run.glyphAdvances;	// negative advance
-		} else {	// left-to-right
-			ptBaselineOrigin.x += *run.glyphAdvances;	// positive advance
-		}
+		ptOrigin = iterGlyph.GetOrigin();	// update glyph origin
 	}
 }

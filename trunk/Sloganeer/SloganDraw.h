@@ -31,6 +31,7 @@
 		21		14dec25	add manual trigger
 		22		15dec25	add tumble transition
 		23		20dec25	add iris transition
+		24		21dec25	remove unused member vars
 
 */
 
@@ -126,6 +127,7 @@ protected:
 	CComPtr<IDWriteTextLayout>	m_pTextLayout;	// text layout interface
 	CComPtr<ID2D1StrokeStyle1>	m_pStrokeStyle;	// stroke style for melt effect
 	CComPtr<ID2D1Bitmap1> m_pEraserBitmap;	// for erasing to transparent background
+	CComPtr<ID2D1PathGeometry> m_pPathGeom;		// path geometry interface
 	CComPtr<ID2D1Layer> m_pLayer;	// for transitions that need a layer
 	DWRITE_TEXT_METRICS	m_textMetrics;	// text metrics
 	DWRITE_OVERHANG_METRICS	m_overhangMetrics;	// overhang metrics
@@ -155,7 +157,6 @@ protected:
 	CIntArrayEx	m_aCharToLine;	// for each character of slogan, index of its line
 	int		m_iGlyphLine;		// index of line text renderer is currently on
 	bool	m_bIsGlyphRising;	// true if glyph is rising; for vertical converge
-	bool	m_bIsFirstGlyphRun;	// true if first run of a text renderer callback
 	bool	m_bTransparentBkgnd;	// true if background is fully transparent
 	bool	m_bIsImmediateMode;	// true if commands should take effect immediately
 	bool	m_bIsManualTrigger;	// true if starting slogans manually; false for auto
@@ -176,10 +177,6 @@ protected:
 	// random typewriter transition
 	CIntArrayEx	m_aCharIdx;		// array of character indices within current slogan
 	UINT	m_nCharsTyped;		// count of characters that have been typed so far
-
-	// clock transition
-	float	m_fClockRadius;		// radius of clock mask in DIPs
-	CComPtr<ID2D1PathGeometry> m_pPathGeom;		// path geometry for clock
 
 #if SD_CAPTURE	// if capturing frames
 	class CMyD2DCapture : public CD2DCapture {
