@@ -13,6 +13,7 @@
 		03		15nov25	add color names
         04      25nov25	support decimal colors
 		05		02dec25	add text and transition type
+		06		24dec25	move input file open to method
 
 */
 
@@ -28,6 +29,7 @@ public:
 
 // Operations
 	bool	ParseCommandLine();
+	bool	OpenInputFile(LPCTSTR pszPath);
 	static	CString	GetHelpString();
 	static	void	ScanColor(LPCTSTR pszParam, D2D1::ColorF& color);
 	static	bool	ScanDecimalColor(LPCTSTR pszParam, D2D1::ColorF& color);

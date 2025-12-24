@@ -11,6 +11,7 @@
 		01		30oct25	move parameters to their own class
 		02		14nov25	add delayed create handler
 		03		11dec25	add parameters dialog
+		04		24dec25	add file open command
 
 */
 
@@ -42,10 +43,11 @@ protected:
 
 // Constants
 	enum {
-		IDM_ABOUTBOX = 0x0010,
-		IDM_FULLSCREEN = 0x0020,
-		IDM_SHOWHELP = 0x0030,
-		IDM_SHOWPARAMS = 0x0040,
+		IDM_ABOUTBOX	= 0x0010,
+		IDM_FULLSCREEN	= 0x0020,
+		IDM_SHOWHELP	= 0x0030,
+		IDM_SHOWPARAMS	= 0x0040,
+		IDM_OPENFILE	= 0x0050,
 	};
 
 // Member data
@@ -69,6 +71,7 @@ protected:
 	bool	HandleKey(UINT nKey);
 	bool	ShowParamsDlg(bool bEnable);
 	bool	IsParamsDlgVisible() const;
+	bool	PromptOpenInputFile();
 	friend class CParamsDlg;
 
 // Message handlers

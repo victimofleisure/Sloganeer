@@ -10,6 +10,7 @@
 		00		11dec25	initial version
 		01		14dec25	add manual trigger
 		02		21dec25	refactor hold and pause
+		03		24dec25	add command to set slogan array
 
 */
 
@@ -26,6 +27,13 @@ void CSloganDraw::SetSlogan(const CSlogan& slogan)
 {
 	CRenderCmd cmd(RC_SET_SLOGAN);
 	cmd.m_prop.byref = new CSlogan(slogan);	// recipient is responsible for deletion
+	PushDrawCommand(cmd);
+}
+
+void CSloganDraw::SetSloganArray(const CSloganArray& aSlogan, bool bHasCustom)
+{
+	CRenderCmd cmd(RC_SET_SLOGAN_ARRAY, bHasCustom);
+	cmd.m_prop.byref = new CSloganArray(aSlogan);	// recipient is responsible for deletion
 	PushDrawCommand(cmd);
 }
 
@@ -132,6 +140,25 @@ void CSloganDraw::OnRenderCommand(const CRenderCmd& cmd)
 				LaunchMeltWorker();	// launch melt probe worker
 		}
 		break;
+	case RC_SET_SLOGAN_ARRAY:
+		{
+			ASSERT(cmd.m_prop.byref != NULL);	// pointer must not be null
+			// assume byref points to a slogan array dynamically allocated via new
+			CAutoPtr<CSloganArray> paSlogan(static_cast<CSloganArray*>(cmd.m_prop.byref));
+			if (paSlogan->IsEmpty())	// if passed array is empty
+				break;	// abort this command
+			// melt stroke array may be resized if slogan count increased
+			m_thrMeltWorker.Destroy();	// wait for melt worker to exit
+			CSlogan*	pSlogan;	// receives slogan array elements
+			W64INT	nSlogans;	// receives slogan array element count
+			paSlogan->Detach(pSlogan, nSlogans);	// detach slogans from passed array
+			m_aSlogan.Attach(pSlogan, nSlogans);	// attach slogans to our member array
+			m_iSlogan = -1;	// invalidate current slogan index; slogan array was replaced
+			m_bCustomSlogans = cmd.m_nParam != 0;	// update custom slogans state
+			m_rlSloganIdx.Init(static_cast<int>(nSlogans));	// reinitialize slogan shuffler
+			LaunchMeltWorker();	// launch melt probe worker
+		}
+		break;
 	case RC_INSERT_SLOGAN:
 		{
 			int	iSlogan = cmd.m_nParam;
@@ -142,10 +169,10 @@ void CSloganDraw::OnRenderCommand(const CRenderCmd& cmd)
 			// worker thread writes to that array, risking a race or access violation
 			m_thrMeltWorker.Destroy();	// wait for melt worker to exit
 			m_aSlogan.InsertAt(iSlogan, *pSlogan);	// update slogan array
-			float	fStroke = 0;	// new slogan's melt stroke is initially unknown
-			m_aMeltStroke.InsertAt(iSlogan, fStroke);	// update melt stroke array
+			m_aMeltStroke.InsertAt(iSlogan, 0.0f);	// update melt stroke array
 			if (iSlogan <= m_iSlogan)	// if insertion is at or below current slogan
 				m_iSlogan++;	// bump current slogan index to account for insertion
+			m_rlSloganIdx.Init(m_aSlogan.GetSize());	// reinitialize slogan shuffler
 			if (!pSlogan->m_sText.IsEmpty())	// if inserted slogan's text isn't empty
 				LaunchMeltWorker(iSlogan);	// probe this slogan only
 		}
@@ -173,7 +200,7 @@ void CSloganDraw::OnRenderCommand(const CRenderCmd& cmd)
 			if (m_bIsImmediateMode) {	// if immediate effect desired
 				UpdateCurrentSloganText();
 			} else {	// apply change to next slogan
-				if (m_iSloganPlayMode == SPM_SEQUENTIAL)	// if sequential
+				if (m_iSloganPlayMode == SPM_SEQUENTIAL)	// if sequential play
 					m_iSlogan--;	// StartSlogan increments index before using it
 			}
 		}

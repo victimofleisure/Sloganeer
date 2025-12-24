@@ -9,6 +9,7 @@
 		rev		date	comments
         00      11dec25	initial version
 		01		14dec25	add manual trigger
+		02		24dec25	add set slogans attribute
 
 */
 
@@ -23,8 +24,12 @@ class CParamsDlg : public CDialog, public CSlogan
 	DECLARE_DYNAMIC(CParamsDlg)
 
 public:
+// Construction
 	CParamsDlg(CWnd* pParent = NULL);   // standard constructor
 	virtual ~CParamsDlg();
+
+// Attributes
+	void	SetSlogans(const CSloganArray& aSlogan);
 
 // Dialog Data
 	enum { IDD = IDD_PARAMS };

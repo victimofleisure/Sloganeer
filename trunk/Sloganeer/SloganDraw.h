@@ -32,6 +32,7 @@
 		22		15dec25	add tumble transition
 		23		20dec25	add iris transition
 		24		21dec25	remove unused member vars
+		25		24dec25	add command to set slogan array
 
 */
 
@@ -71,6 +72,7 @@ public:
 
 // Commands
 	void	SetSlogan(const CSlogan& slogan);
+	void	SetSloganArray(const CSloganArray& aSlogan, bool bHasCustom);
 	void	InsertSlogan(int iSlogan, const CSlogan& slogan);
 	void	SetSloganText(int iSlogan, CString sSlogan);
 	void	SelectSlogan(int iSlogan);
@@ -106,6 +108,7 @@ protected:
 	static const float m_fSpaceWidth;	// glyph this wide or less is a space, in DIPs
 	enum {	// drawing commands
 		RC_SET_SLOGAN = BASE_RENDER_COMMANDS,	// param: none, prop: CSlogan*
+		RC_SET_SLOGAN_ARRAY,		// param: bHasCustom, prop: CSloganArray*
 		RC_INSERT_SLOGAN,			// param: iSlogan, prop: CSlogan*
 		RC_SET_SLOGAN_TEXT,			// param: iSlogan, prop: LPTSTR
 		RC_SELECT_SLOGAN,			// param: iSlogan, prop: none

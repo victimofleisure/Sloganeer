@@ -12,6 +12,7 @@
 		02		14nov25	add recording
 		03		03dec25	add recording to named pipe
 		04		11dec25	add parameters dialog
+		05		24dec25	add file open command
 
 */
 
@@ -25,6 +26,7 @@
 #include "ProgressDlg.h"
 #include "PathStr.h"
 #include "HelpDlg.h"
+#include "ParamParser.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -106,37 +108,19 @@ bool CSloganeerDlg::CustomizeSystemMenu()
 	CMenu* pSysMenu = GetSystemMenu(FALSE);
 	if (pSysMenu == NULL)
 		return false;
-	BOOL bNameValid;
 	CString sMenuItem;
-	bNameValid = sMenuItem.LoadString(IDS_ABOUTBOX);
-	ASSERT(bNameValid);
-	if (!sMenuItem.IsEmpty())
-	{
-		// append about box to system menu
-		pSysMenu->AppendMenu(MF_SEPARATOR);
-		pSysMenu->AppendMenu(MF_STRING, IDM_ABOUTBOX, sMenuItem);
-	}
-	bNameValid = sMenuItem.LoadString(IDS_HELP);
-	ASSERT(bNameValid);
-	if (!sMenuItem.IsEmpty())
-	{
-		// append about box to system menu
-		pSysMenu->AppendMenu(MF_STRING, IDM_SHOWHELP, sMenuItem);
-	}
-	bNameValid = sMenuItem.LoadString(IDS_FULL_SCREEN);
-	ASSERT(bNameValid);
-	if (!sMenuItem.IsEmpty())
-	{
-		// insert full screen command into system menu, before minimize
-		pSysMenu->InsertMenu(SC_MINIMIZE, 0, IDM_FULLSCREEN, sMenuItem);
-	}
-	bNameValid = sMenuItem.LoadString(IDS_PARAMS);
-	ASSERT(bNameValid);
-	if (!sMenuItem.IsEmpty())
-	{
-		// insert full screen command into system menu, before minimize
-		pSysMenu->InsertMenu(SC_MINIMIZE, 0, IDM_SHOWPARAMS, sMenuItem);
-	}
+	VERIFY(sMenuItem.LoadString(IDS_FULL_SCREEN));
+	VERIFY(pSysMenu->InsertMenu(SC_MINIMIZE, 0, IDM_FULLSCREEN, sMenuItem));
+	VERIFY(pSysMenu->AppendMenu(MF_SEPARATOR));
+	VERIFY(sMenuItem.LoadString(IDS_OPEN_FILE));
+	VERIFY(pSysMenu->AppendMenu(MF_STRING, IDM_OPENFILE, sMenuItem));
+	VERIFY(sMenuItem.LoadString(IDS_PARAMS));
+	VERIFY(pSysMenu->AppendMenu(MF_STRING, IDM_SHOWPARAMS, sMenuItem));
+	VERIFY(pSysMenu->AppendMenu(MF_SEPARATOR));
+	VERIFY(sMenuItem.LoadString(IDS_HELP));
+	VERIFY(pSysMenu->AppendMenu(MF_STRING, IDM_SHOWHELP, sMenuItem));
+	VERIFY(sMenuItem.LoadString(IDS_ABOUTBOX));
+	VERIFY(pSysMenu->AppendMenu(MF_STRING, IDM_ABOUTBOX, sMenuItem));
 	return true;
 }
 
@@ -178,6 +162,20 @@ bool CSloganeerDlg::IsParamsDlgVisible() const
 	return m_dlgParams.m_hWnd && m_dlgParams.IsWindowVisible();
 }
 
+bool CSloganeerDlg::PromptOpenInputFile()
+{
+	static const LPCTSTR pszFilter = _T("Input Files (*.txt;*.csv)|*.txt;*.csv|All Files (*.*)|*.*||");
+	CFileDialog	fd(TRUE, NULL, NULL, OFN_HIDEREADONLY, pszFilter);
+	if (fd.DoModal() != IDOK)
+		return false;
+	CParamParser	parser;
+	if (!parser.OpenInputFile(fd.GetPathName()))
+		return false;
+	m_sd.SetSloganArray(parser.m_aSlogan, parser.m_bCustomSlogans);
+	m_dlgParams.SetSlogans(parser.m_aSlogan);
+	return true;
+}
+
 bool CSloganeerDlg::HandleKey(UINT nKey)
 {
 	switch (nKey) {
@@ -189,6 +187,12 @@ bool CSloganeerDlg::HandleKey(UINT nKey)
 		break;
 	case VK_F5:
 		ShowParamsDlg(!IsParamsDlgVisible());
+		break;
+	case 'O':
+		if ((GetKeyState(VK_CONTROL) & GKS_DOWN)
+		&& !(GetKeyState(VK_SHIFT) & GKS_DOWN)
+		&& !(GetKeyState(VK_MENU) & GKS_DOWN))
+			PromptOpenInputFile();
 		break;
 	default:
 		return false;
@@ -297,6 +301,9 @@ void CSloganeerDlg::OnSysCommand(UINT nID, LPARAM lParam)
 		break;
 	case IDM_SHOWPARAMS:
 		ShowParamsDlg(!IsParamsDlgVisible());
+		break;
+	case IDM_OPENFILE:
+		PromptOpenInputFile();
 		break;
 	default:
 		CDialogEx::OnSysCommand(nID, lParam);

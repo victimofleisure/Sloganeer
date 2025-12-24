@@ -16,6 +16,7 @@
 		06		27nov25	fix decimal color false positive
 		07		02dec25	add text and transition type
 		08		19dec25	fix incorrect init if no command line parameters
+		09		24dec25	move input file open to method
 
 */
 
@@ -374,21 +375,27 @@ bool CParamParser::ParseCommandLine()
 	if (!m_bHasRandSeed)	// if random number seed not specified
 		m_nRandSeed = GetTickCount();	// seed from time so runs vary
 	if (!m_strFileName.IsEmpty()) {	// if file path specified
-		// if file format is CSV
-		if (!_tcsicmp(PathFindExtension(m_strFileName), _T(".csv"))) {
-			CSloganCSV	parser(*this, m_aSlogan);	// create CSV slogan parser
-			if (!parser.Read(m_strFileName))	// read slogans from CSV file
-				return false;	// failed to read slogans, fatal error
-			m_bCustomSlogans = true;	// enable per-slogan customization
-		} else {	// assume ANSI or UTF-8 text file
-			ReadSlogans(m_strFileName);	// read slogans from text file
-		}
+		OpenInputFile(m_strFileName);
 	}
 	if (m_aSlogan.IsEmpty()) {	// if no slogans
 		m_sText = m_sDefaultSlogan;
 		m_aSlogan.Add(*this);	// add placeholder slogan
 	}
 	return true;	// proceed with launching app
+}
+
+bool CParamParser::OpenInputFile(LPCTSTR pszPath)
+{
+	// if file format is CSV
+	if (!_tcsicmp(PathFindExtension(pszPath), _T(".csv"))) {
+		CSloganCSV	parser(*this, m_aSlogan);	// create CSV slogan parser
+		if (!parser.Read(pszPath))	// read slogans from CSV file
+			return false;	// failed to read slogans, fatal error
+		m_bCustomSlogans = true;	// enable per-slogan customization
+	} else {	// assume ANSI or UTF-8 text file
+		ReadSlogans(pszPath);	// read slogans from text file
+	}
+	return true;
 }
 
 void CParamParser::BreakIntoLines(CString sText, CStringArrayEx& arrLine, int nMaxLine)

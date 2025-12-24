@@ -11,6 +11,7 @@
         01      09nov25	add worker thread
         02      18nov25	add slogan customization
 		03		11dec25	add cancel flag and selected slogan
+		04		24dec25	resize and zero stroke array in worker create
 
 */
 
@@ -280,9 +281,14 @@ bool CMeltProbeWorker::Create(const CSloganArray& aSlogan, CD2DPointF ptDPI, CAr
 	ASSERT(m_pWorker == NULL);	// single worker thread only
 	if (m_pWorker != NULL)	// if worker already running
 		return false;	// can't proceed
-	// the caller is responsible for allocating the stroke result array,
-	// and it must have the same number of elements as the input slogan array
-	ASSERT(aStroke.GetSize() == aSlogan.GetSize());
+	aStroke.FastSetSize(aSlogan.GetSize());	// allocate destination stroke array
+	if (iSelSlogan >= 0) {	// if probing selected slogan
+		aStroke[iSelSlogan] = 0;	// reset stroke for selected slogan only
+	} else {	// probing all slogans; reset all strokes
+		for (int iSlogan = 0; iSlogan < aSlogan.GetSize(); iSlogan++) {	// for each slogan
+			aStroke[iSlogan] = 0;	// reset stroke
+		}
+	}
 	m_aSlogan = aSlogan;
 	m_ptDPI = ptDPI;
 	m_paStroke = &aStroke;

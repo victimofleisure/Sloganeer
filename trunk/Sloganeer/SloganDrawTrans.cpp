@@ -360,9 +360,14 @@ bool CSloganDraw::MakeCharToLineTable()
 bool CSloganDraw::TransMelt()
 {
 	if (m_bIsTransStart) {	// if start of transition
-		if (m_aMeltStroke[m_iSlogan]) {	// if cached melt stroke available
+		// if current slogan index is valid and cached melt stroke is available
+		if (m_iSlogan >= 0 && m_aMeltStroke[m_iSlogan]) {
 			m_fMeltMaxStroke = m_aMeltStroke[m_iSlogan];	// use cached value
-		} else {	// melt stroke isn't cached
+		} else {	// melt stroke isn't cached, or invalid slogan index
+			// The melt probe is slow enough that we might drop frames, which
+			// is why it normally runs from a worker thread, but in this case
+			// we need the stroke to start the transition and it's not cached,
+			// so there's no choice but to do the probe in the render thread.
 			MeasureMeltStroke();	// find appropriate maximum outline stroke
 		}
 	}
@@ -417,7 +422,9 @@ bool CSloganDraw::LaunchMeltWorker(int iSelSlogan)
 	m_thrMeltWorker.Destroy();	// wait for worker thread to exit
 	CD2DPointF	ptDPI;
 	m_pD2DDeviceContext->GetDpi(&ptDPI.x, &ptDPI.y);
-	m_aMeltStroke.SetSize(m_aSlogan.GetSize());	// allocate destination stroke array
+	// The Create method resizes the melt stroke array to match the number of
+	// slogans, and also zeros all or only one of the stroke array's elements,
+	// depending on whether a selected slogan is specified (iSelSlogan >= 0).
 	return m_thrMeltWorker.Create(m_aSlogan, ptDPI, m_aMeltStroke, iSelSlogan);	// launch worker thread
 }
 

@@ -9,6 +9,7 @@
 		rev		date	comments
         00      11dec25	initial version
 		01		14dec25	add manual trigger
+		02		24dec25	add set slogans attribute
 
 */
 
@@ -199,6 +200,19 @@ bool CParamsDlg::CommitFocusedEdit(HWND hDlgWnd)
 		}
 	}
 	return false;
+}
+
+void CParamsDlg::SetSlogans(const CSloganArray& aSlogan)
+{
+	if (aSlogan.IsEmpty())	// if no slogans
+		return;	// user error
+	if (!m_hWnd)	// if dialog isn't created
+		return;	// can't proceed
+	m_cbSlogan.ResetContent();	// empty combo box
+	for (int iSlogan = 0; iSlogan < aSlogan.GetSize(); iSlogan++) {	// for each slogan
+		m_cbSlogan.AddString(aSlogan[iSlogan].m_sText);	// add slogan text to combo box
+	}
+	m_cbSlogan.SetCurSel(0);	// select first slogan
 }
 
 BEGIN_MESSAGE_MAP(CParamsDlg, CDialog)

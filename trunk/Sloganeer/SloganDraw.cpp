@@ -239,7 +239,7 @@ bool CSloganDraw::OnThreadCreate()
 	if (m_iSloganPlayMode == SPM_SEQUENTIAL) {	// if showing slogans sequentially
 		m_iSlogan = -1;	// avoid skipping first slogan
 	}
-	LaunchMeltWorker();
+	LaunchMeltWorker();	// launch melt probe worker
 	m_fThreadStartTime = m_timer.Time();
 	StartSlogan();	// start the first slogan
 #if SD_CAPTURE	// if capturing frames
