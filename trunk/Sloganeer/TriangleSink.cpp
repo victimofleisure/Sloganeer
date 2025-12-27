@@ -28,7 +28,7 @@ CTriangleSink::CTriangleSink()
 	m_nRunBidiLevel = 0;
 }
 
-void CTriangleSink::OnStartTrans(CD2DSizeF szRT)
+void CTriangleSink::OnStartTrans(CKD2DSizeF szRT)
 {
 	m_szRT = szRT;
 	m_aTriangle.FastRemoveAll();
@@ -69,7 +69,7 @@ void CTriangleSink::OnDraw()
 // X coordinate. When the path geometry is rendered, the same ptBaselineOrigin
 // should also be used as the translation matrix.
 // 
-HRESULT CTriangleSink::TessellateGlyph(CD2DPointF ptBaselineOrigin, const CKD2DRectF& rGlyph, const ID2D1PathGeometry *pPathGeom)
+HRESULT CTriangleSink::TessellateGlyph(CKD2DPointF ptBaselineOrigin, const CKD2DRectF& rGlyph, const ID2D1PathGeometry *pPathGeom)
 {
 	m_rGlyph = rGlyph;
 	m_ptGlyphCenterWorld = m_rGlyph.CenterPoint();
@@ -82,7 +82,7 @@ HRESULT CTriangleSink::TessellateGlyph(CD2DPointF ptBaselineOrigin, const CKD2DR
 		fOriginX = rGlyph.left - ptBaselineOrigin.x + rGlyph.Width() / 2; 
 	}
 	float fOriginY = rGlyph.bottom - ptBaselineOrigin.y - rGlyph.Height() / 2;
-	m_ptGlyphCenterLocal = CD2DPointF(fOriginX, fOriginY);
+	m_ptGlyphCenterLocal = CKD2DPointF(fOriginX, fOriginY);
 	int	nOldTris = m_aTriangle.GetSize();
 	HRESULT hr = pPathGeom->Tessellate(D2D1::Matrix3x2F::Identity(), this);
 	int	nNewTris = m_aTriangle.GetSize();
@@ -157,7 +157,7 @@ void CTriangleSink::AddTriangles(const D2D1_TRIANGLE* triangles, UINT32 triangle
 
 // this method was written by GPT5
 float CTriangleSink::CalcTravel(
-	const CD2DSizeF& szRT,
+	const CKD2DSizeF& szRT,
 	const DPoint& ptWorld,   // point in world coords
 	const DPoint& dir,       // direction (doesn't need to be normalized)
 	float triRadius)         // radius of triangle around ptWorld

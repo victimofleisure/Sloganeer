@@ -22,6 +22,7 @@
 		13		11dec25 add font collection class
 		14		18dec25	add set position method to glyph iterator
 		15		19dec25	add save transform class
+		16		27dec25	add inline point and size classes
 
 */
 
@@ -47,8 +48,8 @@ inline D2D1_SIZE_U DipsToPixels(ID2D1RenderTarget* pRT, D2D1_SIZE_F szDIPs, D2D1
 
 inline D2D1_SIZE_F PixelsToDips(ID2D1RenderTarget* pRT, D2D1_SIZE_U szPixels, D2D1_SIZE_F szDpi)
 {
-	float	fX = szPixels.width * 96.0f / szDpi.width;
-	float	fY = szPixels.height * 96.0f / szDpi.height;
+	FLOAT	fX = szPixels.width * 96.0f / szDpi.width;
+	FLOAT	fY = szPixels.height * 96.0f / szDpi.height;
 	return D2D1::SizeF(fX, fY);
 }
 
@@ -62,11 +63,79 @@ inline D2D1_SIZE_F PixelsToDips(ID2D1RenderTarget* pRT, D2D1_SIZE_U szPixels)
 	return PixelsToDips(pRT, szPixels, GetDpi(pRT));
 }
 
-class CKD2DRectF : public CD2DRectF {
+class CKD2DPointF : public D2D1_POINT_2F {	// like base class but inline
+public:
+	CKD2DPointF(const CPoint& pt);
+	CKD2DPointF(const D2D1_POINT_2F& pt);
+	CKD2DPointF(const D2D1_POINT_2F* pt);
+	CKD2DPointF(FLOAT fX = 0., FLOAT fY = 0.);
+	operator CPoint() { return CPoint((LONG)x, (LONG)y); }
+};
+
+inline CKD2DPointF::CKD2DPointF(const CPoint& pt)
+{
+	x = (FLOAT)pt.x;
+	y = (FLOAT)pt.y;
+}
+
+inline CKD2DPointF::CKD2DPointF(const D2D1_POINT_2F& pt)
+{
+	x = pt.x;
+	y = pt.y;
+}
+
+inline CKD2DPointF::CKD2DPointF(const D2D1_POINT_2F* pt)
+{
+	x = pt == NULL ? 0 : pt->x;
+	y = pt == NULL ? 0 : pt->y;
+}
+
+inline CKD2DPointF::CKD2DPointF(FLOAT fX, FLOAT fY)
+{
+	x = fX;
+	y = fY;
+}
+
+class CKD2DSizeF : public D2D1_SIZE_F {	// like base class but inline
+public:
+	CKD2DSizeF(const CSize& size);
+	CKD2DSizeF(const D2D1_SIZE_F& size);
+	CKD2DSizeF(const D2D1_SIZE_F* size);
+	CKD2DSizeF(FLOAT cx = 0., FLOAT cy = 0.);
+	BOOL IsNull() const { return width == 0. && height == 0.; }
+	operator CSize() { return CSize((LONG)width, (LONG)height); }
+};
+
+inline CKD2DSizeF::CKD2DSizeF(const CSize& size)
+{
+	width = (FLOAT)size.cx;
+	height = (FLOAT)size.cy;
+}
+
+inline CKD2DSizeF::CKD2DSizeF(const D2D1_SIZE_F& size)
+{
+	width = size.width;
+	height = size.height;
+}
+
+inline CKD2DSizeF::CKD2DSizeF(const D2D1_SIZE_F* size)
+{
+	width = size == NULL ? 0 : size->width;
+	height = size == NULL ? 0 : size->height;
+}
+
+inline CKD2DSizeF::CKD2DSizeF(FLOAT cx, FLOAT cy)
+{
+	width = cx;
+	height = cy;
+}
+
+class CKD2DRectF : public D2D1_RECT_F {
 public:
 // Construction
 	CKD2DRectF(const CRect& rect);
 	CKD2DRectF(const D2D1_RECT_F& rect);
+	CKD2DRectF(const D2D1_RECT_F* rect);
 	CKD2DRectF(FLOAT fLeft = 0, FLOAT fTop = 0, FLOAT fRight = 0, FLOAT fBottom = 0);
 	CKD2DRectF(const D2D1_POINT_2F& point, const D2D1_SIZE_F& size);
 	CKD2DRectF(const D2D1_POINT_2F& ptTopLeft, const D2D1_POINT_2F& ptBottomRight);
@@ -74,10 +143,10 @@ public:
 // Attributes
 	FLOAT	Width() const;
 	FLOAT	Height() const;
-	CD2DSizeF	Size() const;
-	CD2DPointF	TopLeft() const;
-	CD2DPointF	BottomRight() const;
-	CD2DPointF	CenterPoint() const;
+	CKD2DSizeF	Size() const;
+	CKD2DPointF	TopLeft() const;
+	CKD2DPointF	BottomRight() const;
+	CKD2DPointF	CenterPoint() const;
 	bool	IsNormal() const;
 
 // Operations
@@ -89,12 +158,28 @@ public:
 	void	Union(const CKD2DRectF& r);
 };
 
-inline CKD2DRectF::CKD2DRectF(const CRect& rect) : CD2DRectF(rect)
+inline CKD2DRectF::CKD2DRectF(const CRect& rect)
 {
+	left = (FLOAT)rect.left;
+	right = (FLOAT)rect.right;
+	top = (FLOAT)rect.top;
+	bottom = (FLOAT)rect.bottom;
 }
 
-inline CKD2DRectF::CKD2DRectF(const D2D1_RECT_F& rect) : CD2DRectF(rect)
+inline CKD2DRectF::CKD2DRectF(const D2D1_RECT_F& rect)
 {
+	left = rect.left;
+	right = rect.right;
+	top = rect.top;
+	bottom = rect.bottom;
+}
+
+inline CD2DRectF::CD2DRectF(const D2D1_RECT_F* rect)
+{
+	left = rect == NULL ? 0 : rect->left;
+	right = rect == NULL ? 0 : rect->right;
+	top = rect == NULL ? 0 : rect->top;
+	bottom = rect == NULL ? 0 : rect->bottom;
 }
 
 inline CKD2DRectF::CKD2DRectF(FLOAT fLeft, FLOAT fTop, FLOAT fRight, FLOAT fBottom) 
@@ -131,24 +216,24 @@ inline FLOAT CKD2DRectF::Height() const
 	return bottom - top;
 }
 
-inline CD2DSizeF CKD2DRectF::Size() const
+inline CKD2DSizeF CKD2DRectF::Size() const
 {
-	return CD2DSizeF(Width(), Height());
+	return CKD2DSizeF(Width(), Height());
 }
 
-inline CD2DPointF CKD2DRectF::TopLeft() const
+inline CKD2DPointF CKD2DRectF::TopLeft() const
 {
-	return CD2DPointF(left, top);
+	return CKD2DPointF(left, top);
 }
 
-inline CD2DPointF CKD2DRectF::BottomRight() const
+inline CKD2DPointF CKD2DRectF::BottomRight() const
 {
-	return CD2DPointF(bottom, right);
+	return CKD2DPointF(bottom, right);
 }
 
-inline CD2DPointF CKD2DRectF::CenterPoint() const
+inline CKD2DPointF CKD2DRectF::CenterPoint() const
 {
-	return CD2DPointF(left + Width() / 2, top + Height() / 2);
+	return CKD2DPointF(left + Width() / 2, top + Height() / 2);
 }
 
 inline bool CKD2DRectF::IsNormal() const
@@ -203,7 +288,7 @@ inline void CKD2DRectF::Union(const CKD2DRectF& r)
 
 class CGlyphIter {
 public:
-	CGlyphIter(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun, bool bTightVertBounds = false);
+	CGlyphIter(CKD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun, bool bTightVertBounds = false);
 	//
 	// Note that rGlyph is the painted area of the glyph, also known as its ink
 	// box or black box, already in world coordinates. Do NOT use rGlyph as the
@@ -211,25 +296,28 @@ public:
 	// the origin *before* calling GetNext(), which updates it.
 	//
 	bool	GetNext(UINT& iGlyph, CKD2DRectF& rGlyph);
-	CD2DPointF	GetOrigin() const;
-	float	GetAscent() const;
-	float	GetDescent() const;
+	CKD2DPointF	GetOrigin() const;
+	FLOAT	GetAscent() const;
+	FLOAT	GetDescent() const;
 	void	Reset();
 	void	SetPos(UINT iGlyph);
-	CD2DSizeF	CalcMaxGlyphBounds();
+	CKD2DSizeF	CalcMaxGlyphBounds();
+	FLOAT	GetAdvance() const;
+	const FLOAT*	GetAdvancePtr() const;
 
 protected:
-	CD2DPointF	m_ptOrigin;		// current origin
+	CKD2DPointF	m_ptOrigin;		// current origin
 	DWRITE_GLYPH_RUN const* m_pGlyphRun;	// pointer to run
-	float	m_fEmScale;		// scaling factor from font's design units to DIPs
-	float	m_fAscent;		// scaled ascent
-	float	m_fDescent;		// scaled descent
+	FLOAT	m_fEmScale;		// scaling factor from font's design units to DIPs
+	FLOAT	m_fAscent;		// scaled ascent
+	FLOAT	m_fDescent;		// scaled descent
 	UINT	m_iGlyph;		// index of current glyph
-	float	m_fOriginX;		// original origin X for reset
+	FLOAT	m_fOriginX;		// original origin X for reset
+	FLOAT	m_fAdvance;		// horizontal advance, even if run glyph advances are null
 	bool	m_bTightVertBounds;	// if true, compute tight vertical bounds, else use ascent
 };
 
-inline CD2DPointF CGlyphIter::GetOrigin() const
+inline CKD2DPointF CGlyphIter::GetOrigin() const
 {
 	return m_ptOrigin;
 }
@@ -240,18 +328,28 @@ inline void CGlyphIter::Reset()
 	m_ptOrigin.x = m_fOriginX;
 }
 
-inline float CGlyphIter::GetAscent() const
+inline FLOAT CGlyphIter::GetAscent() const
 {
 	return m_fAscent;
 }
 
-inline float CGlyphIter::GetDescent() const
+inline FLOAT CGlyphIter::GetDescent() const
 {
 	return m_fDescent;
 }
 
+inline FLOAT CGlyphIter::GetAdvance() const
+{
+	return m_fAdvance;
+}
+
+inline const FLOAT* CGlyphIter::GetAdvancePtr() const
+{
+	return &m_fAdvance;
+}
+
 void	AddEllipse(ID2D1GeometrySink *pSink, D2D1_POINT_2F ptOrigin, D2D1_SIZE_F szRadius);
-void	AddPieWedge(ID2D1GeometrySink *pSink, D2D1_POINT_2F ptOrigin, D2D1_SIZE_F szRadius, float fStartAngle, float fWedgeFrac);
+void	AddPieWedge(ID2D1GeometrySink *pSink, D2D1_POINT_2F ptOrigin, D2D1_SIZE_F szRadius, FLOAT fStartAngle, FLOAT fWedgeFrac);
 
 inline D2D1::ColorF RGBAColorF(UINT32 rgba)
 {
@@ -271,7 +369,7 @@ inline D2D1::ColorF RGBAColorF(UINT32 rgba)
 		static_cast<FLOAT>((rgba & maskA) >> shiftA) / 255.f);
 }
 
-inline D2D1::ColorF BGRColorF(COLORREF clr, float fAlpha = 1.0)
+inline D2D1::ColorF BGRColorF(COLORREF clr, FLOAT fAlpha = 1.0)
 {
 	return D2D1::ColorF(
 		static_cast<FLOAT>(GetRValue(clr)) / 255.f,

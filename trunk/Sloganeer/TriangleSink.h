@@ -38,9 +38,9 @@ public:
 	void	SetRunBidiLevel(UINT nBidiLevel);
 
 // Operations
-	void	OnStartTrans(CD2DSizeF szRT);
+	void	OnStartTrans(CKD2DSizeF szRT);
 	void	OnDraw();
-	HRESULT	TessellateGlyph(CD2DPointF ptBaselineOrigin, const CKD2DRectF& rGlyph, const ID2D1PathGeometry *pPathGeom);
+	HRESULT	TessellateGlyph(CKD2DPointF ptBaselineOrigin, const CKD2DRectF& rGlyph, const ID2D1PathGeometry *pPathGeom);
 	void	GetNextGlyph(int& iStartTri, int& iEndTri);
 
 // Overrides
@@ -54,9 +54,9 @@ protected:
 // Data members
 	CArrayEx<GLYPH_TRIANGLE, GLYPH_TRIANGLE&> m_aTriangle;	// array of glyph triangles
 	CKD2DRectF	m_rGlyph;			// glyph bounds in world coordinates
-	CD2DPointF	m_ptGlyphCenterWorld;	// center of glyph in world coordinates
-	CD2DPointF	m_ptGlyphCenterLocal;	// center of glyph in local coordinates
-	CD2DSizeF	m_szRT;				// render target size
+	CKD2DPointF	m_ptGlyphCenterWorld;	// center of glyph in world coordinates
+	CKD2DPointF	m_ptGlyphCenterLocal;	// center of glyph in local coordinates
+	CKD2DSizeF	m_szRT;				// render target size
 	CIntArrayEx	m_aGlyphTriCount;	// array of per-glyph triangle counts
 	int		m_iGlyphFirstTri;	// index of glyph's first triangle within array
 	int		m_iCurGlyph;		// index of current glyph for iterator
@@ -64,7 +64,7 @@ protected:
 	UINT	m_nRunBidiLevel;	// odd level indicates right-to-left language
 
 // Helpers
-	static float CalcTravel(const CD2DSizeF& szRT, const DPoint& ptWorld, const DPoint& dir, float triRadius);
+	static float CalcTravel(const CKD2DSizeF& szRT, const DPoint& ptWorld, const DPoint& dir, float triRadius);
 };
 
 inline int CTriangleSink::GetTriangleCount() const

@@ -14,15 +14,14 @@
 
 #pragma once
 
-#include "d2d1_1.h"
-#include "d3d11.h"
+#include "D2DHelper.h"
 
 class CD2DOffscreen : public WObject {
 public:
 // Construction
 	CD2DOffscreen();
 	virtual	~CD2DOffscreen();
-	bool	Create(D2D1_SIZE_U szImage, D2D1_SIZE_F szDPI = CD2DSizeF(96, 96));
+	bool	Create(D2D1_SIZE_U szImage, D2D1_SIZE_F szDPI = CKD2DSizeF(96, 96));
 
 // Attributes
 	bool	IsCreated() const;

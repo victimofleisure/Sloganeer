@@ -38,6 +38,7 @@
 		28		15dec25	add tumble transition
 		29		20dec25	add iris transition
 		30		21dec25	remove idle block and always render
+		31		27dec25	add glyph run callback member function pointer
 
 */
 
@@ -72,6 +73,7 @@ CSloganDraw::~CSloganDraw()
 
 void CSloganDraw::Init()
 {
+	m_pGlyphRunCB = NULL;
 	m_fThreadStartTime = 0;
 	m_fTransProgress = 0;
 	m_bThreadExit = false;
@@ -84,7 +86,7 @@ void CSloganDraw::Init()
 	m_fStateDur = 0;
 	m_fTileSize = 0;
 	m_szTileLayout = CSize(0, 0);
-	m_ptTileOffset = CD2DPointF(0, 0);
+	m_ptTileOffset = CKD2DPointF(0, 0);
 	m_iGlyphLine = 0;
 	m_bIsGlyphRising = false;
 	m_bTransparentBkgnd = false;
@@ -364,7 +366,7 @@ bool CSloganDraw::OnDraw()
 		}
 		break;
 	case ST_HOLD:	// if holding
-		m_pD2DDeviceContext->DrawTextLayout(CD2DPointF(0, 0), m_pTextLayout, m_pDrawBrush); // draw text
+		m_pD2DDeviceContext->DrawTextLayout(CKD2DPointF(0, 0), m_pTextLayout, m_pDrawBrush); // draw text
 		break;
 	}
 	m_bIsTransStart = false;	// reset transition start flag
@@ -419,52 +421,36 @@ HRESULT CSloganDraw::DrawGlyphRun(void* pClientDrawingContext, FLOAT fBaselineOr
 	FLOAT fBaselineOriginY, DWRITE_MEASURING_MODE measuringMode, DWRITE_GLYPH_RUN const* pGlyphRun, 
 	DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, IUnknown* pClientDrawingEffect)
 {
+	// The glyph run has three per-glyph arrays. The glyphIndices array is
+	// mandatory, so its pointer can be assumed to be non-null. However the
+	// glyphAdvances and glyphOffsets arrays are both optional, and their
+	// pointers may be null.
+	//
+	// The offsets are normalized here by substituting a member array for
+	// glyphOffsets, containing either a copy of the run's offsets or zeros
+	// if they are unspecified. This guarantees a non-null offsets pointer
+	// and allows the method to modify offsets without altering the original run.
+	//
+	// Advances are not normalized here. Instead, the glyph iterator guarantees
+	// a valid per-glyph advance: if the run does not specify glyphAdvances,
+	// the iterator computes default advances from the font's design metrics.
+	// Code that needs advances should therefore use the glyph iterator's
+	// GetAdvance or GetAdvancePtr accessors rather than reading the run's
+	// glyphAdvances pointer directly.
+	//
 	UINT	nGlyphs = pGlyphRun->glyphCount;
-	m_aGlyphOffset.SetSize(nGlyphs);	// array is member to reduce reallocation
+	m_aGlyphOffset.FastSetSize(nGlyphs);	// array is member to reduce reallocation
 	if (nGlyphs > 0) {	// if one or more glyphs
-		if (pGlyphRun->glyphOffsets != NULL)	// if caller specified glyph offsets, copy them
+		if (pGlyphRun->glyphOffsets != NULL) {	// if caller specified glyph offsets, copy them
 			memcpy(m_aGlyphOffset.GetData(), pGlyphRun->glyphOffsets, sizeof(DWRITE_GLYPH_OFFSET) * nGlyphs);
-		else {	// no glyph offsets, so zero our array
+		} else {	// no glyph offsets, so zero our array
 			ZeroMemory(m_aGlyphOffset.GetData(), sizeof(DWRITE_GLYPH_OFFSET) * nGlyphs);
 		}
 	}
 	DWRITE_GLYPH_RUN	glyphRun = *pGlyphRun;	// copy entire glyph run struct
 	glyphRun.glyphOffsets = m_aGlyphOffset.GetData();	// override glyph run copy's offset array
-	CD2DPointF	ptBaselineOrigin(fBaselineOriginX, fBaselineOriginY);
-	switch (m_iTransType) {
-	case TT_CONVERGE_HORZ:
-		TransConvergeHorz(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
-		break;
-	case TT_CONVERGE_VERT:
-		TransConvergeVert(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
-		break;
-	case TT_MELT:
-		TransMelt(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
-		break;
-	case TT_ELEVATOR:
-		TransElevator(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
-		break;
-	case TT_CLOCK:
-		TransClock(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
-		break;
-	case TT_SKEW:
-		TransSkew(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
-		break;
-	case TT_EXPLODE:
-		TransExplode(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
-		break;
-	case TT_SUBMARINE:
-		TransSubmarine(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
-		break;
-	case TT_TUMBLE:
-		TransTumble(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
-		break;
-	case TT_IRIS:
-		TransIris(ptBaselineOrigin, measuringMode, pGlyphRunDescription, &glyphRun);
-		break;
-	default:
-		NODEFAULTCASE;
-	}
+	(this->*m_pGlyphRunCB)(CKD2DPointF(fBaselineOriginX, fBaselineOriginY), 
+		measuringMode, pGlyphRunDescription, &glyphRun);
 	return S_OK;
 }
 
@@ -610,7 +596,7 @@ bool CSloganDraw::OnTextChange()
 {
 	m_pTextLayout.Release();	// release previous text layout instance
 	int	nTextLen = m_sSlogan.GetLength();
-	CD2DSizeF	szRT(m_pD2DDeviceContext->GetSize());	// get render target size
+	CKD2DSizeF	szRT(m_pD2DDeviceContext->GetSize());	// get render target size
 	// layout box is entire frame, for full-screen text and paragraph centering
 	CHECK(m_pDWriteFactory->CreateTextLayout(	// create text layout instance
 		m_sSlogan,		// source text
@@ -625,10 +611,10 @@ bool CSloganDraw::OnTextChange()
 	return true;
 }
 
-CD2DSizeF CSloganDraw::GetTextBounds(CKD2DRectF& rText) const
+CKD2DSizeF CSloganDraw::GetTextBounds(CKD2DRectF& rText) const
 {
 	// layout box is entire render target
-	CD2DSizeF	szRT(m_pD2DDeviceContext->GetSize());	// get render target size
+	CKD2DSizeF	szRT(m_pD2DDeviceContext->GetSize());	// get render target size
 	// assuming text fits within the frame, overhang metrics are
 	// NEGATIVE distances in DIPs from frame edge to text edge
 	rText = CKD2DRectF(
@@ -648,7 +634,7 @@ void CSloganDraw::DrawTextBounds()
 	m_pD2DDeviceContext->DrawRectangle(rText, m_pDrawBrush);
 }
 
-void CSloganDraw::DrawGlyphBounds(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun,
+void CSloganDraw::DrawGlyphBounds(CKD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun,
 	bool bTightVertBounds)
 {
 	CKD2DRectF	rGlyph;
@@ -661,13 +647,13 @@ void CSloganDraw::DrawGlyphBounds(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN 
 		m_pD2DDeviceContext->DrawRectangle(rGlyph, m_pVarBrush);
 	}
 	if (pGlyphRun->glyphCount) {
-		CD2DSizeF	szRT = m_pD2DDeviceContext->GetSize();
-		m_pD2DDeviceContext->DrawLine(CD2DPointF(0, ptBaselineOrigin.y),
-			CD2DPointF(szRT.width, ptBaselineOrigin.y), m_pDrawBrush);	// draw baseline too
+		CKD2DSizeF	szRT = m_pD2DDeviceContext->GetSize();
+		m_pD2DDeviceContext->DrawLine(CKD2DPointF(0, ptBaselineOrigin.y),
+			CKD2DPointF(szRT.width, ptBaselineOrigin.y), m_pDrawBrush);	// draw baseline too
 	}
 }
 
-void CSloganDraw::GetRunBounds(CKD2DRectF& rRun, CD2DPointF ptBaselineOrigin, 
+void CSloganDraw::GetRunBounds(CKD2DRectF& rRun, CKD2DPointF ptBaselineOrigin, 
 	DWRITE_GLYPH_RUN const* pGlyphRun, bool bTightVertBounds) const
 {
 	CGlyphIter	iterGlyph(ptBaselineOrigin, pGlyphRun, bTightVertBounds);
@@ -719,7 +705,7 @@ double CSloganDraw::GetFrameTime() const
 	return m_iFrame * (1.0 / m_fRecFrameRate);
 }
 
-bool CSloganDraw::CreateEraser(CD2DSizeF& szMask, FLOAT fAlpha)
+bool CSloganDraw::CreateEraser(CKD2DSizeF& szMask, FLOAT fAlpha)
 {
 	// this method only supports a fully transparent background, with alpha of zero;
 	// partial transparency will cause the mask to be visible against the background

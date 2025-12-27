@@ -42,7 +42,7 @@ void CMeltProbe::Init(ID2D1Factory1* pD2DFactory, IDWriteFactory* pDWriteFactory
 	m_pDWriteFactory = pDWriteFactory;
 	m_pStrokeStyle = pStrokeStyle;
 	m_szBmp = CSize(0, 0);
-	m_ptText = CD2DPointF(0, 0);
+	m_ptText = CKD2DPointF(0, 0);
 }
 
 void CMeltProbe::Destroy()
@@ -61,7 +61,7 @@ void CMeltProbe::OnError(HRESULT hr, LPCSTR pszSrcFileName, int nLineNum, LPCSTR
 	theApp.OnError(hr, pszSrcFileName, nLineNum, pszSrcFileDate);	// route errors to application handler
 }
 
-bool CMeltProbe::Create(CString sText, CString sFontName, float fFontSize, int nFontWeight, CD2DPointF ptDPI, float &fEraseStroke)
+bool CMeltProbe::Create(CString sText, CString sFontName, float fFontSize, int nFontWeight, CKD2DPointF ptDPI, float &fEraseStroke)
 {
 	SimplifyText(sText);	// remove whitespace and duplicate characters
 	if (sText.IsEmpty())	// if empty text
@@ -93,7 +93,7 @@ bool CMeltProbe::Create(CString sText, CString sFontName, float fFontSize, int n
 	CHECK(m_pTextLayout->GetOverhangMetrics(&overhangMetrics));	// get overhang metrics
 	CHECK(m_pWICFactory.CoCreateInstance(CLSID_WICImagingFactory));	// create WIC factory
 	// calculate bitmap size
-	CD2DSizeF	szBmp(
+	CKD2DSizeF	szBmp(
 		textMetrics.layoutWidth + overhangMetrics.left + overhangMetrics.right + AA_MARGIN * 2, 
 		textMetrics.layoutHeight + overhangMetrics.top + overhangMetrics.bottom + AA_MARGIN * 2);
 	m_szBmp = CSize(Round(ceil(szBmp.width)), Round(ceil(szBmp.height)));
@@ -105,10 +105,10 @@ bool CMeltProbe::Create(CString sText, CString sFontName, float fFontSize, int n
 		D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_SOFTWARE,
 		D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), ptDPI.x, ptDPI.y);
 	m_pD2DFactory->CreateWicBitmapRenderTarget(m_pWICBmp, props, &m_pRT);
-	CD2DSizeF	szRT(m_pRT->GetSize());	// get render target size
+	CKD2DSizeF	szRT(m_pRT->GetSize());	// get render target size
     m_pRT->CreateSolidColorBrush(D2D1::ColorF(1, 1, 1), &m_pDrawBrush);	// draw in white
     m_pRT->CreateSolidColorBrush(D2D1::ColorF(0), &m_pBkgndBrush);	// on black background
-	m_ptText = CD2DPointF(overhangMetrics.left + AA_MARGIN, overhangMetrics.top + AA_MARGIN);
+	m_ptText = CKD2DPointF(overhangMetrics.left + AA_MARGIN, overhangMetrics.top + AA_MARGIN);
 #if WRITE_PROBE_BITMAP
 	OutlineErasesText(0.0f);
 	WriteBitmap(m_pWICBmp, _T("meltprobe.tif"));
@@ -276,7 +276,7 @@ CMeltProbeWorker::~CMeltProbeWorker()
 	Destroy();
 }
 
-bool CMeltProbeWorker::Create(const CSloganArray& aSlogan, CD2DPointF ptDPI, CArrayEx<float, float>& aStroke, int iSelSlogan)
+bool CMeltProbeWorker::Create(const CSloganArray& aSlogan, CKD2DPointF ptDPI, CArrayEx<float, float>& aStroke, int iSelSlogan)
 {
 	ASSERT(m_pWorker == NULL);	// single worker thread only
 	if (m_pWorker != NULL)	// if worker already running

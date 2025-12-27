@@ -24,9 +24,9 @@
 #define _USE_MATH_DEFINES
 #include "math.h"
 
-#define DTF(x) static_cast<float>(x)
+#define DTF(x) static_cast<FLOAT>(x)
 
-CGlyphIter::CGlyphIter(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun, bool bTightVertBounds)
+CGlyphIter::CGlyphIter(CKD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun, bool bTightVertBounds)
 	: m_ptOrigin(ptBaselineOrigin)
 {
 	ASSERT(pGlyphRun != NULL);
@@ -38,6 +38,7 @@ CGlyphIter::CGlyphIter(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGly
 	m_fDescent = fontMetrics.descent * m_fEmScale;
 	m_iGlyph = 0;
 	m_fOriginX = m_ptOrigin.x;
+	m_fAdvance = 0;
 	m_bTightVertBounds = bTightVertBounds;
 }
 
@@ -49,12 +50,11 @@ bool CGlyphIter::GetNext(UINT& iGlyph, CKD2DRectF& rGlyph)
 	if (iGlyph >= m_pGlyphRun->glyphCount)	// if end of glyphs
 		return false;
 	UINT16	nGlyphIndex = m_pGlyphRun->glyphIndices[iGlyph];
-	float	fGlyphAdvance = m_pGlyphRun->glyphAdvances[iGlyph];
 	DWRITE_GLYPH_METRICS	gm;
 	m_pGlyphRun->fontFace->GetDesignGlyphMetrics(&nGlyphIndex, 1, &gm);
-	float	fAdvanceWidth = gm.advanceWidth * m_fEmScale;	// different from fGlyphAdvance
-	float	fLeftBearing = gm.leftSideBearing * m_fEmScale;
-	float	fRightBearing = gm.rightSideBearing * m_fEmScale;
+	FLOAT	fAdvanceWidth = gm.advanceWidth * m_fEmScale;	// may differ from run's advance width
+	FLOAT	fLeftBearing = gm.leftSideBearing * m_fEmScale;
+	FLOAT	fRightBearing = gm.rightSideBearing * m_fEmScale;
 	bool	bRTL = m_pGlyphRun->bidiLevel & 1;	// odd level indicates right-to-left
 	// horizontal ink extents (black box) in run direction
 	if (bRTL) {	// if right-to-left
@@ -65,10 +65,10 @@ bool CGlyphIter::GetNext(UINT& iGlyph, CKD2DRectF& rGlyph)
 		rGlyph.right = m_ptOrigin.x + fAdvanceWidth - fRightBearing;
 	}
 	if (m_bTightVertBounds) {	// if tight vertical bounds requested
-		float fTopBearing = gm.topSideBearing * m_fEmScale;
-		float fAdvanceHeight = gm.advanceHeight * m_fEmScale;
-		float fBottomBearing = gm.bottomSideBearing * m_fEmScale;
-		float fVertOriginY = gm.verticalOriginY * m_fEmScale;
+		FLOAT	fTopBearing = gm.topSideBearing * m_fEmScale;
+		FLOAT	fAdvanceHeight = gm.advanceHeight * m_fEmScale;
+		FLOAT	fBottomBearing = gm.bottomSideBearing * m_fEmScale;
+		FLOAT	fVertOriginY = gm.verticalOriginY * m_fEmScale;
 		rGlyph.top = m_ptOrigin.y - fVertOriginY + fTopBearing;
 		rGlyph.bottom = m_ptOrigin.y - fVertOriginY + fAdvanceHeight - fBottomBearing;
 	} else {	// use font metrics for vertical bounds
@@ -79,25 +79,28 @@ bool CGlyphIter::GetNext(UINT& iGlyph, CKD2DRectF& rGlyph)
 		const DWRITE_GLYPH_OFFSET& goff = m_pGlyphRun->glyphOffsets[iGlyph];
 		// advanceOffset is along the run direction, ascenderOffset is along Y
 		// we're in screen coords, so if right-to-left, flip advanceOffset
-		float	fAdvOffset = bRTL ? -goff.advanceOffset : goff.advanceOffset;
+		FLOAT	fAdvOffset = bRTL ? -goff.advanceOffset : goff.advanceOffset;
 		rGlyph.OffsetRect(fAdvOffset, goff.ascenderOffset);
 	}
+	// if run's advance pointer is null, substitute font's advance width
+	m_fAdvance = m_pGlyphRun->glyphAdvances != NULL ?
+		m_pGlyphRun->glyphAdvances[iGlyph] : fAdvanceWidth;
 	if (bRTL) {	// if right-to-left
-		m_ptOrigin.x -= fGlyphAdvance;	// negative advance
+		m_ptOrigin.x -= m_fAdvance;	// negative advance
 	} else {	// left-to-right
-		m_ptOrigin.x += fGlyphAdvance;	// positive advance
+		m_ptOrigin.x += m_fAdvance;	// positive advance
 	}
 	m_iGlyph++;	// next glyph
 	return true;
 }
 
-CD2DSizeF CGlyphIter::CalcMaxGlyphBounds()
+CKD2DSizeF CGlyphIter::CalcMaxGlyphBounds()
 {
-	CD2DSizeF	szMax(0, 0);
+	CKD2DSizeF	szMax(0, 0);
 	CKD2DRectF	rGlyph;
 	UINT	iGlyph;
 	while (GetNext(iGlyph, rGlyph)) {	// for each glyph
-		CD2DSizeF	szGlyph(rGlyph.Size());
+		CKD2DSizeF	szGlyph(rGlyph.Size());
 		if (szGlyph.width > szMax.width)	// if wider
 			szMax.width = szGlyph.width;	// update width
 		if (szGlyph.height > szMax.height)	// if taller
@@ -114,7 +117,7 @@ void CGlyphIter::SetPos(UINT iGlyph)
 		Reset();	// only advance is supported, so start at beginning
 	bool	bRTL = m_pGlyphRun->bidiLevel & 1;	// odd level indicates right-to-left
 	while (m_iGlyph < iGlyph) {	// while below target index, advance
-		float	fGlyphAdvance = m_pGlyphRun->glyphAdvances[m_iGlyph];
+		FLOAT	fGlyphAdvance = m_pGlyphRun->glyphAdvances[m_iGlyph];
 		if (bRTL) {	// if right-to-left
 			m_ptOrigin.x -= fGlyphAdvance;	// negative advance
 		} else {	// left-to-right
@@ -127,8 +130,8 @@ void CGlyphIter::SetPos(UINT iGlyph)
 void AddEllipse(ID2D1GeometrySink *pSink, D2D1_POINT_2F ptOrigin, D2D1_SIZE_F szRadius)
 {
 	ASSERT(pSink != NULL);
-	CD2DPointF	ptOrg1(ptOrigin.x, ptOrigin.y - szRadius.height);
-	CD2DPointF	ptOrg2(ptOrigin.x, ptOrigin.y + szRadius.height);
+	CKD2DPointF	ptOrg1(ptOrigin.x, ptOrigin.y - szRadius.height);
+	CKD2DPointF	ptOrg2(ptOrigin.x, ptOrigin.y + szRadius.height);
 	pSink->BeginFigure(ptOrg1, D2D1_FIGURE_BEGIN_FILLED);
 	D2D1_ARC_SEGMENT	arc1 = {ptOrg2, szRadius,
 		0, D2D1_SWEEP_DIRECTION_COUNTER_CLOCKWISE, D2D1_ARC_SIZE_SMALL};
@@ -139,15 +142,15 @@ void AddEllipse(ID2D1GeometrySink *pSink, D2D1_POINT_2F ptOrigin, D2D1_SIZE_F sz
 	pSink->EndFigure(D2D1_FIGURE_END_CLOSED);
 }
 
-void AddPieWedge(ID2D1GeometrySink *pSink, D2D1_POINT_2F ptOrigin, D2D1_SIZE_F szRadius, float fStartAngle, float fWedgeFrac)
+void AddPieWedge(ID2D1GeometrySink *pSink, D2D1_POINT_2F ptOrigin, D2D1_SIZE_F szRadius, FLOAT fStartAngle, FLOAT fWedgeFrac)
 {
 	ASSERT(pSink != NULL);
 	double	fTheta1 = fStartAngle / 180 * M_PI;
-	CD2DPointF	pt1(
+	CKD2DPointF	pt1(
 		DTF(sin(fTheta1) * szRadius.width + ptOrigin.x), 
 		DTF(cos(fTheta1) * szRadius.height + ptOrigin.y));
 	double	fTheta2 = fTheta1 + fWedgeFrac * M_PI * 2;
-	CD2DPointF	pt2(
+	CKD2DPointF	pt2(
 		DTF(sin(fTheta2) * szRadius.width + ptOrigin.x), 
 		DTF(cos(fTheta2) * szRadius.height + ptOrigin.y));
 	//

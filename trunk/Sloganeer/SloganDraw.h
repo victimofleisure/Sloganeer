@@ -33,6 +33,7 @@
 		23		20dec25	add iris transition
 		24		21dec25	remove unused member vars
 		25		24dec25	add command to set slogan array
+		26		27dec25	add glyph run callback member function pointer
 
 */
 
@@ -120,6 +121,11 @@ protected:
 // Types
 	typedef CArrayEx<DWRITE_GLYPH_OFFSET, DWRITE_GLYPH_OFFSET&> CGlyphOffsetArray;
 	typedef CArrayEx<DWRITE_LINE_METRICS, DWRITE_LINE_METRICS&> CLineMetricsArray;
+	typedef bool (CSloganDraw::*GlyphRunCallbackPtr)(
+		CKD2DPointF ptBaselineOrigin, 
+		DWRITE_MEASURING_MODE measuringMode, 
+		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, 
+		DWRITE_GLYPH_RUN const* pGlyphRun);
 
 // Data members
 	CComPtr<ID2D1SolidColorBrush>	m_pBkgndBrush;	// background brush interface
@@ -138,6 +144,7 @@ protected:
 	CRandList	m_rlSloganIdx;	// randomized list of slogan indices
 	CBenchmark	m_timer;		// high-performance timer
 	CString		m_sSlogan;		// current slogan being displayed
+	GlyphRunCallbackPtr	m_pGlyphRunCB;	// pointer to current glyph run callback
 	double	m_fThreadStartTime;	// when thread was launched, in seconds since boot
 	double	m_fTransProgress;	// transition progress, normalized from 0 to 1
 	bool	m_bThreadExit;		// true if render thread exit requested
@@ -150,7 +157,7 @@ protected:
 	float	m_fStateDur;		// duration of current state, in seconds
 	float	m_fTileSize;		// tile size, in DIPs
 	CSize	m_szTileLayout;		// tiling layout, in rows and columns
-	CD2DPointF	m_ptTileOffset;	// tile offset, in DIPs
+	CKD2DPointF	m_ptTileOffset;	// tile offset, in DIPs
 	CIntArrayEx	m_aTileIdx;		// array of tile indices
 	CGlyphOffsetArray	m_aGlyphOffset;	// array of glyph offsets, for text renderer
 	CLineMetricsArray	m_aLineMetrics;	// array of line metrics, for text renderer
@@ -217,16 +224,16 @@ protected:
 	void	OnCustomSlogan();
 	bool	OnFontChange();
 	bool	OnTextChange();
-	CD2DSizeF	GetTextBounds(CKD2DRectF& rText) const;
+	CKD2DSizeF	GetTextBounds(CKD2DRectF& rText) const;
 	void	DrawTextBounds();
-	void	DrawGlyphBounds(CD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun, 
+	void	DrawGlyphBounds(CKD2DPointF ptBaselineOrigin, DWRITE_GLYPH_RUN const* pGlyphRun, 
 		bool bTightVertBounds = false);
-	void	GetRunBounds(CKD2DRectF& rRun, CD2DPointF ptBaselineOrigin, 
+	void	GetRunBounds(CKD2DRectF& rRun, CKD2DPointF ptBaselineOrigin, 
 		DWRITE_GLYPH_RUN const* pGlyphRun, bool bTightVertBounds = false) const;
 	double	GetPhase(UINT nFlags = 0) const;
 	double	GetFrameRate();
 	double	GetFrameTime() const;
-	bool	CreateEraser(CD2DSizeF& szMask, FLOAT fAlpha = 1.0f);
+	bool	CreateEraser(CKD2DSizeF& szMask, FLOAT fAlpha = 1.0f);
 	void	EraseBackground(D2D1_POINT_2F ptTargetOffset, D2D1_RECT_F *pImageRect = NULL);
 	bool	PushDrawCommand(const CRenderCmd& cmd);
 	void	UpdateCurrentSloganText();
@@ -247,37 +254,37 @@ protected:
 	void	InitTiling(const CKD2DRectF& rText);
 	void	TransRandTile();
 	bool	TransConverge();
-	void	TransConvergeHorz(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+	bool	TransConvergeHorz(CKD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
-	void	TransConvergeVert(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+	bool	TransConvergeVert(CKD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
 	bool	GetLineMetrics();
 	bool	MakeCharToLineTable();
 	bool	TransMelt();
-	bool	TransMelt(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+	bool	TransMelt(CKD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
 	bool	LaunchMeltWorker(int iSelSlogan = -1);
 	bool	MeasureMeltStroke();
 	bool	TransElevator();
-	void	TransElevator(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+	bool	TransElevator(CKD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
 	bool	TransClock();
-	bool	TransClock(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+	bool	TransClock(CKD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
 	bool	TransSkew();
-	void	TransSkew(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+	bool	TransSkew(CKD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
 	bool	TransExplode();
-	bool	TransExplode(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+	bool	TransExplode(CKD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
 	bool	TransSubmarine();
-	void	TransSubmarine(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+	bool	TransSubmarine(CKD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
 	bool	TransTumble();
-	void	TransTumble(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+	bool	TransTumble(CKD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
 	bool	TransIris();
-	void	TransIris(CD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
+	bool	TransIris(CKD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
 };
 
