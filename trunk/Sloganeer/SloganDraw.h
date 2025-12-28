@@ -34,6 +34,7 @@
 		24		21dec25	remove unused member vars
 		25		24dec25	add command to set slogan array
 		26		27dec25	add glyph run callback member function pointer
+		27		28dec25	merge typewriter effects
 
 */
 
@@ -181,7 +182,7 @@ protected:
 	// explode transition
 	CTriangleSink	m_triSink;	// triangle sink containing array of triangles
 
-	// random typewriter transition
+	// typewriter transition
 	CIntArrayEx	m_aCharIdx;		// array of character indices within current slogan
 	UINT	m_nCharsTyped;		// count of characters that have been typed so far
 
@@ -249,7 +250,6 @@ protected:
 	void	TransReveal();
 	void	TransFade();
 	void	TransTypewriter();
-	void	TransRandomTypewriter();
 	void	TransScale();
 	void	InitTiling(const CKD2DRectF& rText);
 	void	TransRandTile();

@@ -39,6 +39,7 @@
 		29		20dec25	add iris transition
 		30		21dec25	remove idle block and always render
 		31		27dec25	add glyph run callback member function pointer
+		32		28dec25	merge typewriter effects
 
 */
 
@@ -263,6 +264,7 @@ void CSloganDraw::OnResize()
 		case TT_RAND_TILE:
 			m_bIsTransStart = true;	// redo initialization
 			break;
+		case TT_TYPEWRITER:
 		case TT_RAND_TYPE:
 			m_nCharsTyped = 0;	// reset chars typed count
 			break;
@@ -316,10 +318,8 @@ bool CSloganDraw::OnDraw()
 			TransReveal();
 			break;
 		case TT_TYPEWRITER:
-			TransTypewriter();
-			break;
 		case TT_RAND_TYPE:
-			TransRandomTypewriter();
+			TransTypewriter();
 			break;
 		case TT_FADE:
 			TransFade();

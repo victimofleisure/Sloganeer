@@ -19,6 +19,7 @@
 		09		20dec25	add iris transition
 		10		21dec25	refactor elevator and clock to use clipping
 		11		27dec25	add glyph run callback member function pointer
+		12		28dec25	merge typewriter effects
 
 */
 
@@ -125,32 +126,22 @@ void CSloganDraw::TransFade()
 
 void CSloganDraw::TransTypewriter()
 {
-	UINT	nTextLen = static_cast<UINT>(m_sSlogan.GetLength());
-	UINT	nCharsTyped = static_cast<UINT>(Round(nTextLen * m_fTransProgress));
-	DWRITE_TEXT_RANGE	trShow = {0, nCharsTyped};
-	DWRITE_TEXT_RANGE	trHide = {nCharsTyped, nTextLen - nCharsTyped};
-	if (IsTransOut()) {	// if outgoing transition
-		std::swap(trShow, trHide);	// swap text ranges
-	}
-	// Per-character brushes override the default brush passed to DrawTextLayout,
-	// and they must be reset to restore normal behavior; see ResetDrawingEffect.
-	m_pTextLayout->SetDrawingEffect(m_pDrawBrush, trShow);	// set brush for shown characters
-	m_pTextLayout->SetDrawingEffect(m_pBkgndBrush, trHide);	// set brush for hidden characters
-	CKD2DPointF	ptOrigin(0, 0);
-	m_pD2DDeviceContext->DrawTextLayout(ptOrigin, m_pTextLayout, m_pDrawBrush);	// draw text
-}
-
-void CSloganDraw::TransRandomTypewriter()
-{
+	// setting the drawing effect is costly, so only do it when a character is typed
 	UINT	nTextLen = static_cast<UINT>(m_sSlogan.GetLength());
 	if (m_bIsTransStart) {	// if start of transition
-		CRandList	rlChar(nTextLen);	// initialize shuffler for entire text
 		m_aCharIdx.FastSetSize(nTextLen);	// only reallocate if text too big
 		m_aCharIdx.FastRemoveAll();	// reset item count without freeing memory
-		for (UINT iChar = 0; iChar < nTextLen; iChar++) {	// for each character
-			int	iRandChar = rlChar.GetNext();	// pick a random character
-			if (!theApp.IsSpace(m_sSlogan[iRandChar]))	// if non-space character
-				m_aCharIdx.Add(iRandChar);	// add character's index to sequence
+		if (m_iTransType == TT_RAND_TYPE) {	// if typing in random order
+			CRandList	rlChar(nTextLen);	// initialize shuffler for entire text
+			for (UINT iChar = 0; iChar < nTextLen; iChar++) {	// for each character
+				int	iRandChar = rlChar.GetNext();	// pick a random character
+				if (!theApp.IsSpace(m_sSlogan[iRandChar]))	// if non-space character
+					m_aCharIdx.Add(iRandChar);	// add character's index to sequence
+			}
+		} else {	// typing in sequential order
+			for (UINT iChar = 0; iChar < nTextLen; iChar++) {	// for each character
+				m_aCharIdx.Add(iChar);	// add character's index to sequence
+			}
 		}
 		m_nCharsTyped = 0;	// reset number of characters typed
 	}
