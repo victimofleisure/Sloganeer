@@ -592,7 +592,6 @@ bool CSloganDraw::TransExplode(CKD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MO
 		}
 		iterGlyph.Reset();	// reset glyph iterator, as we reuse it below
 	}
-	CD2DSaveTransform	transSave(m_pD2DDeviceContext);	// save transform, restore on exit
 	double	fPhase = GetPhase();
 	fPhase = EaseIn(fPhase, 1);	// easing entire trajectory looks best
 	double	fRad = m_triSink.GetTravel() * fPhase;
@@ -608,8 +607,8 @@ bool CSloganDraw::TransExplode(CKD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MO
 		for (int iTri = iStartTri; iTri < iEndTri; iTri++) {	// for each triangle
 			// radiate triangles in proportion to transition progress
 			const CTriangleSink::GLYPH_TRIANGLE&	gt = m_triSink.GetTriangle(iTri);
-			float	x = DTF(sin(gt.fAngle) * fRad);
-			float	y = DTF(cos(gt.fAngle) * fRad);
+			float	x = DTF(sin(gt.fAngle) * fRad) + fOriginX;
+			float	y = DTF(cos(gt.fAngle) * fRad) + ptBaselineOrigin.y;
 			D2D1_TRIANGLE	t = gt;
 			t.point1.x += x; t.point2.x += x; t.point3.x += x;
 			t.point1.y += y; t.point2.y += y; t.point3.y += y;
@@ -619,8 +618,6 @@ bool CSloganDraw::TransExplode(CKD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MO
 			pTriSink->EndFigure(D2D1_FIGURE_END_CLOSED);	// end figure
 		}
 		CHECK(pTriSink->Close());	// close geometry sink
-		auto mTranslate(D2D1::Matrix3x2F::Translation(fOriginX, ptBaselineOrigin.y));
-		m_pD2DDeviceContext->SetTransform(mTranslate);	// translate to left edge and baseline
 		m_pD2DDeviceContext->FillGeometry(pTriGeom, m_pDrawBrush);	// fill geometry
 	}
 	return true;
