@@ -36,9 +36,12 @@
 | 41 | 12/20/25 | 12/20/25 | done | add iris transition                                                                                     | 1.0.00.043 |      |
 | 42 | 12/20/25 | 12/21/25 | done | refactor elevator and clock to clip instead of overdrawing                                              | 1.0.00.044 |      |
 | 43 | 12/20/25 | 12/21/25 | done | refactor hold and pause states to render instead of blocking                                            | 1.0.00.044 |      |
+| 44 | 12/23/25 | 12/24/25 | done | add file open command                                                                                   | 1.0.00.045 |      |
+| 45 | 12/24/25 | 12/27/25 | done | optimize text renderer callbacks and D2D helpers; add glyph run callback member function pointer        | 1.0.00.046 |      |
+| 46 | 12/28/25 | 12/28/25 | done | merge typewriter effects for better performance                                                         | 1.0.00.047 |      |
+| 14 | 11/13/25 | 12/29/25 | done | add blur transition                                                                                     | 1.0.00.048 |      |
 | 24 | 11/26/25 |          | punt | hollow transition; like melt, but outline in draw color, using glyphs as clipping mask; lacks suspense  |            |      |
 | 35 | 11/30/25 |          | punt | scale up until all glyphs are off screen; too many degenerate cases                                     |            |      |
-| 14 | 11/13/25 |          | todo | research smoke / fog / blur transition                                                                  |            |      |
 | 28 | 11/28/25 |          | todo | Spout support                                                                                           |            |      |
 | 31 | 11/28/25 |          | todo | customize transition probabilities via control file; weighted random list                               |            |      |
 | 39 | 12/18/25 |          | todo | expose color cycling in UI                                                                              |            |      |
