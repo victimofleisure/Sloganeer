@@ -14,6 +14,7 @@
 		05		11dec25 add font collection class
 		06		18dec25	add set position method to glyph iterator
 		07		19dec25	add save transform class
+		08		29dec25	add method to create compatible bitmap
 
 */
 
@@ -214,4 +215,22 @@ bool CD2DFontCollection::Create()
 		m_aFontFamilyName.Add(sFamilyName);
 	}
 	return true;
+}
+
+HRESULT CreateCompatibleBitmap(ID2D1DeviceContext *pDC, ID2D1Bitmap1 **pOff, D2D1_BITMAP_OPTIONS nOptions)
+{
+	// create bitmap with same size, pixel format, and DPI as given device context
+	CComPtr<ID2D1Image>	pTarget;
+	pDC->GetTarget(&pTarget);
+	CComPtr<ID2D1Bitmap1> pTargetBitmap;
+	HRESULT	hr;
+	hr = pTarget->QueryInterface(IID_PPV_ARGS(&pTargetBitmap));
+	if (FAILED(hr))
+		return hr;
+	CKD2DSizeF szDpi;
+	pTargetBitmap->GetDpi(&szDpi.width, &szDpi.height);
+	D2D1_BITMAP_PROPERTIES1	props = {pTargetBitmap->GetPixelFormat(), 
+		szDpi.width, szDpi.height, nOptions};
+	hr = pDC->CreateBitmap(pTargetBitmap->GetPixelSize(), NULL, 0, &props, pOff);
+	return hr;
 }

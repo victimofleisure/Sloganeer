@@ -19,6 +19,7 @@
 		09		15dec25	add tumble transition
 		10		20dec25	add iris transition
 		11		21dec25	refactor hold and pause
+		12		29dec25	add blur transition
 
 */
 
@@ -27,7 +28,7 @@
 PARAMDEF(help)			// display help
 PARAMDEF(fullscr)		// start application in full screen mode
 PARAMDEF(text)			// slogan text
-PARAMDEF(fontsize)		// font size in points
+PARAMDEF(fontsize)		// font size in DIPs
 PARAMDEF(fontname)		// font name
 PARAMDEF(fontwt)		// font weight, from 1 - 999
 PARAMDEF(transdur)		// transition duration in seconds
@@ -114,6 +115,7 @@ TRANSTYPEDEF(	XPL,	EXPLODE)		// explode each letter into fragments
 TRANSTYPEDEF(	SUB,	SUBMARINE)		// rise from or sink into horizon
 TRANSTYPEDEF(	TMB,	TUMBLE)			// spin and scale while bunching or spreading
 TRANSTYPEDEF(	IRS,	IRIS)			// clip each letter with an ellipse
+TRANSTYPEDEF(	BLR,	BLUR)			// blur or sharpen
 					
 #undef TRANSTYPEDEF
 #endif

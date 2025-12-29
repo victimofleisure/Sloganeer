@@ -74,7 +74,7 @@ bool CMeltProbe::Create(CString sText, CString sFontName, float fFontSize, int n
 		static_cast<DWRITE_FONT_WEIGHT>(nFontWeight),	// font weight
 		DWRITE_FONT_STYLE_NORMAL,	// font style
 		DWRITE_FONT_STRETCH_NORMAL,	// font stretch
-		fFontSize,	// font size in points
+		fFontSize,	// font size in DIPs
 		L"",	// locale
 		&m_pTextFormat	// receives text format instance
 	));

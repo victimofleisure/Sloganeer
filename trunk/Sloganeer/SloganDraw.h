@@ -35,6 +35,7 @@
 		25		24dec25	add command to set slogan array
 		26		27dec25	add glyph run callback member function pointer
 		27		28dec25	merge typewriter effects
+		28		29dec25	add blur transition
 
 */
 
@@ -186,6 +187,12 @@ protected:
 	CIntArrayEx	m_aCharIdx;		// array of character indices within current slogan
 	UINT	m_nCharsTyped;		// count of characters that have been typed so far
 
+	// blur transition
+	CComPtr<ID2D1Bitmap1> m_pOffTarget;	// bitmap compatible with render target
+	CComPtr<ID2D1Effect> m_pEffect;	// effect interface
+	CComPtr<ID2D1Image>	m_pEffectOutImage;	// effect output
+	CComPtr<ID2D1ImageBrush> m_pImageBrush;	// effect image brush
+
 #if SD_CAPTURE	// if capturing frames
 	class CMyD2DCapture : public CD2DCapture {
 	public:
@@ -286,6 +293,8 @@ protected:
 	bool	TransIris();
 	bool	TransIris(CKD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE measuringMode, 
 		DWRITE_GLYPH_RUN_DESCRIPTION const* pGlyphRunDescription, DWRITE_GLYPH_RUN const* pGlyphRun);
+	static double	PowerCurve(double fPhase, double fPower);
+	bool	TransBlur();
 };
 
 inline bool CSloganDraw::IsTransOut() const

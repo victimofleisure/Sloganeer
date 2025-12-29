@@ -40,6 +40,7 @@
 		30		21dec25	remove idle block and always render
 		31		27dec25	add glyph run callback member function pointer
 		32		28dec25	merge typewriter effects
+		33		29dec25	add blur transition
 
 */
 
@@ -229,6 +230,10 @@ void CSloganDraw::DestroyUserResources()
 	m_pEraserBitmap.Release();
 	m_pPathGeom.Release();
 	m_pLayer.Release();
+	m_pOffTarget.Release();
+	m_pEffect.Release();
+	m_pImageBrush.Release();
+	m_pEffectOutImage.Release();
 	if (m_bThreadExit)	// if thread exiting
 		CoUninitialize();	// needed for WIC
 }
@@ -271,6 +276,10 @@ void CSloganDraw::OnResize()
 		}
 		m_pEraserBitmap.Release();	// recreate eraser bitmap if needed
 	}
+	m_pOffTarget.Release();
+	m_pEffect.Release();
+	m_pImageBrush.Release();
+	m_pEffectOutImage.Release();
 }
 
 bool CSloganDraw::OnDraw()
@@ -360,6 +369,9 @@ bool CSloganDraw::OnDraw()
 			break;
 		case TT_IRIS:
 			TransIris();
+			break;
+		case TT_BLUR:
+			TransBlur();
 			break;
 		default:
 			NODEFAULTCASE;	// logic error
@@ -581,7 +593,7 @@ bool CSloganDraw::OnFontChange()
 		static_cast<DWRITE_FONT_WEIGHT>(m_nFontWeight),	// font weight
 		DWRITE_FONT_STYLE_NORMAL,	// font style
 		DWRITE_FONT_STRETCH_NORMAL,	// font stretch
-		m_fFontSize,	// font size in points
+		m_fFontSize,	// font size in DIPs
 		L"",	// locale
 		&m_pTextFormat	// receives text format instance
 	));

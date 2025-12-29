@@ -20,6 +20,7 @@
 		10		21dec25	refactor elevator and clock to use clipping
 		11		27dec25	add glyph run callback member function pointer
 		12		28dec25	merge typewriter effects
+		13		29dec25	add blur transition
 
 */
 
@@ -754,5 +755,36 @@ bool CSloganDraw::TransIris(CKD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE 
 		}
 		ptOrigin = iterGlyph.GetOrigin();	// update glyph origin
 	}
+	return true;
+}
+
+double CSloganDraw::PowerCurve(double fPhase, double fPower)
+{
+	return (pow(fPower, fPhase) - 1) / (fPower - 1);
+}
+
+bool CSloganDraw::TransBlur()
+{
+	CKD2DRectF	rRT(CKD2DPointF(0, 0), m_pD2DDeviceContext->GetSize());
+	if (m_pEffect == NULL) {	// if effect doesn't exist
+		CHECK(CreateCompatibleBitmap(m_pD2DDeviceContext, &m_pOffTarget));
+		CHECK(m_pD2DDeviceContext->CreateEffect(CLSID_D2D1GaussianBlur, &m_pEffect));
+		m_pEffect->SetInput(0, m_pOffTarget);	// connect blur input to offscreen target
+		m_pEffect->GetOutput(&m_pEffectOutImage);	// connect blur output to effect out image
+		CHECK(m_pD2DDeviceContext->CreateImageBrush(m_pEffectOutImage, 
+			D2D1::ImageBrushProperties(rRT), D2D1::BrushProperties(0.0f), &m_pImageBrush));
+	}
+	const double fPower = 33;	// favor legible portion of effect
+	double	fPhase = PowerCurve(GetPhase(), fPower);
+	float fMaxBlurRadius = m_fFontSize;
+	CComPtr<ID2D1Image>	pTarget;
+	m_pD2DDeviceContext->GetTarget(&pTarget);	// save screen target
+	m_pD2DDeviceContext->SetTarget(m_pOffTarget);	// set offscreen target
+	m_pD2DDeviceContext->Clear(m_clrBkgnd);	// clear offscreen target to background color
+	m_pD2DDeviceContext->DrawTextLayout(CKD2DPointF(0, 0), m_pTextLayout, m_pDrawBrush);	// draw text
+	m_pD2DDeviceContext->SetTarget(pTarget);	// restore screen target
+	m_pEffect->SetValue(D2D1_GAUSSIANBLUR_PROP_STANDARD_DEVIATION, DTF(fPhase * fMaxBlurRadius));
+	m_pImageBrush->SetOpacity(DTF(1 - fPhase));	// reduce opacity as blur increases
+	m_pD2DDeviceContext->FillRectangle(rRT, m_pImageBrush);	// fill with image of text
 	return true;
 }

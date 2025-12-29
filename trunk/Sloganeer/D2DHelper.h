@@ -23,6 +23,7 @@
 		14		18dec25	add set position method to glyph iterator
 		15		19dec25	add save transform class
 		16		27dec25	add inline point and size classes
+		17		29dec25	add method to create compatible bitmap
 
 */
 
@@ -456,3 +457,6 @@ inline CD2DSaveTransform::~CD2DSaveTransform()
 {
 	m_pDC->SetTransform(&m_matPrev);
 }
+
+HRESULT CreateCompatibleBitmap(ID2D1DeviceContext *pDC, ID2D1Bitmap1 **pOff, D2D1_BITMAP_OPTIONS nOptions = D2D1_BITMAP_OPTIONS_TARGET);
+

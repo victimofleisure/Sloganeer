@@ -55,7 +55,7 @@ public:
 // Public data
 	CString	m_sText;			// text to display
 	CString	m_sFontName;		// font name
-	float	m_fFontSize;		// font size, in points
+	float	m_fFontSize;		// font size, in DIPs
 	int		m_nFontWeight;		// font weight, from 1 to 999
 	float	m_fHoldDur;			// hold duration in seconds
 	float	m_fPauseDur;		// pause duration in seconds

@@ -192,7 +192,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>version.lib;D2d1.lib;D3D11.lib;dwrite.lib</AdditionalDependencies>
+      <AdditionalDependencies>version.lib;D2d1.lib;D3D11.lib;dwrite.lib;dxguid.lib</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -216,7 +216,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>version.lib;D2d1.lib;D3D11.lib;dwrite.lib</AdditionalDependencies>
+      <AdditionalDependencies>version.lib;D2d1.lib;D3D11.lib;dwrite.lib;dxguid.lib</AdditionalDependencies>
       <StripPrivateSymbols>
       </StripPrivateSymbols>
     </Link>
@@ -245,7 +245,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>version.lib;D2d1.lib;D3D11.lib;dwrite.lib</AdditionalDependencies>
+      <AdditionalDependencies>version.lib;D2d1.lib;D3D11.lib;dwrite.lib;dxguid.lib</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -273,7 +273,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>version.lib;D2d1.lib;D3D11.lib;dwrite.lib</AdditionalDependencies>
+      <AdditionalDependencies>version.lib;D2d1.lib;D3D11.lib;dwrite.lib;dxguid.lib</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
