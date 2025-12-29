@@ -182,6 +182,7 @@ My slogan\nhas two lines
 |22|SUB|Submarine|Rise from or sink into horizon|
 |23|TMB|Tumble|Spin and scale while bunching or spreading|
 |24|IRS|Iris|Clip each letter with an ellipse|
+|25|BLR|Blur|Blur or sharpen|
 
 ### Colors
 
