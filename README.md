@@ -18,7 +18,7 @@ Simple example: `Sloganeer myslogans.txt -fontname Calibri -fontsize 120`
 |&#8209;help|Show help; -h is also accepted.|
 |&#8209;fullscr|Start the application in full screen mode.|
 |&#8209;text&nbsp;STRING|Slogan text; if the string contains spaces, enclose it in double quotes. Supports common backslash escape sequences. For multiple slogans, specify this flag repeatedly.|
-|&#8209;fontsize&nbsp;SIZE|Font size in points.|
+|&#8209;fontsize&nbsp;SIZE|Font size in DIPs. A DIP equals 1/96 inch.|
 |&#8209;fontname&nbsp;NAME|Font name; if the font name contains spaces, enclose it in double quotes.|
 |&#8209;fontwt&nbsp;WEIGHT|Font weight from 1 to 999; integer only.|
 |&#8209;transdur&nbsp;SECS|Transition duration in seconds. Applies to both incoming and outgoing transitions unless the outdur option is also specified.|
@@ -47,7 +47,7 @@ Simple example: `Sloganeer myslogans.txt -fontname Calibri -fontsize 120`
 
 |Example|Description|
 |---|---|
-|&#8209;fontsize&nbsp;90|Set the font size to 90 points.|
+|&#8209;fontsize&nbsp;90|Set the font size to 90 DIPs.|
 |&#8209;fontname&nbsp;Georgia|Set the font name to Georgia.|
 |&#8209;fontwt&nbsp;400|Set the font weight to 400.|
 |&#8209;transdur&nbsp;2.5|Set the transition duration to 2.5 seconds.|
@@ -86,7 +86,7 @@ CSV format supports the columns listed below. Most of these columns have the sam
 |-|-|
 |text|slogan text|
 |fontname|font name|
-|fontsize|font size in points|
+|fontsize|font size in DIPs|
 |fontwt|font weight, from 1 - 999|
 |bgclr|background color|
 |drawclr|drawing color|
