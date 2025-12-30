@@ -40,6 +40,7 @@
 | 45 | 12/24/25 | 12/27/25 | done | optimize text renderer callbacks and D2D helpers; add glyph run callback member function pointer        | 1.0.00.046 |      |
 | 46 | 12/28/25 | 12/28/25 | done | merge typewriter effects for better performance                                                         | 1.0.00.047 |      |
 | 14 | 11/13/25 | 12/29/25 | done | add blur transition                                                                                     | 1.0.00.048 |      |
+| 47 | 12/29/25 | 12/30/25 | done | add assemble transition                                                                                 | 1.0.00.049 |      |
 | 24 | 11/26/25 |          | punt | hollow transition; like melt, but outline in draw color, using glyphs as clipping mask; lacks suspense  |            |      |
 | 35 | 11/30/25 |          | punt | scale up until all glyphs are off screen; too many degenerate cases                                     |            |      |
 | 28 | 11/28/25 |          | todo | Spout support                                                                                           |            |      |
