@@ -10,6 +10,7 @@
         00      16nov25	initial version
 		01		24nov25	add bidi level for RTL languages
 		02		27nov25	radiate from center of glyph's ink box
+		03		30dec25	add sort by angle
 
 */
 
@@ -89,6 +90,32 @@ HRESULT CTriangleSink::TessellateGlyph(CKD2DPointF ptBaselineOrigin, const CKD2D
 	int	nGlyphTris = nNewTris - nOldTris;
 	m_aGlyphTriCount.Add(nGlyphTris);
 	return hr;
+}
+
+void CTriangleSink::SortByAngle()
+{
+	int	nGlyphs = m_aGlyphTriCount.GetSize();
+	int	iStartTri = 0;
+	for (int iGlyph = 0; iGlyph < nGlyphs; iGlyph++) {	// for each glyph
+		int	nGlyphTris = m_aGlyphTriCount[iGlyph];	// get glyph's triangle count
+		if (nGlyphTris) {	// if glyph has triangles
+			qsort(&m_aTriangle[iStartTri], nGlyphTris, sizeof(GLYPH_TRIANGLE), 
+				SortByAngleCompareFunc);	// sort triangles by angle
+			iStartTri += nGlyphTris;	// index to next glyph's first triangle
+		}
+	}
+}
+
+int CTriangleSink::SortByAngleCompareFunc(const void* p1, const void* p2)
+{
+	// sort into descending order so that angle proceeds clockwise
+	GLYPH_TRIANGLE	*pTri1 = (GLYPH_TRIANGLE*)p1;
+	GLYPH_TRIANGLE	*pTri2 = (GLYPH_TRIANGLE*)p2;
+	if (pTri1->fAngle < pTri2->fAngle)
+		return 1;
+	if (pTri1->fAngle > pTri2->fAngle)
+		return -1;
+	return 0;
 }
 
 void CTriangleSink::GetNextGlyph(int& iStartTri, int& iEndTri)

@@ -21,6 +21,7 @@
 		11		27dec25	add glyph run callback member function pointer
 		12		28dec25	merge typewriter effects
 		13		29dec25	add blur transition
+		14		30dec25	add assemble transition
 
 */
 
@@ -591,10 +592,18 @@ bool CSloganDraw::TransExplode(CKD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MO
 			CHECK(m_triSink.TessellateGlyph(ptLayoutOrigin, rGlyph, pPathGeom));	// tessellate glyph
 		}
 		iterGlyph.Reset();	// reset glyph iterator, as we reuse it below
+		if (m_iTransType == TT_ASSEMBLE)	// if transition type is assemble; special case of explode
+			m_triSink.SortByAngle();	// sort each glyph's triangles by angle
 	}
 	double	fPhase = GetPhase();
-	fPhase = EaseIn(fPhase, 1);	// easing entire trajectory looks best
-	double	fRad = m_triSink.GetTravel() * fPhase;
+	double	fRad;
+	if (m_iTransType == TT_EXPLODE) {	// if explode transition
+		fPhase = EaseIn(fPhase, 1);	// easing entire trajectory looks best
+		fRad = m_triSink.GetTravel() * fPhase;
+	} else {	// assemble transition; no easing or radial spread
+		fPhase = 1 - fPhase;	// reverse progress
+		fRad = 0;	// disable radial motion
+	}
 	for (UINT iGlyph = 0; iGlyph < run.glyphCount; iGlyph++) {	// for each glyph
 		float fOriginX = iterGlyph.GetOrigin().x;	// before GetNext changes it
 		iterGlyph.GetNext(iTemp, rGlyph);
@@ -604,6 +613,8 @@ bool CSloganDraw::TransExplode(CKD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MO
 		CHECK(pTriGeom->Open(&pTriSink));	// open geometry sink
 		int	iStartTri, iEndTri;	// range of triangles; end is exclusive
 		m_triSink.GetNextGlyph(iStartTri, iEndTri);	// get glyph's triangles
+		if (m_iTransType == TT_ASSEMBLE)	// if assemble, end varies with progress
+			iEndTri = iStartTri + Round((iEndTri - iStartTri) * fPhase);
 		for (int iTri = iStartTri; iTri < iEndTri; iTri++) {	// for each triangle
 			// radiate triangles in proportion to transition progress
 			const CTriangleSink::GLYPH_TRIANGLE&	gt = m_triSink.GetTriangle(iTri);
@@ -757,6 +768,14 @@ bool CSloganDraw::TransIris(CKD2DPointF ptBaselineOrigin, DWRITE_MEASURING_MODE 
 
 double CSloganDraw::PowerCurve(double fPhase, double fPower)
 {
+	// Samples a curve with the specified degree of curviness. The position of
+	// the sample along the curve is determined by the fPhase input, which is
+	// normalized and must be in the range zero to one inclusive. The curviness
+	// is determined by the fPower argument, which must be greater than one to 
+	// avoid dividing by zero. To obtain a satisfactory variety of curviness,
+	// change fPower exponentially, by powers of ten for example. The output
+	// is similarly normalized and ranges from zero to one inclusive.
+	//
 	return (pow(fPower, fPhase) - 1) / (fPower - 1);
 }
 

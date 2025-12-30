@@ -20,6 +20,7 @@
 		10		20dec25	add iris transition
 		11		21dec25	refactor hold and pause
 		12		29dec25	add blur transition
+		13		30dec25	add assemble transition
 
 */
 
@@ -113,9 +114,10 @@ TRANSTYPEDEF(	CLK,	CLOCK)			// per-character radial reveal
 TRANSTYPEDEF(	SKW,	SKEW)			// tip over or return to upright
 TRANSTYPEDEF(	XPL,	EXPLODE)		// explode each letter into fragments
 TRANSTYPEDEF(	SUB,	SUBMARINE)		// rise from or sink into horizon
-TRANSTYPEDEF(	TMB,	TUMBLE)			// spin and scale while bunching or spreading
+TRANSTYPEDEF(	TMB,	TUMBLE)			// spin and scale while gathering or spreading
 TRANSTYPEDEF(	IRS,	IRIS)			// clip each letter with an ellipse
 TRANSTYPEDEF(	BLR,	BLUR)			// blur or sharpen
+TRANSTYPEDEF(	ASM,	ASSEMBLE)		// construct each letter from pieces in order
 					
 #undef TRANSTYPEDEF
 #endif

@@ -10,6 +10,7 @@
         00      16nov25	initial version
 		01		24nov25	add bidi level for RTL languages
 		02		27nov25	remove baseline origin point member
+		03		30dec25	add sort by angle
 
 */
 
@@ -42,6 +43,8 @@ public:
 	void	OnDraw();
 	HRESULT	TessellateGlyph(CKD2DPointF ptBaselineOrigin, const CKD2DRectF& rGlyph, const ID2D1PathGeometry *pPathGeom);
 	void	GetNextGlyph(int& iStartTri, int& iEndTri);
+	void	SortByAngle();
+	static int SortByAngleCompareFunc(const void* p1, const void* p2);
 
 // Overrides
 	IFACEMETHOD(QueryInterface)(REFIID riid, void** ppv);

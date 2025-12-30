@@ -180,9 +180,10 @@ My slogan\nhas two lines
 |20|SKW|Skew|Tip over or return to upright|
 |21|XPL|Explode|Explode each letter into fragments|
 |22|SUB|Submarine|Rise from or sink into horizon|
-|23|TMB|Tumble|Spin and scale while bunching or spreading|
+|23|TMB|Tumble|Spin and scale while gathering or spreading|
 |24|IRS|Iris|Clip each letter with an ellipse|
 |25|BLR|Blur|Blur or sharpen|
+|26|ASM|Assemble|Construct each letter from pieces in order|
 
 ### Colors
 

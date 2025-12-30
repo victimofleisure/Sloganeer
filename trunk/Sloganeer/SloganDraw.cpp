@@ -41,6 +41,7 @@
 		31		27dec25	add glyph run callback member function pointer
 		32		28dec25	merge typewriter effects
 		33		29dec25	add blur transition
+		34		30dec25	add assemble transition
 
 */
 
@@ -359,6 +360,7 @@ bool CSloganDraw::OnDraw()
 			TransSkew();
 			break;
 		case TT_EXPLODE:
+		case TT_ASSEMBLE:
 			TransExplode();
 			break;
 		case TT_SUBMARINE:
