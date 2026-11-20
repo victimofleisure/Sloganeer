@@ -42,6 +42,7 @@
 		32		28dec25	merge typewriter effects
 		33		29dec25	add blur transition
 		34		30dec25	add assemble transition
+		35		20nov26	use improved no repeat shuffle
 
 */
 
@@ -472,7 +473,7 @@ void CSloganDraw::StartSlogan()
 {
 	switch (m_iSloganPlayMode) {
 	case SPM_SHUFFLE:
-		m_iSlogan = m_rlSloganIdx.GetNext(m_iSlogan);	// get next slogan index
+		m_iSlogan = m_rlSloganIdx.GetNextNoRepeat();	// get next slogan index
 		break;
 	case SPM_SEQUENTIAL:
 		m_iSlogan++;	// next slogan index
@@ -517,7 +518,7 @@ void CSloganDraw::StartTrans(int nState, float fDuration)
 	if (IsValid(m_aTransType[iTransDir])) {
 		m_iTransType = m_aTransType[iTransDir];	// use specified transition type
 	} else {	// transition type isn't overridden
-		m_iTransType = m_rlTransType.GetNext(m_iTransType);	// get next transition type
+		m_iTransType = m_rlTransType.GetNextNoRepeat();	// get next transition type
 	}
 	ResetTransform(m_pD2DDeviceContext);	// remove transform if any
 	m_pEraserBitmap.Release();	// recreate eraser bitmap if needed
