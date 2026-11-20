@@ -1,19 +1,19 @@
 | id | open     | close    | type | description                                                                                             | rev        | user |
 |----|----------|----------|------|---------------------------------------------------------------------------------------------------------|------------|------|
-| 4  | 11/13/25 | 11/14/25 | done | add parameter validation                                                                                | 1.0.00.025 |      |
-| 6  | 11/13/25 | 11/14/25 | done | frame size parameter is not implemented; use NxN format                                                 | 1.0.00.025 |      |
+|  4 | 11/13/25 | 11/14/25 | done | add parameter validation                                                                                | 1.0.00.025 |      |
+|  6 | 11/13/25 | 11/14/25 | done | frame size parameter is not implemented; use NxN format                                                 | 1.0.00.025 |      |
 | 12 | 11/13/25 | 11/14/25 | done | verify that parameter color values are actually in RGB and not BGR                                      | 1.0.00.025 |      |
-| 1  | 11/13/25 | 11/14/25 | done | capture should report error if frame size changes                                                       | 1.0.00.025 |      |
-| 5  | 11/13/25 | 11/14/25 | done | test an invalid record path                                                                             | 1.0.00.025 |      |
-| 2  | 11/13/25 | 11/14/25 | done | capture and offscreen classes should have a set format method                                           | 1.0.00.025 |      |
+|  1 | 11/13/25 | 11/14/25 | done | capture should report error if frame size changes                                                       | 1.0.00.025 |      |
+|  5 | 11/13/25 | 11/14/25 | done | test an invalid record path                                                                             | 1.0.00.025 |      |
+|  2 | 11/13/25 | 11/14/25 | done | capture and offscreen classes should have a set format method                                           | 1.0.00.025 |      |
 | 13 | 11/13/25 | 11/14/25 | done | add recording                                                                                           | 1.0.00.025 |      |
-| 3  | 11/13/25 | 11/14/25 | done | record should check for a preexisting image sequence in the destination folder                          | 1.0.00.025 |      |
+|  3 | 11/13/25 | 11/14/25 | done | record should check for a preexisting image sequence in the destination folder                          | 1.0.00.025 |      |
 | 16 | 11/13/25 | 11/14/25 | done | add help for both command line and GUI; -help and F1                                                    | 1.0.00.026 |      |
 | 17 | 11/13/25 | 11/15/25 | done | allow color names as alternative to hexadecimal values                                                  | 1.0.00.027 |      |
 | 15 | 11/13/25 | 11/17/25 | done | explode transition, based on tessellation                                                               | 1.0.00.028 |      |
 | 20 | 11/17/25 | 11/17/25 | done | abbreviate overlong command line flags                                                                  | 1.0.00.028 |      |
-| 8  | 11/13/25 | 11/20/25 | done | add CSV file format to allow per-slogan fonts, colors, and transition types                             | 1.0.00.029 |      |
-| 9  | 11/13/25 | 11/20/25 | done | CSV file should support assigning a transition type to each slogan, for complete scripting              | 1.0.00.029 |      |
+|  8 | 11/13/25 | 11/20/25 | done | add CSV file format to allow per-slogan fonts, colors, and transition types                             | 1.0.00.029 |      |
+|  9 | 11/13/25 | 11/20/25 | done | CSV file should support assigning a transition type to each slogan, for complete scripting              | 1.0.00.029 |      |
 | 10 | 11/13/25 | 11/20/25 | done | for CSV colors, in addition to hexadecimal values, also support HTML color names                        | 1.0.00.029 |      |
 | 11 | 11/13/25 | 11/20/25 | done | for CSV transition types, in addition to indices, also support mnemonic codes                           | 1.0.00.029 |      |
 | 22 | 11/13/25 | 11/22/25 | done | add random variant of typewriter transition                                                             | 1.0.00.030 |      |
@@ -27,7 +27,7 @@
 | 33 | 11/28/25 | 11/29/25 | done | resizing window during random tiles transition causes incomplete text coverage                          | 1.0.00.038 |      |
 | 30 | 11/28/25 | 11/29/25 | done | reveal leaves scrap in upper left corner; use overhang metrics only in GetTextBounds                    | 1.0.00.038 |      |
 | 34 | 11/29/25 | 11/29/25 | done | refactor simple reveal to use clipping instead of overdrawing in background color                       | 1.0.00.038 |      |
-| 7  | 11/13/25 | 12/02/25 | done | transparent background color breaks some transitions: reveal, random tiles, elevator, clock, fade, melt | 1.0.00.038 |      |
+|  7 | 11/13/25 | 12/02/25 | done | transparent background color breaks some transitions: reveal, random tiles, elevator, clock, fade, melt | 1.0.00.038 |      |
 | 32 | 11/28/25 | 12/02/25 | done | command line parameter to override transition type; useful for testing                                  | 1.0.00.039 |      |
 | 36 | 12/01/25 | 12/03/25 | done | record to named pipe                                                                                    | 1.0.00.039 |      |
 | 29 | 11/28/25 | 12/13/25 | done | add UI for adjusting parameters and adding/editing slogans                                              | 1.0.00.040 |      |
@@ -41,6 +41,8 @@
 | 46 | 12/28/25 | 12/28/25 | done | merge typewriter effects for better performance                                                         | 1.0.00.047 |      |
 | 14 | 11/13/25 | 12/29/25 | done | add blur transition                                                                                     | 1.0.00.048 |      |
 | 47 | 12/29/25 | 12/30/25 | done | add assemble transition                                                                                 | 1.0.00.049 |      |
+| 48 | 11/16/26 | 11/20/26 | done | help for seed command line parameter omits argument                                                     | 1.0.00.050 |      |
+| 49 | 11/20/26 | 11/20/26 | done | use improved no-repeat shuffle                                                                          | 1.0.00.050 |      |
 | 24 | 11/26/25 |          | punt | hollow transition; like melt, but outline in draw color, using glyphs as clipping mask; lacks suspense  |            |      |
 | 35 | 11/30/25 |          | punt | scale up until all glyphs are off screen; too many degenerate cases                                     |            |      |
 | 28 | 11/28/25 |          | todo | Spout support                                                                                           |            |      |
